@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Count, Q, Sum
 from django.db import transaction
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -357,10 +358,11 @@ def shop_dashboard(request):
 
     branding, _ = ShopBranding.objects.get_or_create(shop=shop)
     active_campaign = shop.get_active_campaign()
-    qr_code, _ = QRCode.objects.get_or_create(shop=shop, defaults={'target_url': f"http://127.0.0.1:8000/s/{shop.public_token}/"})
+    site_base = getattr(settings, 'SITE_URL', request.build_absolute_uri('/')).rstrip('/')
+    qr_code, _ = QRCode.objects.get_or_create(shop=shop, defaults={'target_url': f"{site_base}/s/{shop.public_token}/"})
 
     if not qr_code.qr_image:
-        generate_shop_qr(shop, request.build_absolute_uri('/'))
+        generate_shop_qr(shop, site_base)
 
     recent_coupons = Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at')[:10]
 
@@ -981,9 +983,10 @@ def qr_poster_view(request):
     if not shop:
         return redirect('admin_dashboard')
 
-    qr_obj, _ = QRCode.objects.get_or_create(shop=shop, defaults={'target_url': f"http://127.0.0.1:8000/s/{shop.public_token}/"})
+    site_base = getattr(settings, 'SITE_URL', request.build_absolute_uri('/')).rstrip('/')
+    qr_obj, _ = QRCode.objects.get_or_create(shop=shop, defaults={'target_url': f"{site_base}/s/{shop.public_token}/"})
     if not qr_obj.qr_image:
-        generate_shop_qr(shop, request.build_absolute_uri('/'))
+        generate_shop_qr(shop, site_base)
 
     return render(request, 'dashboard/qr_poster.html', {
         'shop': shop,

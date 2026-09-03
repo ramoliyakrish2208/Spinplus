@@ -1,0 +1,47 @@
+# Git and version control
+.git/
+.gitignore
+
+# Secrets and environment files
+.env
+*.env
+*.key
+*.pem
+*.crt
+*.cer
+*.secret
+secrets/
+id_rsa*
+
+# Local SQLite databases & backups
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+db.sqlite3
+backups/
+*.bak
+*.sql
+*.dump
+
+# Local Virtual Environments
+env/
+venv/
+ENV/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Local media uploads & logs
+media/
+logs/
+*.log
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
