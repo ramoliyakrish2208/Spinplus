@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-09-03T20:07:18+05:30",
+  "environment": "LOCAL_DEVELOPMENT",
+  "django_version": "5.0.3",
+  "python_version": "3.11.9",
+  "database_engine": "django.db.backends.sqlite3",
+  "test_suite": {
+    "total_tests": 65,
+    "passed": 65,
+    "failed": 0,
+    "errors": 0,
+    "system_check_issues": 0,
+    "deploy_check_warnings": 1
+  },
+  "endpoints": [
+    {
+      "name": "Customer QR Landing",
+      "url": "/s/523e02dfcea2/",
+      "status_code": 200,
+      "latency_ms": 155.69,
+      "query_count": 17
+    },
+    {
+      "name": "Public Coupon View",
+      "url": "/coupon/v_cgBg00-1ASatbRn0TB_bTA/",
+      "status_code": 200,
+      "latency_ms": 11.12,
+      "query_count": 6
+    },
+    {
+      "name": "Shop Owner Dashboard",
+      "url": "/dashboard/shop/",
+      "status_code": 200,
+      "latency_ms": 21.98,
+      "query_count": 21
+    },
+    {
+      "name": "Campaign Management List",
+      "url": "/dashboard/shop/campaigns/",
+      "status_code": 200,
+      "latency_ms": 10.37,
+      "query_count": 9
+    },
+    {
+      "name": "Billing & Plan Upgrade Center",
+      "url": "/dashboard/billing/",
+      "status_code": 200,
+      "latency_ms": 16.99,
+      "query_count": 13
+    },
+    {
+      "name": "Super Admin Capacity Dashboard",
+      "url": "/dashboard/admin/capacity/",
+      "status_code": 200,
+      "latency_ms": 12.8,
+      "query_count": 13
+    }
+  ],
+  "system_capacity_legacy_state": {
+    "status": "HARDCODED_FALLBACKS_PRESENT",
+    "environment_detection": false,
+    "live_hardware_metrics": false,
+    "notes": "admin_capacity_dashboard_view currently hardcodes fallback values (25 sessions, 21.25 RPS, 5000 spins/day) and lacks dynamic host environment detection."
+  }
+}
