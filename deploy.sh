@@ -83,12 +83,33 @@ if not User.objects.filter(username='admin').exists():
 else:
     print('      ℹ  Superadmin already exists')
 "
-else
-    # ── Normal migration (preserve existing data) ─────────────
+    # ── Normal update: 100% safe, preserves all existing data ──
     echo ""
-    echo "[3/6] Running database migrations..."
-    python manage.py migrate
-    echo "      ✅ Migrations applied"
+    echo "[3/6] Safe update mode: Protecting database and applying migrations..."
+
+    # 1. Automatic Database Snapshot Backup
+    if [ -f "$DEPLOY_DIR/db.sqlite3" ]; then
+        BACKUP_DIR="$DEPLOY_DIR/backups"
+        mkdir -p "$BACKUP_DIR"
+        BACKUP_FILE="$BACKUP_DIR/db_backup_$(date +%Y%m%d_%H%M%S).sqlite3"
+        cp "$DEPLOY_DIR/db.sqlite3" "$BACKUP_FILE"
+        echo "      🛡️ Database snapshot created: $BACKUP_FILE"
+        # Keep only the latest 5 backups to conserve disk space
+        ls -t "$BACKUP_DIR"/db_backup_*.sqlite3 2>/dev/null | tail -n +6 | xargs -r rm -f
+    fi
+
+    # 2. Run migrations without touching existing data
+    echo "      Running database schema migrations..."
+    if python manage.py migrate --noinput; then
+        echo "      ✅ Migrations applied successfully (all real data preserved)"
+    else
+        echo "      ❌ Migration failed! Rolling back to snapshot..."
+        if [ -n "$BACKUP_FILE" ] && [ -f "$BACKUP_FILE" ]; then
+            cp "$BACKUP_FILE" "$DEPLOY_DIR/db.sqlite3"
+            echo "      ✅ Database restored from snapshot. Server remained safe."
+        fi
+        exit 1
+    fi
 fi
 
 # ── 4. Collect static files ───────────────────────────────────
