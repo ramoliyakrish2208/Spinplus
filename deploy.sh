@@ -40,6 +40,21 @@ echo "[1/6] Pulling latest code from GitHub..."
 git pull origin main
 echo "      ✅ Code updated → $(git log --oneline -1)"
 
+# ── Ensure .env exists ─────────────────────────────────────────
+if [ ! -f "$DEPLOY_DIR/.env" ]; then
+    echo ""
+    echo "[!] .env not found. Creating production .env..."
+    cat > "$DEPLOY_DIR/.env" << 'EOF'
+SECRET_KEY=spinplus-production-secret-key-high-entropy-random-98127398127391
+DJANGO_DEBUG=False
+ALLOWED_HOSTS=spinplus.pythonanywhere.com,localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=https://spinplus.pythonanywhere.com
+SITE_URL=https://spinplus.pythonanywhere.com
+ENABLE_HTTPS_REDIRECT=False
+EOF
+    echo "      ✅ .env created with production settings"
+fi
+
 # ── 2. Install / update dependencies ─────────────────────────
 echo ""
 echo "[2/6] Installing Python dependencies..."
