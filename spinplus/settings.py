@@ -137,15 +137,21 @@ db_engine_env = os.environ.get('DB_ENGINE', '').lower()
 if database_url:
     import urllib.parse
     url = urllib.parse.urlparse(database_url)
+    query_params = urllib.parse.parse_qs(url.query)
+    sslmode = query_params.get('sslmode', ['require'])[0]
+    db_options = {}
+    if sslmode:
+        db_options['sslmode'] = sslmode
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': url.path[1:],
-            'USER': url.username or '',
-            'PASSWORD': url.password or '',
+            'USER': urllib.parse.unquote(url.username or ''),
+            'PASSWORD': urllib.parse.unquote(url.password or ''),
             'HOST': url.hostname or '',
             'PORT': str(url.port or 5432),
             'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),
+            'OPTIONS': db_options,
         }
     }
 elif db_engine_env in ('postgresql', 'django.db.backends.postgresql') or os.environ.get('DB_HOST'):

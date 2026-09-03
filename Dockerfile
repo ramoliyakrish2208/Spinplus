@@ -41,5 +41,5 @@ USER appuser
 
 EXPOSE 8080
 
-# Cloud Run Container Contract: Listen on $PORT and respond to SIGTERM gracefully
-CMD ["sh", "-c", "exec gunicorn spinplus.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 2 --timeout 60 --access-logfile - --error-logfile -"]
+# Container Startup Contract: Listen on $PORT, apply migrations, and serve via Gunicorn
+CMD ["sh", "scripts/entrypoint.sh"]
