@@ -13,6 +13,22 @@ DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "$DEPLOY_DIR"
 
+# ── Activate virtual environment ─────────────────────────────
+echo ""
+echo "[0/6] Activating virtual environment..."
+if [ -f "$DEPLOY_DIR/venv/bin/activate" ]; then
+    source "$DEPLOY_DIR/venv/bin/activate"
+    echo "      ✅ Activated: $DEPLOY_DIR/venv"
+elif [ -f "$HOME/.virtualenvs/spinplus/bin/activate" ]; then
+    source "$HOME/.virtualenvs/spinplus/bin/activate"
+    echo "      ✅ Activated: ~/.virtualenvs/spinplus"
+elif [ -f "$HOME/.virtualenvs/SpinPlus/bin/activate" ]; then
+    source "$HOME/.virtualenvs/SpinPlus/bin/activate"
+    echo "      ✅ Activated: ~/.virtualenvs/SpinPlus"
+else
+    echo "      ⚠  No venv found — using system Python ($(which python))"
+fi
+
 echo ""
 echo "============================================================"
 echo "  SpinPlus Deployment — $(date '+%Y-%m-%d %H:%M:%S')"
