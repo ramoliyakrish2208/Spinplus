@@ -130,28 +130,66 @@ TEMPLATES = [
 WSGI_APPLICATION = 'spinplus.wsgi.application'
 
 
-# Database Configuration: Clean Local (SQLite WAL) vs Cloud (PostgreSQL) Abstraction
+# Database Configuration: SQLite (local) / PostgreSQL / MySQL abstraction
+# Driven entirely by DATABASE_URL or DB_ENGINE environment variable.
 database_url = os.environ.get('DATABASE_URL')
 db_engine_env = os.environ.get('DB_ENGINE', '').lower()
 
 if database_url:
     import urllib.parse
     url = urllib.parse.urlparse(database_url)
-    query_params = urllib.parse.parse_qs(url.query)
-    sslmode = query_params.get('sslmode', ['require'])[0]
-    db_options = {}
-    if sslmode:
-        db_options['sslmode'] = sslmode
+    scheme = url.scheme.lower()  # mysql, mysql+mysqldb, postgresql, postgres
+
+    if scheme in ('mysql', 'mysql+mysqldb', 'mysqldb'):
+        # PythonAnywhere Free MySQL or any MySQL server
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': urllib.parse.unquote(url.path[1:]),
+                'USER': urllib.parse.unquote(url.username or ''),
+                'PASSWORD': urllib.parse.unquote(url.password or ''),
+                'HOST': url.hostname or '',
+                'PORT': str(url.port or 3306),
+                'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),
+                'OPTIONS': {
+                    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                    'charset': 'utf8mb4',
+                },
+            }
+        }
+    else:
+        # PostgreSQL (Supabase, Neon, RDS, etc.)
+        query_params = urllib.parse.parse_qs(url.query)
+        sslmode = query_params.get('sslmode', ['require'])[0]
+        db_options = {}
+        if sslmode:
+            db_options['sslmode'] = sslmode
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': url.path[1:],
+                'USER': urllib.parse.unquote(url.username or ''),
+                'PASSWORD': urllib.parse.unquote(url.password or ''),
+                'HOST': url.hostname or '',
+                'PORT': str(url.port or 5432),
+                'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),
+                'OPTIONS': db_options,
+            }
+        }
+elif db_engine_env in ('mysql', 'django.db.backends.mysql'):
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': url.path[1:],
-            'USER': urllib.parse.unquote(url.username or ''),
-            'PASSWORD': urllib.parse.unquote(url.password or ''),
-            'HOST': url.hostname or '',
-            'PORT': str(url.port or 5432),
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'spinplus'),
+            'USER': os.environ.get('DB_USER', 'spinplus'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': str(os.environ.get('DB_PORT', '3306')),
             'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),
-            'OPTIONS': db_options,
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+                'charset': 'utf8mb4',
+            },
         }
     }
 elif db_engine_env in ('postgresql', 'django.db.backends.postgresql') or os.environ.get('DB_HOST'):
