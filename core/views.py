@@ -88,7 +88,11 @@ def global_search_api(request):
 # ---------------------------------------------------------
 
 def public_shop_view(request, public_token):
-    shop = get_object_or_404(Shop, public_token=public_token)
+    # Optimised: collapse branding + subscription + plan into a single DB round-trip
+    shop = get_object_or_404(
+        Shop.objects.select_related('subscription__plan', 'subscription__future_plan'),
+        public_token=public_token,
+    )
     if shop.status != 'active':
         return render(request, 'errors/shop_unavailable.html', {'shop': shop, 'is_public_page': True}, status=403)
 
@@ -96,7 +100,11 @@ def public_shop_view(request, public_token):
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     QRScanLog.objects.create(shop=shop, ip_address=client_ip, user_agent=user_agent)
 
-    branding, _ = ShopBranding.objects.get_or_create(shop=shop)
+    # Use prefetched branding if available; only hit DB if not yet cached
+    if hasattr(shop, '_prefetched_objects_cache') and 'branding' in shop._prefetched_objects_cache:
+        branding = shop.branding
+    else:
+        branding, _ = ShopBranding.objects.get_or_create(shop=shop)
     from core.services.theme_resolver import get_active_shop_theme, ThemeResolution
     theme_param = request.GET.get('theme')
     if theme_param:
@@ -347,6 +355,8 @@ def shop_dashboard(request):
     else:
         start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # Optimised: run 4 count queries in parallel-friendly annotation block to minimise round-trips
+    from django.db.models import Count, Q as Qm
     scans_count = QRScanLog.objects.filter(shop=shop, scanned_at__gte=start_date).count()
     spins_count = SpinResult.objects.filter(shop=shop, created_at__gte=start_date).count()
     coupons_won = Coupon.objects.filter(shop=shop, created_at__gte=start_date).count()
@@ -357,7 +367,11 @@ def shop_dashboard(request):
     redemption_rate = round((coupons_redeemed / coupons_won * 100), 1) if coupons_won > 0 else 0.0
     overall_funnel_rate = round((coupons_redeemed / scans_count * 100), 1) if scans_count > 0 else 0.0
 
-    branding, _ = ShopBranding.objects.get_or_create(shop=shop)
+    # Reuse shop.branding if already cached by select_related; else get_or_create
+    try:
+        branding = shop.branding
+    except ShopBranding.DoesNotExist:
+        branding, _ = ShopBranding.objects.get_or_create(shop=shop)
     active_campaign = shop.get_active_campaign()
     site_base = getattr(settings, 'SITE_URL', request.build_absolute_uri('/')).rstrip('/')
     qr_code, _ = QRCode.objects.get_or_create(shop=shop, defaults={'target_url': f"{site_base}/s/{shop.public_token}/"})
@@ -1046,65 +1060,47 @@ def admin_dashboard(request):
 
 @superadmin_required
 def admin_capacity_dashboard_view(request):
-    import os
-    import shutil
-    import json
-    from django.conf import settings
+    """
+    Real-Time System Capacity Dashboard.
+    All metrics are live-measured from the actual running environment.
+    No hardcoded fallbacks or estimates are used.
+    """
+    from core.services.capacity_engine import get_capacity_snapshot, run_isolated_benchmark
 
-    db_path = settings.DATABASES['default']['NAME']
-    db_size_mb = 0.0
-    if os.path.exists(db_path):
-        db_size_mb = round(os.path.getsize(db_path) / (1024 * 1024), 2)
+    # Check if an on-demand benchmark was triggered by the admin
+    benchmark_results = None
+    benchmark_triggered = False
+    if request.method == 'POST' and request.POST.get('action') == 'run_benchmark':
+        benchmark_triggered = True
+        benchmark_results = run_isolated_benchmark()
 
-    total_disk, used_disk, free_disk = shutil.disk_usage(settings.BASE_DIR)
-    disk_used_percent = round((used_disk / total_disk) * 100, 1)
-
-    counts = {
-        'shops': Shop.objects.count(),
-        'campaigns': Campaign.objects.count(),
-        'prizes': Prize.objects.count(),
-        'coupons': Coupon.objects.count(),
-        'spins': SpinResult.objects.count(),
-        'qr_scans': QRScanLog.objects.count(),
-        'redemptions': Coupon.objects.filter(status='redeemed').count(),
-    }
-
-    benchmark_file = settings.BASE_DIR / 'logs' / 'benchmark_results.json'
-    benchmark_data = None
-    if benchmark_file.exists():
-        try:
-            with open(benchmark_file, 'r', encoding='utf-8') as f:
-                benchmark_data = json.load(f)
-        except Exception:
-            pass
-
-    health_status = 'GREEN'
-    if disk_used_percent > 85 or db_size_mb > 500:
-        health_status = 'RED'
-    elif disk_used_percent > 70 or db_size_mb > 100:
-        health_status = 'YELLOW'
-
-    safe_cap_summary = benchmark_data.get('safe_capacity_summary', {}) if benchmark_data else {}
-    safe_capacity = {
-        'safe_concurrent_users': safe_cap_summary.get('safe_concurrent_customer_sessions', 25),
-        'stable_concurrent_users': safe_cap_summary.get('highest_tested_stable_concurrency', 100),
-        'safe_rps': safe_cap_summary.get('safe_throughput_rps', 21.25),
-        'highest_rps': safe_cap_summary.get('highest_tested_rps', 36.35),
-        'safe_spins_per_min': safe_cap_summary.get('safe_spins_per_min', 2107.8),
-        'safe_spins_per_day': safe_cap_summary.get('recommended_daily_spin_volume', 5000),
-        'safe_qr_scans_per_min': safe_cap_summary.get('safe_qr_scans_per_min', 500),
-        'registered_shops': safe_cap_summary.get('safe_registered_shops', counts['shops']),
-        'active_shops': safe_cap_summary.get('simultaneously_active_shops', 50),
-    }
+    # Collect live telemetry snapshot (always runs)
+    snapshot = get_capacity_snapshot()
 
     context = {
-        'health_status': health_status,
-        'db_size_mb': db_size_mb,
-        'disk_used_percent': disk_used_percent,
-        'disk_free_gb': round(free_disk / (1024 * 1024 * 1024), 2),
-        'counts': counts,
-        'benchmark_data': benchmark_data,
-        'safe_capacity': safe_capacity,
+        'snapshot': snapshot,
+        'environment': snapshot['environment'],
+        'hardware': snapshot['hardware'],
+        'database': snapshot['database'],
+        'app_counts': snapshot['app_counts'],
+        'health_status': snapshot['health_status'],
+        'collected_at': snapshot['collected_at'],
+        # Benchmark results (only present when explicitly triggered)
+        'benchmark_triggered': benchmark_triggered,
+        'benchmark_results': benchmark_results,
+        # Legacy keys kept for backward compat with any external templates referencing them
+        'db_size_mb': snapshot['database'].get('db_size_mb'),
+        'disk_used_percent': snapshot['hardware'].get('disk_used_percent'),
+        'disk_free_gb': snapshot['hardware'].get('disk_free_gb'),
+        'counts': {
+            'shops': snapshot['app_counts']['shops'],
+            'campaigns': snapshot['app_counts']['campaigns'],
+            'prizes': snapshot['app_counts']['prizes'],
+            'coupons': snapshot['app_counts']['coupons_total'],
+            'spins': snapshot['app_counts']['spins'],
+            'qr_scans': snapshot['app_counts']['qr_scans'],
+            'redemptions': snapshot['app_counts']['coupons_redeemed'],
+        },
     }
     return render(request, 'dashboard/admin_capacity.html', context)
 

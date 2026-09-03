@@ -691,8 +691,13 @@ class Campaign(models.Model):
     hero_image = models.ImageField(upload_to='campaign_heroes/', blank=True, null=True)
     template_type = models.CharField(max_length=50, blank=True)
     theme = models.CharField(max_length=50, default='', blank=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['shop', 'is_active'], name='campaign_shop_active_idx'),
+        ]
 
     def get_welcome_title(self):
         return self.welcome_title if self.welcome_title else f"Welcome to {self.shop.name}"
@@ -905,16 +910,16 @@ class Subscription(models.Model):
     )
     shop = models.OneToOneField(Shop, on_delete=models.CASCADE, related_name='subscription')
     plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, related_name='subscriptions')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', db_index=True)
     starts_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     notes = models.TextField(blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # Queued / Future Scheduled Plan (Takes effect when current plan expires)
     future_plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True, related_name='queued_subscriptions')
-    future_starts_at = models.DateTimeField(null=True, blank=True)
+    future_starts_at = models.DateTimeField(null=True, blank=True, db_index=True)
     future_expires_at = models.DateTimeField(null=True, blank=True)
     future_notes = models.TextField(blank=True, default='')
 
