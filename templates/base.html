@@ -535,12 +535,14 @@
                             <i data-lucide="layout-dashboard"></i> Overview
                         </a>
                     </li>
+                    {% if not request.user.shop or not request.user.shop.onboarding_completed %}
                     <li class="sidebar-item">
                         <a href="{% url 'onboarding' %}"
                             class="sidebar-link {% if '/onboarding' in request.path %}active{% endif %}">
                             <i data-lucide="rocket"></i> Setup Wizard
                         </a>
                     </li>
+                    {% endif %}
                     <li class="sidebar-item">
                         <a href="{% url 'campaign_list' %}"
                             class="sidebar-link {% if '/campaigns' in request.path %}active{% endif %}">
