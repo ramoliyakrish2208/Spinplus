@@ -1511,6 +1511,8 @@ def admin_plan_requests_view(request):
 def admin_plan_request_action_view(request, request_id):
     """
     1-Click Approve & Activate or Reject incoming shop plan request.
+    When approved, subscription expiration is extended by the requested plan's duration
+    on top of the current active expiration (exceed by more days), with full limitations included.
     """
     plan_req = get_object_or_404(PlanRequest, id=request_id)
     action = request.POST.get('action')
@@ -1521,31 +1523,46 @@ def admin_plan_request_action_view(request, request_id):
         plan_req.reviewed_by = request.user
         plan_req.save()
 
-        # Update shop subscription atomically
         sub = plan_req.shop.get_subscription()
+        now = timezone.now()
+        days = plan_req.plan.billing_period_days if plan_req.plan.billing_period_days else 30
+
+        # Exceed by more days based on plan:
+        # If current plan is active and unexpired, extend from the existing expiration date!
+        if sub.expires_at and sub.expires_at > now:
+            base_date = sub.expires_at
+            exceeded = True
+        else:
+            base_date = now
+            exceeded = False
+
+        new_expires_at = base_date + timezone.timedelta(days=days)
+
+        # Update shop subscription atomically with new plan and extended expiration
         sub.plan = plan_req.plan
         sub.status = 'active'
         sub.is_active = True
-        sub.starts_at = timezone.now()
-        days = plan_req.plan.billing_period_days if plan_req.plan.billing_period_days else 30
-        sub.expires_at = timezone.now() + timezone.timedelta(days=days)
+        if not sub.starts_at or not exceeded:
+            sub.starts_at = now
+        sub.expires_at = new_expires_at
         sub.save()
 
         # Notification & Audit Log
+        type_str = "Renewal" if plan_req.request_type == 'renewal' else "Upgrade"
         Notification.objects.create(
             shop=plan_req.shop,
             user=plan_req.shop.owner,
-            title="Plan Request Approved 🎉",
-            message=f"Your request for {plan_req.plan.name} ({plan_req.plan.formatted_price()}) has been approved! Your subscription is active until {sub.expires_at.strftime('%d %b %Y')}.",
+            title=f"Plan {type_str} Approved 🎉",
+            message=f"Your request for {plan_req.plan.name} ({plan_req.plan.formatted_price()}) has been approved! Your subscription has been extended by +{days} days until {sub.expires_at.strftime('%d %b %Y')}. All plan features and limitations ({plan_req.plan.max_campaigns} campaigns, {plan_req.plan.max_active_campaigns} active, {plan_req.plan.max_prizes_per_campaign} prizes/wheel, {plan_req.plan.max_spins_per_month} spins/mo) are active.",
             level='success'
         )
         ActivityLog.objects.create(
             shop=plan_req.shop,
             actor=request.user,
-            action="Plan Request Approved",
-            details=f"Approved and activated {plan_req.plan.name} for {plan_req.shop.name}."
+            action=f"Plan {type_str} Approved",
+            details=f"Approved {type_str.lower()} to {plan_req.plan.name} for {plan_req.shop.name}. Expiration extended to {sub.expires_at.strftime('%d %b %Y')} (+{days} days)."
         )
-        messages.success(request, f"Approved request for {plan_req.shop.name}! {plan_req.plan.name} is now active.")
+        messages.success(request, f"Approved {type_str.lower()} for {plan_req.shop.name}! Plan extended to {sub.expires_at.strftime('%d %b %Y')} (+{days} days) with full {plan_req.plan.name} limits.")
 
     elif action == 'reject':
         plan_req.status = 'rejected'
@@ -1623,29 +1640,36 @@ def request_plan_view(request):
         messages.error(request, "The Demo plan is for initial trial only and cannot be requested.")
         return redirect('billing')
 
+    current_sub = shop.get_subscription()
+    req_type = 'renewal' if (current_sub.plan and current_sub.plan.id == target_plan.id) else 'upgrade'
+    if request.POST.get('request_type'):
+        req_type = request.POST.get('request_type')
+
     existing_req = PlanRequest.objects.filter(shop=shop, plan=target_plan, status='pending').first()
     if not existing_req:
         PlanRequest.objects.create(
             shop=shop,
             plan=target_plan,
+            request_type=req_type,
             contact_phone=phone,
             notes=notes,
             status='pending'
         )
+        type_label = "Renewal" if req_type == 'renewal' else "Upgrade"
         for admin_user in User.objects.filter(role='super_admin'):
             Notification.objects.create(
                 user=admin_user,
-                title=f"Plan Upgrade Request: {shop.name}",
-                message=f"{shop.name} has requested {target_plan.name} ({target_plan.formatted_price()}). Please review in Platform Admin.",
+                title=f"Plan {type_label} Request: {shop.name}",
+                message=f"{shop.name} has requested {type_label.lower()} for {target_plan.name} ({target_plan.formatted_price()}). Please review in Platform Admin.",
                 level='info'
             )
         ActivityLog.objects.create(
             shop=shop,
             actor=request.user,
-            action="Plan Requested",
-            details=f"Requested {target_plan.name} ({target_plan.formatted_price()})"
+            action=f"Plan {type_label} Requested",
+            details=f"Requested {type_label.lower()} to {target_plan.name} ({target_plan.formatted_price()})"
         )
-        messages.success(request, f"Your request for {target_plan.name} has been submitted! Platform admin has been notified and will review your request.")
+        messages.success(request, f"Your {type_label.lower()} request for {target_plan.name} has been submitted! Platform admin has been notified and will review your request.")
     else:
         messages.info(request, f"You already have a pending request for {target_plan.name}. We will review and activate it shortly.")
 

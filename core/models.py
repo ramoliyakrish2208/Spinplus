@@ -1019,14 +1019,19 @@ class ThemeAuditLog(models.Model):
 
 
 class PlanRequest(models.Model):
-    """Tenant shop owners submit plan upgrade requests for admin approval."""
+    """Tenant shop owners submit plan renewal or upgrade requests for admin approval."""
     STATUS_CHOICES = (
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
     )
+    REQUEST_TYPE_CHOICES = (
+        ('renewal', 'Renewal'),
+        ('upgrade', 'Upgrade / Switch'),
+    )
     shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='plan_requests')
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='plan_requests')
+    request_type = models.CharField(max_length=20, choices=REQUEST_TYPE_CHOICES, default='upgrade')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     contact_phone = models.CharField(max_length=20, blank=True, default='')
     notes = models.TextField(blank=True, default='')
@@ -1040,8 +1045,17 @@ class PlanRequest(models.Model):
             models.Index(fields=['status', 'created_at']),
         ]
 
+    @property
+    def calculate_extended_expiry(self):
+        """Calculates projected expiration: extends from existing active expiration if in future, else from now."""
+        sub = self.shop.get_subscription()
+        now = timezone.now()
+        days = self.plan.billing_period_days if self.plan and self.plan.billing_period_days else 30
+        base = sub.expires_at if (sub.expires_at and sub.expires_at > now) else now
+        return base + timezone.timedelta(days=days)
+
     def __str__(self):
-        return f"{self.shop.name} → {self.plan.name} ({self.status})"
+        return f"{self.shop.name} → {self.plan.name} ({self.get_request_type_display()}, {self.status})"
 
 
 from django.db.models.signals import post_save

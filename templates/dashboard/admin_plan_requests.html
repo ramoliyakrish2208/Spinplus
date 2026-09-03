@@ -228,12 +228,27 @@
 
                         <!-- Requested Plan Column -->
                         <td data-label="Requested Plan">
+                            <div style="margin-bottom:4px;">
+                                {% if req.request_type == 'renewal' %}
+                                <span class="badge badge-gold" style="font-size:0.68rem;padding:2px 8px;font-weight:800;">
+                                    <i data-lucide="refresh-cw" style="width:9px;height:9px;"></i> RENEWAL
+                                </span>
+                                {% else %}
+                                <span class="badge badge-active" style="font-size:0.68rem;padding:2px 8px;font-weight:800;">
+                                    <i data-lucide="arrow-up-right" style="width:9px;height:9px;"></i> UPGRADE
+                                </span>
+                                {% endif %}
+                            </div>
                             <strong style="color:var(--color-accent);font-size:0.95rem;display:block;">{{ req.plan.name }}</strong>
                             <span style="font-size:0.8rem;color:var(--text-primary);font-family:'Space Grotesk', monospace;font-weight:700;">
                                 {{ req.plan.formatted_price }}
                             </span>
-                            <div style="font-size:0.72rem;color:var(--text-muted);">
-                                {{ req.plan.billing_period_days }}d · Max {{ req.plan.max_campaigns }} camps · {{ req.plan.max_spins_per_month }} spins
+                            <div style="font-size:0.75rem;color:var(--color-success);font-weight:700;margin-top:3px;display:flex;align-items:center;gap:4px;">
+                                <i data-lucide="calendar-plus" style="width:12px;height:12px;color:var(--color-success);"></i>
+                                Extends to: {{ req.calculate_extended_expiry|date:"d M Y" }} (+{{ req.plan.billing_period_days }}d)
+                            </div>
+                            <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">
+                                Limits: {{ req.plan.max_campaigns }} camps · {{ req.plan.max_active_campaigns }} active · {{ req.plan.max_prizes_per_campaign }} prizes · {{ req.plan.max_spins_per_month }} spins/mo
                             </div>
                             {% if req.notes %}
                             <div style="margin-top:4px;font-size:0.75rem;background:var(--bg-elevated);padding:4px 8px;border-radius:var(--radius-sm);color:var(--text-secondary);border:1px solid var(--border-subtle);">
@@ -282,7 +297,7 @@
                                 <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="approve">
-                                    <button type="button" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" onclick="confirmAdminAction(this, 'approve', '{{ req.shop.name|escapejs }}', '{{ req.plan.name|escapejs }}', '{{ req.plan.formatted_price|escapejs }}');" title="Approve and activate this plan for {{ req.shop.name }}">
+                                    <button type="button" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" onclick="confirmAdminAction(this, 'approve', '{{ req.shop.name|escapejs }}', '{{ req.plan.name|escapejs }}', '{{ req.plan.formatted_price|escapejs }}', '{{ req.calculate_extended_expiry|date:"d M Y" }}', '{{ req.plan.billing_period_days }}');" title="Approve and activate this plan for {{ req.shop.name }}">
                                         <i data-lucide="check" style="width:12px;height:12px;"></i> Approve & Activate
                                     </button>
                                 </form>
@@ -358,12 +373,12 @@
 </div>
 
 <script>
-    function confirmAdminAction(btn, action, shopName, planName, priceStr) {
+    function confirmAdminAction(btn, action, shopName, planName, priceStr, extendedDate, days) {
         const form = btn.closest('form');
         if (action === 'approve') {
             showConfirmModal(
                 'Approve & Activate Plan',
-                `Are you sure you want to approve and activate the "${planName}" (${priceStr}) for ${shopName}?\n\nThis will immediately update the shop's active subscription limits and notify the shop owner.`,
+                `Approve and activate "${planName}" (${priceStr}) for ${shopName}?\n\n• Expiration will exceed by +${days} days to ${extendedDate}.\n• All limitations of ${planName} will be applied.\n• The shop owner will receive instant notification.`,
                 () => { form.submit(); },
                 null,
                 'Approve & Activate',
@@ -372,7 +387,7 @@
         } else if (action === 'reject') {
             showConfirmModal(
                 'Decline Plan Request',
-                `Are you sure you want to decline the request for "${planName}" from ${shopName}?\n\nThe shop owner will be notified to review other plans or reach out to support.`,
+                `Decline the request for "${planName}" from ${shopName}?\n\nThe shop owner will be notified to review options or reach out to support.`,
                 () => { form.submit(); },
                 null,
                 'Decline Request',

@@ -184,6 +184,7 @@
                         <form method="POST" action="{% url 'request_plan' %}">
                             {% csrf_token %}
                             <input type="hidden" name="plan_id" value="{{ p.id }}">
+                            <input type="hidden" name="request_type" value="renewal">
                             <button type="button" class="btn-primary" style="width:100%;" onclick="confirmPlanRequest(this, '{{ p.name|escapejs }}', '{{ p.formatted_price|escapejs }}', true);">
                                 <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Request Renewal for {{ p.name }}
                             </button>
@@ -197,6 +198,7 @@
                     <form method="POST" action="{% url 'request_plan' %}">
                         {% csrf_token %}
                         <input type="hidden" name="plan_id" value="{{ p.id }}">
+                        <input type="hidden" name="request_type" value="upgrade">
                         <button type="button" class="btn-accent" style="width:100%;" onclick="confirmPlanRequest(this, '{{ p.name|escapejs }}', '{{ p.formatted_price|escapejs }}', false);">
                             <i data-lucide="send" style="width:14px;height:14px;"></i> Request for {{ p.name }}
                         </button>
