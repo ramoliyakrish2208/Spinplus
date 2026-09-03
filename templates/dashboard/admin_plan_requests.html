@@ -282,14 +282,14 @@
                                 <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="approve">
-                                    <button type="submit" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" title="Approve and activate this plan for {{ req.shop.name }}">
+                                    <button type="button" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" onclick="confirmAdminAction(this, 'approve', '{{ req.shop.name|escapejs }}', '{{ req.plan.name|escapejs }}', '{{ req.plan.formatted_price|escapejs }}');" title="Approve and activate this plan for {{ req.shop.name }}">
                                         <i data-lucide="check" style="width:12px;height:12px;"></i> Approve & Activate
                                     </button>
                                 </form>
                                 <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="reject">
-                                    <button type="submit" class="btn-secondary" style="color:var(--color-danger);border-color:rgba(239,68,68,0.3);font-size:0.78rem;padding:6px 10px;min-height:32px;" onclick="return confirm('Reject this plan request?');" title="Reject request">
+                                    <button type="button" class="btn-secondary" style="color:var(--color-danger);border-color:rgba(239,68,68,0.3);font-size:0.78rem;padding:6px 10px;min-height:32px;" onclick="confirmAdminAction(this, 'reject', '{{ req.shop.name|escapejs }}', '{{ req.plan.name|escapejs }}', '{{ req.plan.formatted_price|escapejs }}');" title="Reject request">
                                         <i data-lucide="x" style="width:12px;height:12px;"></i> Reject
                                     </button>
                                 </form>
@@ -356,4 +356,29 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+    function confirmAdminAction(btn, action, shopName, planName, priceStr) {
+        const form = btn.closest('form');
+        if (action === 'approve') {
+            showConfirmModal(
+                'Approve & Activate Plan',
+                `Are you sure you want to approve and activate the "${planName}" (${priceStr}) for ${shopName}?\n\nThis will immediately update the shop's active subscription limits and notify the shop owner.`,
+                () => { form.submit(); },
+                null,
+                'Approve & Activate',
+                'btn-primary'
+            );
+        } else if (action === 'reject') {
+            showConfirmModal(
+                'Decline Plan Request',
+                `Are you sure you want to decline the request for "${planName}" from ${shopName}?\n\nThe shop owner will be notified to review other plans or reach out to support.`,
+                () => { form.submit(); },
+                null,
+                'Decline Request',
+                'btn-danger'
+            );
+        }
+    }
+</script>
 {% endblock %}

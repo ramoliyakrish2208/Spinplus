@@ -140,7 +140,7 @@ function showAlertModal(title, message, type = 'info', onOk = null) {
 }
 
 // Accessible Confirmation Popup Modal System
-function showConfirmModal(title, message, onConfirm, onCancel = null) {
+function showConfirmModal(title, message, onConfirm, onCancel = null, confirmText = 'Confirm', confirmClass = 'btn-primary') {
   let backdrop = document.getElementById('customModalBackdrop');
   if (backdrop) backdrop.remove();
 
@@ -168,7 +168,7 @@ function showConfirmModal(title, message, onConfirm, onCancel = null) {
       <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; white-space: pre-line;">${message}</p>
       <div style="display: flex; gap: 12px; justify-content: center;">
         <button id="modalCancelBtn" class="btn-secondary" style="flex: 1;">Cancel</button>
-        <button id="modalConfirmBtn" class="btn-primary" style="flex: 1;">Confirm</button>
+        <button id="modalConfirmBtn" class="${confirmClass}" style="flex: 1;">${confirmText}</button>
       </div>
     </div>
   `;

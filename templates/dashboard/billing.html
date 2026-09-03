@@ -184,7 +184,7 @@
                         <form method="POST" action="{% url 'request_plan' %}">
                             {% csrf_token %}
                             <input type="hidden" name="plan_id" value="{{ p.id }}">
-                            <button type="submit" class="btn-primary" style="width:100%;" onclick="return confirm('Request renewal for {{ p.name }}?');">
+                            <button type="button" class="btn-primary" style="width:100%;" onclick="confirmPlanRequest(this, '{{ p.name|escapejs }}', '{{ p.formatted_price|escapejs }}', true);">
                                 <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Request Renewal for {{ p.name }}
                             </button>
                         </form>
@@ -197,7 +197,7 @@
                     <form method="POST" action="{% url 'request_plan' %}">
                         {% csrf_token %}
                         <input type="hidden" name="plan_id" value="{{ p.id }}">
-                        <button type="submit" class="btn-accent" style="width:100%;" onclick="return confirm('Submit request for {{ p.name }} ({{ p.formatted_price }})? Platform admin will review and activate your plan.');">
+                        <button type="button" class="btn-accent" style="width:100%;" onclick="confirmPlanRequest(this, '{{ p.name|escapejs }}', '{{ p.formatted_price|escapejs }}', false);">
                             <i data-lucide="send" style="width:14px;height:14px;"></i> Request for {{ p.name }}
                         </button>
                     </form>
@@ -260,4 +260,23 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+    function confirmPlanRequest(btn, planName, priceStr, isRenewal) {
+        const form = btn.closest('form');
+        const title = isRenewal ? `Renew ${planName}` : `Request ${planName}`;
+        const message = isRenewal
+            ? `Submit renewal request for ${planName} (${priceStr})?\n\nPlatform admin will review and extend your subscription.`
+            : `Submit upgrade request for ${planName} (${priceStr})?\n\nPlatform administrators will review your request and activate the plan.`;
+
+        showConfirmModal(
+            title,
+            message,
+            () => { form.submit(); },
+            null,
+            isRenewal ? 'Request Renewal' : 'Submit Request',
+            'btn-primary'
+        );
+    }
+</script>
 {% endblock %}
