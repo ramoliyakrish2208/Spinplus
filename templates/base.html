@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}Spin & Win SaaS Platform{% endblock %}</title>
+    {% block meta %}{% endblock %}
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Poppins:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- CSS Bento System -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/themes.css' %}">
+
+    <style>
+        /* ── Layout Core ── */
+        :root {
+            --sidebar-width: 260px;
+            --topbar-height: 64px;
+        }
+
+        /* ── Premium Modern Scrollbars ── */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.28);
+            border-radius: 9999px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            transition: background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary, #6366f1);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            box-shadow: 0 0 10px var(--color-accent-glow, rgba(99, 102, 241, 0.45));
+        }
+
+        ::-webkit-scrollbar-thumb:active {
+            background: var(--color-primary-dark, #4f46e5);
+            border: 1px solid transparent;
+            background-clip: padding-box;
+        }
+
+        ::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+
+        body.dashboard-body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        /* ── Top Bar ── */
+        .saas-topbar {
+            height: var(--topbar-height);
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            flex-shrink: 0;
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .topbar-logo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+        }
+
+        .mobile-hamburger {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        /* ── Global Search ── */
+        .global-search-container {
+            position: relative;
+            width: 320px;
+        }
+
+        .global-search-container input.global-search-input,
+        input#globalSearchInput.global-search-input,
+        .global-search-input {
+            width: 100%;
+            padding: 9px 16px 9px 48px !important;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .global-search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .global-search-input:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.2);
+            outline: none;
+        }
+
+        .search-icon-inside {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+            width: 16px;
+            height: 16px;
+        }
+
+        .search-results-dropdown {
+            position: absolute;
+            top: 46px;
+            left: 0;
+            right: 0;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            max-height: 320px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1001;
+        }
+
+        .search-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 0.85rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            display: block;
+            transition: background var(--transition-fast);
+        }
+
+        .search-item:hover {
+            background: rgba(109, 40, 217, 0.08);
+        }
+
+        /* ── Controls & Profile ── */
+        .topbar-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--bg-surface);
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        /* ── Main Layout Container ── */
+        .saas-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - var(--topbar-height));
+            overflow: hidden;
+            max-width: 100vw;
+        }
+
+        /* ── Sidebar ── */
+        .saas-sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 16px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            flex-shrink: 0;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.15) transparent;
+        }
+
+        .saas-sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .saas-sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .saas-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.15);
+            border-radius: 9999px;
+            transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .saas-sidebar:hover::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4);
+        }
+
+        .saas-sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary, #6366f1);
+            box-shadow: 0 0 8px var(--color-accent-glow, rgba(99, 102, 241, 0.4));
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: background var(--transition-fast), color var(--transition-fast);
+        }
+
+        .sidebar-link i {
+            width: 18px;
+            height: 18px;
+            transition: transform var(--transition-fast);
+        }
+
+        .sidebar-link:hover {
+            background: rgba(109, 40, 217, 0.08);
+            color: var(--text-primary);
+        }
+
+        .sidebar-link:hover i {
+            transform: translateX(2px);
+        }
+
+        .sidebar-link.active {
+            background: var(--color-primary);
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);
+        }
+
+        .sidebar-link.active i {
+            color: #ffffff;
+        }
+
+        .saas-content {
+            flex: 1;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-width: 0;
+            max-width: 100%;
+            padding: 0;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+        }
+
+        .saas-content::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        .saas-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .saas-content::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.28);
+            border-radius: 9999px;
+            border: 1px solid transparent;
+            background-clip: padding-box;
+            transition: background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .saas-content::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary, #6366f1);
+            box-shadow: 0 0 10px var(--color-accent-glow, rgba(99, 102, 241, 0.45));
+        }
+
+        /* ── Mobile Overlay ── */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            top: var(--topbar-height);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 998;
+        }
+
+        .sidebar-backdrop.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-hamburger {
+                display: flex;
+            }
+
+            .global-search-container {
+                display: none;
+            }
+
+            .saas-sidebar {
+                position: fixed;
+                top: var(--topbar-height);
+                left: 0;
+                bottom: 0;
+                z-index: 999;
+                transform: translateX(-100%);
+                box-shadow: var(--shadow-lg);
+            }
+
+            .saas-sidebar.open {
+                transform: translateX(0);
+            }
+        }
+
+        /* ── Global Print Clean-Up ── */
+        @page {
+            size: auto;
+            margin: 0;
+        }
+
+        @media print {
+
+            .saas-topbar,
+            .saas-sidebar,
+            .sidebar-backdrop,
+            #themeAtmosphereCanvas,
+            .theme-toggle-btn,
+            .global-search-container,
+            .mobile-hamburger,
+            .no-print,
+            header,
+            aside,
+            nav {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                opacity: 0 !important;
+            }
+
+            html,
+            body,
+            body.dashboard-body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                height: auto !important;
+                min-height: 100% !important;
+                max-height: none !important;
+                overflow: visible !important;
+                position: static !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .saas-container,
+            .saas-content {
+                display: block !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body
+    class="{% if request.user.is_authenticated and not is_public_page %}dashboard-body{% endif %} font-{{ font_family|default:'inter' }}"
+    data-theme="{{ active_theme|default:'royal' }}" data-intensity="{{ theme_intensity|default:'balanced' }}">
+
+    <!-- Procedural 3D Theme Atmosphere Canvas -->
+    <canvas id="themeAtmosphereCanvas"></canvas>
+
+    {% if request.user.is_authenticated and not is_public_page %}
+    <!-- Premium Bento Header -->
+    <header class="saas-topbar">
+        <div style="display:flex;align-items:center;gap:16px;">
+            <button class="mobile-hamburger" onclick="toggleSidebar()" aria-label="Toggle navigation">
+                <i data-lucide="menu"></i>
+            </button>
+            <a href="{% url 'shop_dashboard' %}" class="topbar-brand">
+                <div class="topbar-logo-icon">
+                    <i data-lucide="disc-3"></i>
+                </div>
+                <span>Spin <span style="color:var(--color-primary);">& Win</span></span>
+            </a>
+        </div>
+
+        <!-- Global Search -->
+        <div class="global-search-container">
+            <i data-lucide="search" class="search-icon-inside"></i>
+            <input type="text" id="globalSearchInput" class="global-search-input"
+                style="padding-left: 48px !important;"
+                placeholder="Search coupons, campaigns, prizes..." oninput="handleGlobalSearch(this.value)">
+            <div id="searchResultsDropdown" class="search-results-dropdown"></div>
+        </div>
+
+        <!-- Controls & Profile -->
+        <div class="topbar-controls">
+            <button class="theme-toggle-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode"
+                title="Toggle Dark/Light Mode">
+                <i data-lucide="sun-moon"></i>
+            </button>
+
+            <div style="font-size:0.85rem;text-align:right;display:none;display:sm-block;">
+                <strong style="display:block;color:var(--text-primary);line-height:1.2;">{{ request.user.username }}</strong>
+                <span style="font-size:0.72rem;color:var(--text-muted);font-weight:600;">{{ request.user.get_role_display }}</span>
+            </div>
+
+            <a href="{% url 'logout' %}" class="btn-secondary"
+                style="font-size:0.8rem;padding:6px 14px;min-height:36px;">
+                <i data-lucide="log-out" style="width:14px;height:14px;"></i> Logout
+            </a>
+        </div>
+    </header>
+    {% endif %}
+
+    <div class="{% if request.user.is_authenticated and not is_public_page %}saas-container{% endif %}">
+        {% if request.user.is_authenticated and not is_public_page %}
+        <!-- Mobile backdrop -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+        <!-- Bento Sidebar Navigation -->
+        <aside class="saas-sidebar" id="saasSidebar">
+            <nav>
+                <ul class="sidebar-menu" role="navigation" aria-label="Main navigation">
+                    {% if request.user.is_superadmin %}
+                    <li class="sidebar-item">
+                        <a href="{% url 'admin_dashboard' %}"
+                            class="sidebar-link {% if request.path == '/dashboard/admin/' %}active{% endif %}">
+                            <i data-lucide="crown"></i> Platform Admin
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'admin_subscriptions' %}"
+                            class="sidebar-link {% if '/admin/subscriptions' in request.path %}active{% endif %}">
+                            <i data-lucide="layers"></i> Subscriptions (₹)
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <li class="sidebar-item">
+                        <a href="{% url 'shop_dashboard' %}"
+                            class="sidebar-link {% if request.path == '/dashboard/shop/' %}active{% endif %}">
+                            <i data-lucide="layout-dashboard"></i> Overview
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'onboarding' %}"
+                            class="sidebar-link {% if '/onboarding' in request.path %}active{% endif %}">
+                            <i data-lucide="rocket"></i> Setup Wizard
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'campaign_list' %}"
+                            class="sidebar-link {% if '/campaigns' in request.path %}active{% endif %}">
+                            <i data-lucide="target"></i> Offers & Campaigns
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'update_branding' %}"
+                            class="sidebar-link {% if '/branding' in request.path %}active{% endif %}">
+                            <i data-lucide="palette"></i> Experience Studio
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'qr_poster' %}"
+                            class="sidebar-link {% if '/qr' in request.path %}active{% endif %}">
+                            <i data-lucide="qr-code"></i> Permanent QR Code
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'redeem_coupon' %}"
+                            class="sidebar-link {% if '/redeem' in request.path %}active{% endif %}">
+                            <i data-lucide="ticket"></i> Express Redeem
+                        </a>
+                    </li>
+                    {% if not request.user.is_superadmin %}
+                    <li class="sidebar-item">
+                        <a href="{% url 'billing' %}"
+                            class="sidebar-link {% if '/billing' in request.path or '/subscription' in request.path %}active{% endif %}">
+                            <i data-lucide="credit-card"></i> Subscription
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="sidebar-item">
+                        <a href="{% url 'notifications' %}"
+                            class="sidebar-link {% if '/notifications' in request.path %}active{% endif %}">
+                            <i data-lucide="bell"></i> Alerts & Logs
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'activity_logs' %}"
+                            class="sidebar-link {% if '/logs' in request.path %}active{% endif %}">
+                            <i data-lucide="history"></i> Activity Audit
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'account_settings' %}"
+                            class="sidebar-link {% if '/account' in request.path %}active{% endif %}">
+                            <i data-lucide="shield-check"></i> Account Security
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'shop_profile' %}"
+                            class="sidebar-link {% if '/profile' in request.path %}active{% endif %}">
+                            <i data-lucide="store"></i> Business Profile
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            {% if request.user.shop %}
+            <div
+                style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border-subtle);font-size:0.8rem;text-align:center;">
+                <div style="color:var(--text-secondary);font-weight:700;margin-bottom:6px;">{{ request.user.shop.name }}
+                </div>
+                <a href="{% url 'public_shop' request.user.shop.public_token %}" target="_blank" class="btn-secondary"
+                    style="font-size:0.75rem;padding:6px 12px;width:100%;text-decoration:none;">
+                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> Customer View
+                </a>
+            </div>
+            {% endif %}
+        </aside>
+        {% endif %}
+
+        <!-- Content Body Block -->
+        <main class="{% if request.user.is_authenticated and not is_public_page %}saas-content{% endif %}"
+            style="{% if not request.user.is_authenticated or is_public_page %}width:100%;min-height:100vh;{% endif %}">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- JS Core -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="{% static 'js/ui.js' %}"></script>
+    <script src="{% static 'js/wheel.js' %}"></script>
+    <script src="{% static 'js/theme-engine.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+
+        {% if not is_public_page %}
+        // ── Theme & Mode Synchronization Across All Shop Panel Pages ──
+        (function initShopPanelThemeAndMode() {
+            const savedMode = localStorage.getItem('shop_panel_mode') || 'dark';
+            const savedTheme = localStorage.getItem('shop_panel_theme') || document.body.getAttribute('data-theme') || 'royal';
+
+            document.body.setAttribute('data-mode', savedMode);
+            document.documentElement.setAttribute('data-mode', savedMode);
+            document.body.setAttribute('data-theme', savedTheme);
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+        {% endif %}
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('saasSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const isOpen = sidebar.classList.toggle('open');
+            if (backdrop) backdrop.classList.toggle('show', isOpen);
+            document.body.style.overflow = isOpen ? 'hidden' : '';
+        }
+
+        function toggleDarkMode() {
+            const body = document.body;
+            const currentMode = body.getAttribute('data-mode') || 'dark';
+            const newMode = currentMode === 'dark' ? 'light' : 'dark';
+
+            body.setAttribute('data-mode', newMode);
+            document.documentElement.setAttribute('data-mode', newMode);
+            localStorage.setItem('shop_panel_mode', newMode);
+
+            if (window.ThemeEngineInstance && typeof window.ThemeEngineInstance.setMode === 'function') {
+                window.ThemeEngineInstance.setMode(newMode);
+            }
+        }
+
+        function applyShopPanelTheme(themeName) {
+            if (!themeName) return;
+            document.body.setAttribute('data-theme', themeName);
+            document.documentElement.setAttribute('data-theme', themeName);
+            localStorage.setItem('shop_panel_theme', themeName);
+
+            if (window.ThemeEngineInstance && typeof window.ThemeEngineInstance.applyTheme === 'function') {
+                window.ThemeEngineInstance.applyTheme(themeName);
+            }
+        }
+
+        // Close sidebar on nav click (mobile)
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) toggleSidebar();
+            });
+        });
+
+        function handleGlobalSearch(query) {
+            const dropdown = document.getElementById('searchResultsDropdown');
+            if (!query || query.length < 2) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            fetch(`/dashboard/search/?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.results && data.results.length > 0) {
+                        let html = '';
+                        data.results.forEach(r => {
+                            html += `<a href="${r.url}" class="search-item">
+                            <span class="badge badge-gold" style="font-size:0.65rem;margin-bottom:4px;">${r.type}</span>
+                            <strong style="display:block;color:var(--text-primary);">${r.title}</strong>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">${r.subtitle}</div>
+                        </a>`;
+                        });
+                        dropdown.innerHTML = html;
+                        dropdown.style.display = 'block';
+                    } else {
+                        dropdown.innerHTML = '<div style="padding:14px;font-size:0.85rem;color:var(--text-muted);text-align:center;">No results found</div>';
+                        dropdown.style.display = 'block';
+                    }
+                });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

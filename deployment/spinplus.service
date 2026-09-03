@@ -1,0 +1,34 @@
+[Unit]
+Description=SpinPlus Django SaaS Platform (Gunicorn WSGI)
+After=network.target
+
+[Service]
+Type=simple
+
+# Run as dedicated non-root production user
+User=www-data
+Group=www-data
+
+# Production Working Directory & Virtual Environment
+WorkingDirectory=/var/www/spinplus
+Environment="PATH=/var/www/spinplus/venv/bin"
+
+# Securely load environment variables from protected .env file (chmod 600)
+EnvironmentFile=/var/www/spinplus/.env
+
+# Gunicorn Execution strictly on localhost loopback via config file
+ExecStart=/var/www/spinplus/venv/bin/gunicorn spinplus.wsgi:application \
+    --config /var/www/spinplus/gunicorn.conf.py
+
+# Automatic Restart & Failure Recovery
+Restart=always
+RestartSec=5s
+KillMode=mixed
+TimeoutStopSec=30
+
+# Security Isolation
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

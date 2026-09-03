@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}500 — Server Error{% endblock %}
+
+{% block content %}
+<div style="min-height: 85vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg-main);">
+    <div class="bento-card bento-feature" style="max-width: 480px; width: 100%; text-align: center; padding: 48px 32px; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: var(--shadow-bento);">
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: var(--color-danger-bg); border: 1px solid rgba(239, 68, 68, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--color-danger);">
+            <i data-lucide="alert-octagon" style="width: 36px; height: 36px;"></i>
+        </div>
+        <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; margin-bottom: 12px;">SYSTEM ERROR 500</span>
+        <h1 style="font-size: 1.8rem; font-weight: 900; margin: 0 0 10px 0; color: var(--text-primary); letter-spacing: -0.4px;">Something Went Wrong</h1>
+        <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0 0 28px 0; line-height: 1.6;">
+            We encountered an unexpected error processing this request. Our engineering team has been notified.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <a href="javascript:location.reload()" class="btn-primary" style="width: 100%; justify-content: center;">
+                <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> Reload Page
+            </a>
+            {% if request.user.is_authenticated %}
+            <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">
+                <i data-lucide="layout-dashboard" style="width:13px;height:13px;"></i> Back to Dashboard
+            </a>
+            {% else %}
+            <a href="/" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">
+                <i data-lucide="home" style="width:13px;height:13px;"></i> Return to Home
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

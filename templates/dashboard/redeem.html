@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Express Redemption Terminal — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .redeem-bento-wrap {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+    .code-input-bento {
+        width: 100%;
+        padding: 18px 24px;
+        border-radius: var(--radius-md);
+        border: 2px solid var(--color-primary);
+        background: var(--bg-elevated);
+        color: var(--color-accent);
+        font-size: 1.8rem;
+        font-weight: 800;
+        letter-spacing: 4px;
+        text-align: center;
+        text-transform: uppercase;
+        font-family: 'Space Grotesk', monospace;
+        margin: 20px 0;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .code-input-bento:focus {
+        border-color: var(--color-accent);
+        box-shadow: var(--shadow-gold);
+        outline: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="redeem-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Overview
+        </a>
+    </div>
+
+    <!-- Main Express Redemption Bento Action Card -->
+    <div class="bento-card bento-feature" style="text-align:center;padding:36px 28px;margin-bottom:24px;">
+        <span class="badge badge-gold" style="margin-bottom:8px;">
+            <i data-lucide="zap" style="width:12px;height:12px;"></i> EXPRESS TERMINAL
+        </span>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Redeem Customer Coupon</h1>
+        <p style="font-size:0.88rem;color:var(--text-secondary);margin:0 0 20px 0;">Enter winning code or scan QR token for instant checkout discount verification.</p>
+
+        <!-- Status Notifications -->
+        {% if error %}
+            <div style="background:var(--color-danger-bg);border:1px solid rgba(239,68,68,0.35);color:var(--color-danger);padding:14px 20px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:20px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <i data-lucide="alert-circle"></i> {{ error }}
+            </div>
+        {% endif %}
+
+        {% if message %}
+            <div style="background:var(--color-success-bg);border:1px solid rgba(16,185,129,0.35);color:var(--color-success);padding:14px 20px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:20px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <i data-lucide="check-circle-2"></i> {{ message }}
+            </div>
+        {% endif %}
+
+        {% if coupon and coupon.status == 'active' %}
+            <!-- Verification Confirmation Step Bento Container -->
+            <div style="background:var(--bg-elevated);border:2px solid var(--color-accent);border-radius:var(--radius-md);padding:24px;margin:20px 0;box-shadow:var(--shadow-gold);">
+                <span class="badge badge-active" style="margin-bottom:8px;">✓ VALID COUPON READY</span>
+                <h2 style="font-size:1.8rem;font-weight:800;color:var(--color-accent);margin:8px 0 4px 0;">{{ coupon.prize.name }}</h2>
+                <p style="font-size:0.92rem;color:var(--text-secondary);margin:0 0 12px 0;">{{ coupon.prize.coupon_text|default:"Valid for single store transaction" }}</p>
+                
+                <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px;">
+                    Code: <code style="font-size:1.1rem;font-weight:800;color:var(--text-primary);letter-spacing:1px;">{{ coupon.code }}</code>
+                </div>
+
+                <form method="POST" action="{% url 'redeem_coupon' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="code" value="{{ coupon.code }}">
+                    <input type="hidden" name="action" value="confirm_redeem">
+                    <button type="submit" class="btn-accent" style="padding:14px 28px;font-size:1rem;width:100%;">
+                        <i data-lucide="check" style="width:20px;height:20px;"></i> CONFIRM & REDEEM NOW
+                    </button>
+                </form>
+            </div>
+        {% else %}
+            <!-- Camera Video Scanner Container -->
+            <div id="cameraStreamContainer" style="display:none;margin:16px 0;position:relative;border-radius:var(--radius-md);overflow:hidden;border:2px solid var(--color-primary);">
+                <video id="videoElement" autoplay playsinline style="width:100%;height:240px;object-fit:cover;background:#000;"></video>
+                <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;">
+                    <button type="button" onclick="stopCamera()" class="btn-secondary" style="font-size:0.78rem;padding:4px 12px;">
+                        ⏹️ Stop Camera
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Coupon Entry Form -->
+            <form id="redeemForm" method="POST" action="{% url 'redeem_coupon' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="verify">
+                <input type="text" id="codeInput" name="code" class="code-input-bento" placeholder="SW-XXXX-XXXX" required autofocus autocomplete="off">
+                
+                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                    <button type="button" onclick="startCamera()" class="btn-secondary" style="flex:1;">
+                        <i data-lucide="camera" style="width:16px;height:16px;"></i> Scan Barcode
+                    </button>
+                    <button type="submit" class="btn-primary" style="flex:2;">
+                        <i data-lucide="search" style="width:16px;height:16px;"></i> VERIFY CODE
+                    </button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+
+    <!-- Recent Redemptions Audit Card -->
+    <div class="bento-card">
+        <div class="bento-header">
+            <h3 style="font-size:1.05rem;font-weight:800;margin:0;"><i data-lucide="history" style="width:16px;height:16px;"></i> Recent Redemptions Audit</h3>
+            <span style="font-size:0.78rem;color:var(--text-muted);">{{ shop.name }}</span>
+        </div>
+
+        {% if recent_redemptions %}
+            <div class="responsive-bento-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Coupon Code</th>
+                            <th>Prize Reward</th>
+                            <th>Redeemed At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for red in recent_redemptions %}
+                        <tr>
+                            <td data-label="Code"><code style="font-size:0.85rem;font-weight:700;color:var(--color-accent);">{{ red.coupon.code }}</code></td>
+                            <td data-label="Prize"><strong>{{ red.coupon.prize.name }}</strong></td>
+                            <td data-label="Redeemed At" style="color:var(--text-muted);font-size:0.8rem;">{{ red.redeemed_at|date:"d M, H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="font-size:0.85rem;color:var(--text-muted);margin:0;text-align:center;padding:16px 0;">No redemptions recorded for this shop yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    let mediaStream = null;
+
+    function startCamera() {
+        const container = document.getElementById('cameraStreamContainer');
+        const video = document.getElementById('videoElement');
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                mediaStream = stream;
+                video.srcObject = stream;
+                container.style.display = 'block';
+                showToast("Camera scanner activated", "info");
+            })
+            .catch(err => {
+                showToast("Unable to access camera", "warning");
+            });
+        } else {
+            showToast("Camera scanning not supported on this device", "warning");
+        }
+    }
+
+    function stopCamera() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+        }
+        const container = document.getElementById('cameraStreamContainer');
+        if (container) container.style.display = 'none';
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Coupon Verification — {{ coupon.code }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-bento-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 32px 20px;
+        background: var(--bg-main);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-bento-wrap">
+    <div class="bento-card bento-feature"
+        style="max-width: 440px; width: 100%; text-align: center; padding: 36px 28px;">
+        {% if shop.logo %}
+        <img src="{{ shop.logo.url }}" alt="{{ shop.name }}"
+            style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:3px solid var(--color-primary);display:block;">
+        {% else %}
+        <div
+            style="width:72px;height:72px;border-radius:50%;border:3px solid var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--color-primary);margin:0 auto 12px;background:var(--bg-surface);">
+            {{ shop.name|slice:":1" }}
+        </div>
+        {% endif %}
+
+        <h2 style="font-size:1.5rem;font-weight:800;margin:0 0 4px 0;">{{ shop.name }}</h2>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 20px 0;">Official Coupon Verification Terminal
+        </p>
+
+        {% if error %}
+        <div
+            style="background:var(--color-danger-bg);border:1px solid rgba(239,68,68,0.35);color:var(--color-danger);padding:12px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i data-lucide="alert-circle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        {% if message %}
+        <div
+            style="background:var(--color-success-bg);border:1px solid rgba(16,185,129,0.35);color:var(--color-success);padding:12px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i data-lucide="check-circle-2"></i> {{ message }}
+        </div>
+        {% endif %}
+
+        <div
+            style="background:rgba(0,0,0,0.35);border:2px dashed var(--color-accent);border-radius:var(--radius-md);padding:18px;margin-bottom:20px;box-shadow:var(--shadow-gold);">
+            <div
+                style="font-size:1.6rem;font-weight:800;letter-spacing:3px;color:var(--color-accent);font-family:'Space Grotesk', monospace;">
+                {{ coupon.code }}
+            </div>
+            <p style="font-size:1.25rem;font-weight:800;color:var(--text-primary);margin:8px 0 2px 0;">{{ coupon.prize.name }}</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">{{ coupon.prize.coupon_text }}</p>
+        </div>
+
+        <div style="font-size:0.85rem;margin-bottom:24px;">
+            Status:
+            {% if coupon.status == 'active' %}
+            <span class="badge badge-active">ACTIVE & VALID</span>
+            {% elif coupon.status == 'redeemed' %}
+            <span class="badge badge-gold">ALREADY REDEEMED</span>
+            {% else %}
+            <span class="badge badge-ended">{{ coupon.status|upper }}</span>
+            {% endif %}
+            <br>
+            <span style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;display:inline-block;">Expires: {{ coupon.expires_at|date:"d M Y" }}</span>
+        </div>
+
+        {% if request.user.is_authenticated and coupon.status == 'active' %}
+        <form method="POST" action="{% url 'verify_coupon_token' coupon.verify_token %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-accent" style="width:100%;padding:14px;">
+                <i data-lucide="check" style="width:18px;height:18px;"></i> REDEEM THIS COUPON NOW
+            </button>
+        </form>
+        {% elif not request.user.is_authenticated %}
+        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Show this screen to staff at checkout to claim
+            your discount.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

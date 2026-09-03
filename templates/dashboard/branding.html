@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Theme & Appearance Studio — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .studio-bento-wrap {
+        width: 100%;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+
+    .recommendation-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: var(--radius-full);
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        font-size: 0.76rem;
+        font-weight: 700;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: all var(--transition-fast);
+        text-decoration: none;
+    }
+
+    .recommendation-chip:hover {
+        background: var(--color-primary);
+        color: #ffffff;
+        border-color: var(--color-primary);
+        transform: translateY(-1px);
+    }
+
+    .device-preview-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: var(--radius-xl);
+        padding: 24px 16px;
+        border: 1px solid var(--border-subtle);
+        min-height: 540px;
+        position: relative;
+    }
+
+    .device-frame-mobile,
+    .device-frame-tablet,
+    .device-frame-desktop,
+    #previewFrame {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+    }
+
+    .device-frame-mobile::-webkit-scrollbar,
+    .device-frame-tablet::-webkit-scrollbar,
+    .device-frame-desktop::-webkit-scrollbar,
+    #previewFrame::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+
+    .device-frame-mobile {
+        width: 375px;
+        height: 520px;
+        border: 8px solid #1e293b;
+        border-radius: 36px;
+        overflow-y: auto;
+        background: var(--bg-main);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .device-frame-tablet {
+        width: 600px;
+        height: 520px;
+        border: 10px solid #1e293b;
+        border-radius: 28px;
+        overflow-y: auto;
+        background: var(--bg-main);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .device-frame-desktop {
+        width: 100%;
+        max-width: 720px;
+        height: 520px;
+        border: 12px solid #1e293b;
+        border-radius: 18px;
+        overflow-y: auto;
+        background: var(--bg-main);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .color-input-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="studio-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Header Bento Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="palette" style="width:12px;height:12px;"></i> COMPLETE THEME LIBRARY 5.0
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Shop Experience Studio</h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Select a complete visual identity from our 34 business, festival, seasonal, and promotional themes.</p>
+            </div>
+            <div>
+                <span class="badge badge-active" id="activeThemeBadge">
+                    <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Active Theme: {{ branding.theme|upper }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Category Recommendations -->
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Recommended For:</span>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('janmashtami')">🦚 Krishna Janmashtami</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('royal_jewellery')">👑 Jewellery (Royal Jewellery)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('minimal_luxury')">✨ Fashion & Luxury (Minimal Luxury)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('luxury_black')">🖤 High Luxury (Luxury Black)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('pearl')">💎 Beauty & Salon (Pearl)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('restaurant')">🍽️ Dining & Food (Restaurant)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('coffee')">☕ Café & Bakery (Coffee Shop)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('beauty')">💄 Cosmetics (Beauty & Glow)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('sports')">🏋️ Gym & Fitness (Sports Energy)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('electronics')">⚡ Tech & Mobile (Cyber Tech)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('automotive')">🏎️ Cars & Bikes (Automotive)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('aurora')">🌌 Modern Tech (Aurora)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('glass')">🧊 Lifestyle (Glassmorphism)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('neon')">🔮 Gaming (Cyber Neon)</button>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('diwali')">🪔 Festive Season (Diwali Lights)</button>
+        </div>
+    </div>
+
+    <!-- Smart Real-Time Festival & Calendar Engine Card -->
+    <div class="bento-card bento-glass" style="margin-bottom:24px;border-left:4px solid var(--color-primary);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+            <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="badge badge-purple"><i data-lucide="sparkles" style="width:12px;height:12px;"></i> SMART THEME ENGINE 6.0</span>
+                    {% if shop.auto_theme_enabled %}
+                    <span class="badge badge-active">AUTOMATIC SWITCHING ON</span>
+                    {% else %}
+                    <span class="badge" style="background:rgba(239, 68, 68, 0.15);color:#ef4444;">AUTOMATIC SWITCHING OFF</span>
+                    {% endif %}
+                </div>
+                <h2 style="font-size:1.3rem;font-weight:800;margin:6px 0 2px 0;">Smart Calendar & Festival Auto-Switcher</h2>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">Automatically detects Indian & global festivals, holidays, and promotional events in your timezone (<strong>{{ shop.timezone }}</strong>) and applies the theme, reverting when done.</p>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:0.75rem;color:var(--text-muted);display:block;">Currently Active:</span>
+                <span style="font-size:1.1rem;font-weight:800;color:var(--color-accent);text-transform:capitalize;">
+                    {% if current_resolution.event %}{{ current_resolution.event.icon }} {% endif %}{{ current_resolution.theme }}
+                </span>
+            </div>
+        </div>
+
+        <form method="POST" action="{% url 'update_branding' %}" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:20px;padding:16px;background:rgba(0,0,0,0.25);border-radius:12px;border:1px solid var(--border-subtle);">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="smart_theme_config">
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Automatic Theme Switcher</label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:6px;">
+                    <input type="checkbox" name="auto_theme_enabled" {% if shop.auto_theme_enabled %}checked{% endif %} style="width:18px;height:18px;accent-color:var(--color-primary);">
+                    <span style="font-size:0.88rem;font-weight:700;">Enable Calendar Automation</span>
+                </label>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Normal Shop Theme (Fallback)</label>
+                <select name="normal_theme" class="form-select" style="font-size:0.85rem;">
+                    {% for val, label in theme_choices %}
+                    <option value="{{ val }}" {% if shop.normal_theme == val or branding.theme == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Shop Timezone</label>
+                <select name="timezone" class="form-select" style="font-size:0.85rem;">
+                    <option value="Asia/Kolkata" {% if shop.timezone == 'Asia/Kolkata' %}selected{% endif %}>Asia/Kolkata (IST +5:30)</option>
+                    <option value="UTC" {% if shop.timezone == 'UTC' %}selected{% endif %}>UTC (Universal Time)</option>
+                    <option value="America/New_York" {% if shop.timezone == 'America/New_York' %}selected{% endif %}>America/New York (EST)</option>
+                    <option value="Europe/London" {% if shop.timezone == 'Europe/London' %}selected{% endif %}>Europe/London (GMT)</option>
+                    <option value="Asia/Dubai" {% if shop.timezone == 'Asia/Dubai' %}selected{% endif %}>Asia/Dubai (GST +4:00)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Pre-Festival Warmup (Days)</label>
+                <input type="number" name="pre_festival_days" value="{{ shop.pre_festival_days|default:3 }}" min="0" max="14" class="form-input" style="font-size:0.85rem;" title="Show 'Coming Soon' countdown banner before festival begins">
+            </div>
+
+            <div class="form-group" style="margin:0;">
+                <label class="form-label">Region / State</label>
+                <input type="text" name="region" value="{{ shop.region }}" class="form-input" style="font-size:0.85rem;" placeholder="e.g. Gujarat">
+            </div>
+
+            <div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text-secondary);cursor:pointer;">
+                    <input type="checkbox" name="auto_category_theme_adaptation" {% if shop.auto_category_theme_adaptation %}checked{% endif %}>
+                    <span>Auto-adapt themes based on Shop Category (e.g. Jewellery -> Royal Jewellery, Janmashtami -> Janmashtami Jewellery)</span>
+                </label>
+                <button type="submit" class="btn-primary" style="font-size:0.82rem;padding:6px 16px;">
+                    <i data-lucide="save" style="width:14px;height:14px;"></i> Save Smart Engine Config
+                </button>
+            </div>
+        </form>
+
+        <!-- Manual Temporary Override Bar -->
+        <div style="padding:14px;background:rgba(236, 72, 153, 0.08);border:1px solid rgba(236, 72, 153, 0.2);border-radius:12px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h4 style="font-size:0.95rem;font-weight:800;margin:0 0 2px 0;">Temporary Manual Override</h4>
+                    <p style="font-size:0.8rem;color:var(--text-secondary);margin:0;">Temporarily override the theme for a specific duration. The system automatically reverts when expired.</p>
+                </div>
+                {% if shop.manual_theme_override %}
+                <form method="POST" action="{% url 'update_branding' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="clear_manual_override">
+                    <button type="submit" class="btn-secondary" style="font-size:0.8rem;color:#ef4444;border-color:rgba(239,68,68,0.4);">
+                        <i data-lucide="x" style="width:14px;height:14px;"></i> Clear Override
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            <form method="POST" action="{% url 'update_branding' %}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_manual_override">
+                <select name="manual_theme_override" class="form-select" style="font-size:0.82rem;max-width:200px;">
+                    {% for val, label in theme_choices %}
+                    <option value="{{ val }}" {% if shop.manual_theme_override == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="override_duration" class="form-select" style="font-size:0.82rem;max-width:160px;">
+                    <option value="1_hour">For 1 Hour</option>
+                    <option value="6_hours">For 6 Hours</option>
+                    <option value="12_hours">For 12 Hours</option>
+                    <option value="1_day" selected>For 1 Day</option>
+                </select>
+
+                <button type="submit" class="btn-primary" style="font-size:0.82rem;padding:6px 14px;background:var(--color-accent);border:none;">
+                    Apply Temporary Override
+                </button>
+            </form>
+        </div>
+
+        <!-- Upcoming Festival Timeline & Future Date Preview -->
+        <div style="margin-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                <h4 style="font-size:0.95rem;font-weight:800;margin:0;display:flex;align-items:center;gap:6px;">
+                    <i data-lucide="calendar" style="width:16px;height:16px;color:var(--color-accent);"></i> Next 5 Upcoming Real Calendar Festivals (Auto-Detected)
+                </h4>
+                <span style="font-size:0.75rem;color:var(--text-muted);font-weight:700;">Local Date: {{ today_date|date:"d M Y" }} ({{ shop.timezone }})</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
+                {% for evt in upcoming_events %}
+                <div style="padding:12px 14px;background:var(--bg-elevated);border-radius:12px;border:1px solid {% if evt.is_active_now %}var(--color-primary){% else %}var(--border-subtle){% endif %};display:flex;flex-direction:column;gap:6px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                        <span style="font-size:1.5rem;line-height:1;">{{ evt.icon }}</span>
+                        {% if evt.is_active_now %}
+                        <span class="badge badge-active" style="font-size:0.65rem;padding:2px 6px;">🔴 LIVE TODAY</span>
+                        {% elif evt.days_until <= 3 %}
+                        <span class="badge badge-gold" style="font-size:0.65rem;padding:2px 6px;">⏳ In {{ evt.days_until }} day{{ evt.days_until|pluralize }}</span>
+                        {% else %}
+                        <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text-secondary);font-size:0.65rem;padding:2px 6px;">In {{ evt.days_until }} days</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="font-size:0.88rem;font-weight:800;color:var(--text-primary);margin-bottom:2px;">{{ evt.name }}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                            <i data-lucide="clock" style="width:11px;height:11px;"></i> {{ evt.formatted_range }}
+                        </div>
+                    </div>
+                    <div style="margin-top:auto;padding-top:8px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;font-size:0.72rem;">
+                        <span style="color:var(--text-muted);">Theme Auto-Switch:</span>
+                        <span class="badge badge-purple" style="font-size:0.65rem;text-transform:uppercase;">{{ evt.theme }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="font-size:0.8rem;color:var(--text-muted);">No upcoming calendar events scheduled.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 12-Column Grid Layout: Customizer Controls (Span 5 Cols) & Device Preview Frame (Span 7 Cols) -->
+    <div class="bento-grid">
+        <!-- Controls Bento Card (Span 5 Cols) -->
+        <div class="bento-card col-span-5">
+            <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;">
+                <i data-lucide="sliders" style="width:16px;height:16px;"></i> Theme Customizer
+            </h3>
+
+            <form method="POST" action="{% url 'update_branding' %}" id="brandingForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" id="formAction" value="save">
+
+                <div class="form-group">
+                    <label class="form-label">Select Visual Identity</label>
+                    <select name="theme" id="themeSelect" class="form-select" onchange="onThemePresetChange(this.value)">
+                        <optgroup label="👑 A. Premium Business Themes">
+                            <option value="royal_jewellery" {% if branding.theme == 'royal_jewellery' or branding.theme == 'royal' %}selected{% endif %}>💎 Royal Jewellery (Gold & Diamond Luxury)</option>
+                            <option value="minimal_luxury" {% if branding.theme == 'minimal_luxury' or branding.theme == 'minimal' %}selected{% endif %}>✨ Minimal Luxury (Editorial & Restrained)</option>
+                            <option value="luxury_black" {% if branding.theme == 'luxury_black' %}selected{% endif %}>🖤 Luxury Black (Dark Chrome & Champagne)</option>
+                            <option value="pearl" {% if branding.theme == 'pearl' %}selected{% endif %}>💎 Pearl Luxury (Cosmetics & Soft Gold)</option>
+                            <option value="restaurant" {% if branding.theme == 'restaurant' %}selected{% endif %}>🍽️ Restaurant (Gourmet Amber & Warm Dining)</option>
+                            <option value="coffee" {% if branding.theme == 'coffee' %}selected{% endif %}>☕ Coffee Shop (Artisan Roast & Caramel)</option>
+                            <option value="fashion" {% if branding.theme == 'fashion' %}selected{% endif %}>👗 Fashion Editorial (Haute Couture)</option>
+                            <option value="beauty" {% if branding.theme == 'beauty' %}selected{% endif %}>💄 Beauty & Cosmetics (Rose & Glossy Glow)</option>
+                            <option value="sports" {% if branding.theme == 'sports' %}selected{% endif %}>🏋️ Sports & Fitness (High Energy Athletic)</option>
+                            <option value="electronics" {% if branding.theme == 'electronics' %}selected{% endif %}>⚡ Electronics & Cyber Technology</option>
+                            <option value="automotive" {% if branding.theme == 'automotive' %}selected{% endif %}>🏎️ Automotive (Metallic Chrome & Speed)</option>
+                            <option value="real_estate" {% if branding.theme == 'real_estate' %}selected{% endif %}>🏢 Real Estate & Architectural Luxury</option>
+                        </optgroup>
+                        <optgroup label="🚀 Modern & Atmospheric Themes">
+                            <option value="aurora" {% if branding.theme == 'aurora' %}selected{% endif %}>🌌 Aurora (Vibrant Glow Atmosphere)</option>
+                            <option value="glass" {% if branding.theme == 'glass' %}selected{% endif %}>🧊 Glassmorphism (Frosted Reflections)</option>
+                            <option value="neon" {% if branding.theme == 'neon' %}selected{% endif %}>🔮 Cyber Neon (Dark & Digital Energy)</option>
+                        </optgroup>
+                        <optgroup label="🪔 B. Festival Themes">
+                            <option value="janmashtami" {% if branding.theme == 'janmashtami' %}selected{% endif %}>🦚 Krishna Janmashtami (Midnight Sky, Flute & Peacock Feathers)</option>
+                            <option value="janmashtami_jewellery" {% if branding.theme == 'janmashtami_jewellery' %}selected{% endif %}>🦚 Krishna Jewellery (Royal Gold & Peacock Feathers)</option>
+                            <option value="janmashtami_sweets" {% if branding.theme == 'janmashtami_sweets' %}selected{% endif %}>🧈 Krishna Sweets & Dahi Handi (Butter Pot Special)</option>
+                            <option value="janmashtami_clothing" {% if branding.theme == 'janmashtami_clothing' %}selected{% endif %}>👗 Krishna Festive Attire (Peacock Brocade)</option>
+                            <option value="janmashtami_kids" {% if branding.theme == 'janmashtami_kids' %}selected{% endif %}>👶 Little Krishna / Bal Gopal (Playful Celebration)</option>
+                            <option value="diwali" {% if branding.theme == 'diwali' %}selected{% endif %}>🪔 Diwali (Royal Lights & Diyas)</option>
+                            <option value="navratri" {% if branding.theme == 'navratri' %}selected{% endif %}>💃 Navratri (Garba Nights & Dandiya)</option>
+                            <option value="holi" {% if branding.theme == 'holi' %}selected{% endif %}>🎨 Holi (Color Blast & Powder Splash)</option>
+                            <option value="christmas" {% if branding.theme == 'christmas' %}selected{% endif %}>🎄 Christmas (Winter Wonderland & Gifts)</option>
+                            <option value="new_year" {% if branding.theme == 'new_year' %}selected{% endif %}>🎆 New Year (Midnight Fireworks Celebration)</option>
+                            <option value="eid" {% if branding.theme == 'eid' %}selected{% endif %}>🌙 Eid / Ramadan (Moonlight & Lanterns)</option>
+                            <option value="eid_ul_fitr" {% if branding.theme == 'eid_ul_fitr' %}selected{% endif %}>🌙 Eid-ul-Fitr (Celebration & Emerald Glow)</option>
+                            <option value="onam" {% if branding.theme == 'onam' %}selected{% endif %}>🪷 Onam (Festival of Harvest & Pookalam)</option>
+                            <option value="makar_sankranti" {% if branding.theme == 'makar_sankranti' %}selected{% endif %}>🪁 Makar Sankranti / Uttarayan (Kites & Sky)</option>
+                            <option value="durga_puja" {% if branding.theme == 'durga_puja' %}selected{% endif %}>🌺 Durga Puja (Festive Red & Gold Traditions)</option>
+                            <option value="valentines" {% if branding.theme == 'valentines' %}selected{% endif %}>💖 Valentine’s (Romance & Rose Petals)</option>
+                            <option value="womens_day" {% if branding.theme == 'womens_day' %}selected{% endif %}>💕 Women’s Day (Feminine Elegance & Lilac)</option>
+                            <option value="halloween" {% if branding.theme == 'halloween' %}selected{% endif %}>🎃 Halloween (Dark Fantasy & Pumpkins)</option>
+                            <option value="earth_eco" {% if branding.theme == 'earth_eco' %}selected{% endif %}>🌍 Earth & Eco (Sustainable Organic Green)</option>
+                        </optgroup>
+                        <optgroup label="☀️ C. Seasonal Themes">
+                            <option value="summer_sale" {% if branding.theme == 'summer_sale' %}selected{% endif %}>☀️ Summer Sale (Sunlight & Tropical Breeze)</option>
+                            <option value="winter_sale" {% if branding.theme == 'winter_sale' %}selected{% endif %}>❄️ Winter Sale (Frozen Ice & Snowflake Frost)</option>
+                            <option value="monsoon_sale" {% if branding.theme == 'monsoon_sale' %}selected{% endif %}>🌧️ Monsoon Sale (Rain Droplets & Ripples)</option>
+                        </optgroup>
+                        <optgroup label="⚡ D. Promotional Themes">
+                            <option value="flash_sale" {% if branding.theme == 'flash_sale' %}selected{% endif %}>⚡ Flash Sale (High Voltage Lightning & Speed)</option>
+                            <option value="mega_sale" {% if branding.theme == 'mega_sale' %}selected{% endif %}>🔥 Mega Sale (Commercial % Discount Burst)</option>
+                            <option value="clearance" {% if branding.theme == 'clearance' %}selected{% endif %}>🏷️ Clearance Sale (Bold Retail Liquidation)</option>
+                            <option value="grand_opening" {% if branding.theme == 'grand_opening' %}selected{% endif %}>🎉 Grand Opening (Celebration & Confetti)</option>
+                            <option value="weekend_flash" {% if branding.theme == 'weekend_flash' %}selected{% endif %}>💥 Weekend Flash (Countdown Timer & Energy)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Brand Typography</label>
+                    <select name="font_family" id="fontFamilySelect" class="form-select" onchange="updateLivePreview()">
+                        <option value="cinzel" {% if branding.font_family == 'cinzel' %}selected{% endif %}>Cinzel (Royal & Heritage)</option>
+                        <option value="playfair" {% if branding.font_family == 'playfair' %}selected{% endif %}>Playfair Display (Luxury Serif)</option>
+                        <option value="space_grotesk" {% if branding.font_family == 'space_grotesk' %}selected{% endif %}>Space Grotesk (Futuristic / Cyber)</option>
+                        <option value="poppins" {% if branding.font_family == 'poppins' %}selected{% endif %}>Poppins (Friendly & Festive)</option>
+                        <option value="outfit" {% if branding.font_family == 'outfit' %}selected{% endif %}>Outfit (Modern Tech)</option>
+                        <option value="inter" {% if branding.font_family == 'inter' %}selected{% endif %}>Inter (Modern Clean)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Theme Animation Intensity</label>
+                    <select name="intensity" id="intensitySelect" class="form-select" onchange="updateLivePreview()">
+                        <option value="subtle" {% if branding.intensity == 'subtle' %}selected{% endif %}>🍃 Subtle (Low Animation & Calm Elegance)</option>
+                        <option value="balanced" {% if branding.intensity == 'balanced' or not branding.intensity %}selected{% endif %}>✨ Balanced (Standard Premium Effects)</option>
+                        <option value="dynamic" {% if branding.intensity == 'dynamic' %}selected{% endif %}>⚡ Dynamic (Maximum Promotional Effects)</option>
+                    </select>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Controls particle density, 3D float speed, and celebratory lighting.</div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <label class="form-label" style="font-size:0.75rem;">Primary Brand Color</label>
+                        <div class="color-input-pill">
+                            <input type="color" id="primaryColor" name="primary_color" value="{{ branding.primary_color }}" style="border:none;background:transparent;width:24px;height:24px;cursor:pointer;" onchange="updateLivePreview()">
+                            <input type="text" id="primaryColorText" value="{{ branding.primary_color }}" class="form-input" style="padding:4px 8px;font-size:0.8rem;height:auto;" oninput="syncColorInput('primaryColor', this.value)">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.75rem;">Secondary Accent</label>
+                        <div class="color-input-pill">
+                            <input type="color" id="secondaryColor" name="secondary_color" value="{{ branding.secondary_color }}" style="border:none;background:transparent;width:24px;height:24px;cursor:pointer;" onchange="updateLivePreview()">
+                            <input type="text" id="secondaryColorText" value="{{ branding.secondary_color }}" class="form-input" style="padding:4px 8px;font-size:0.8rem;height:auto;" oninput="syncColorInput('secondaryColor', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <label class="form-label" style="font-size:0.75rem;">Accent Gold / Glow</label>
+                        <div class="color-input-pill">
+                            <input type="color" id="accentColor" name="accent_color" value="{{ branding.accent_color }}" style="border:none;background:transparent;width:24px;height:24px;cursor:pointer;" onchange="updateLivePreview()">
+                            <input type="text" id="accentColorText" value="{{ branding.accent_color }}" class="form-input" style="padding:4px 8px;font-size:0.8rem;height:auto;" oninput="syncColorInput('accentColor', this.value)">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-size:0.75rem;">Background Tone</label>
+                        <div class="color-input-pill">
+                            <input type="color" id="bgColor" name="background_color" value="{{ branding.background_color }}" style="border:none;background:transparent;width:24px;height:24px;cursor:pointer;" onchange="updateLivePreview()">
+                            <input type="text" id="bgColorText" value="{{ branding.background_color }}" class="form-input" style="padding:4px 8px;font-size:0.8rem;height:auto;" oninput="syncColorInput('bgColor', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Spin Button CTA Callout</label>
+                    <input type="text" name="spin_button_text" id="spinButtonText" value="{{ branding.spin_button_text }}" class="form-input" placeholder="e.g. SPIN FOR JEWELS" oninput="updateLivePreview()">
+                </div>
+
+                <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
+                    <button type="submit" class="btn-primary" style="flex:2;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i> Save & Publish Theme
+                    </button>
+                    <button type="button" class="btn-secondary" style="flex:1;" onclick="resetToPresetDefaults()">
+                        <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset Preset
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Live Device Preview Frame (Span 7 Cols) -->
+        <div class="bento-card col-span-7">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+                <h3 style="font-size:1.1rem;font-weight:800;margin:0;"><i data-lucide="smartphone"
+                        style="width:16px;height:16px;"></i> Live Multi-Device Customer Preview</h3>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" class="btn-secondary btn-primary" id="btnDeviceMobile" onclick="switchDeviceMode('mobile')" style="padding:6px 12px;font-size:0.78rem;">📱 Mobile (375px)</button>
+                    <button type="button" class="btn-secondary" id="btnDeviceTablet" onclick="switchDeviceMode('tablet')" style="padding:6px 12px;font-size:0.78rem;">📟 Tablet</button>
+                    <button type="button" class="btn-secondary" id="btnDeviceDesktop" onclick="switchDeviceMode('desktop')" style="padding:6px 12px;font-size:0.78rem;">💻 Desktop</button>
+                </div>
+            </div>
+
+            <!-- Frame Container -->
+            <div class="device-preview-wrapper">
+                <div id="previewFrame" class="device-frame-mobile" data-theme="{{ branding.theme }}">
+                    <div style="padding:20px 16px;text-align:center;">
+                        <!-- Store Header -->
+                        <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:var(--radius-full);background:var(--bg-elevated);border:1px solid var(--border-subtle);margin-bottom:12px;">
+                            <span style="font-size:0.75rem;font-weight:800;color:var(--color-primary);">{{ shop.name }}</span>
+                        </div>
+
+                        <!-- Campaign Title -->
+                        <h2 id="previewWelcomeTitle" style="font-size:1.15rem;font-weight:900;margin:0 0 6px 0;line-height:1.2;color:var(--text-primary);">
+                            Spin & Win Store Rewards
+                        </h2>
+                        <p style="font-size:0.75rem;color:var(--text-secondary);margin:0 0 16px 0;">
+                            Scan QR in store, spin the wheel & win exclusive voucher discounts!
+                        </p>
+
+                        <!-- Canvas Wheel Preview -->
+                        <div style="position:relative;width:240px;height:240px;margin:0 auto 16px;">
+                            <canvas id="previewWheelCanvas" width="240" height="240" style="width:240px;height:240px;"></canvas>
+                        </div>
+
+                        <!-- Spin Button -->
+                        <button type="button" id="previewSpinBtn" class="btn-primary" style="width:100%;padding:10px 16px;font-size:0.85rem;margin-bottom:16px;">
+                            {{ branding.spin_button_text }}
+                        </button>
+
+                        <!-- Digital Coupon Mockup -->
+                        <div class="coupon-card" style="padding:16px 12px;border-radius:var(--radius-lg);margin-top:12px;">
+                            <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;color:var(--color-accent);margin-bottom:4px;">Sample Voucher</div>
+                            <div style="font-size:0.95rem;font-weight:800;color:var(--text-primary);margin-bottom:4px;">20% OFF Total Bill</div>
+                            <div class="coupon-code-box" style="font-size:1rem;padding:6px 12px;margin:8px 0;letter-spacing:2px;">
+                                SAMPLE-WIN-2026
+                            </div>
+                            <div style="font-size:0.65rem;color:var(--text-muted);">Valid for 24 hours at store checkout</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/wheel.js' %}"></script>
+<script src="{% static 'js/theme-engine.js' %}"></script>
+<script>
+    const THEME_PRESET_DEFAULTS = {
+        'royal': { primary: '#d4af37', secondary: '#4a152d', accent: '#ffd700', bg: '#0a060d', font: 'cinzel', cta: 'SPIN FOR JEWELS' },
+        'royal_jewellery': { primary: '#ffd700', secondary: '#4a152d', accent: '#ffd700', bg: '#0a060d', font: 'cinzel', cta: 'SPIN ROYAL JEWELS' },
+        'minimal': { primary: '#6366f1', secondary: '#1e293b', accent: '#f59e0b', bg: '#0f172a', font: 'inter', cta: 'SPIN TO DISCOVER' },
+        'minimal_luxury': { primary: '#f3e5ab', secondary: '#272730', accent: '#d4af37', bg: '#050507', font: 'cinzel', cta: 'SPIN FOR LUXURY' },
+        'luxury_black': { primary: '#f3e5ab', secondary: '#272730', accent: '#d4af37', bg: '#050507', font: 'cinzel', cta: 'SPIN FOR LUXURY' },
+        'pearl': { primary: '#0f172a', secondary: '#e2e8f0', accent: '#d4af37', bg: '#f8fafc', font: 'playfair', cta: 'SPIN FOR PEARLS' },
+        'aurora': { primary: '#a855f7', secondary: '#3b82f6', accent: '#06b6d4', bg: '#0b0f19', font: 'outfit', cta: 'SPIN THE AURORA' },
+        'glass': { primary: '#6366f1', secondary: '#8b5cf6', accent: '#38bdf8', bg: '#0f172a', font: 'inter', cta: 'SPIN GLASS WHEEL' },
+        'neon': { primary: '#06b6d4', secondary: '#a855f7', accent: '#f43f5e', bg: '#09090b', font: 'space_grotesk', cta: 'SPIN CYBER NEON' },
+        'restaurant': { primary: '#d97706', secondary: '#451a03', accent: '#f59e0b', bg: '#1c1917', font: 'playfair', cta: 'SPIN GOURMET REWARDS' },
+        'coffee': { primary: '#b45309', secondary: '#78350f', accent: '#fcd34d', bg: '#1a0e05', font: 'playfair', cta: 'SIP & WIN REWARDS' },
+        'fashion': { primary: '#e4e4e7', secondary: '#27272a', accent: '#d4af37', bg: '#09090b', font: 'cinzel', cta: 'SPIN HAUTE COUTURE' },
+        'beauty': { primary: '#ec4899', secondary: '#831843', accent: '#fbcfe8', bg: '#180814', font: 'playfair', cta: 'SPIN BEAUTY GLOW' },
+        'sports': { primary: '#ef4444', secondary: '#1e293b', accent: '#f59e0b', bg: '#0b0f19', font: 'outfit', cta: 'SPIN FOR ENERGY' },
+        'electronics': { primary: '#06b6d4', secondary: '#1e3a8a', accent: '#38bdf8', bg: '#030712', font: 'space_grotesk', cta: 'SPIN TECH REWARDS' },
+        'automotive': { primary: '#f59e0b', secondary: '#18181b', accent: '#ef4444', bg: '#09090b', font: 'space_grotesk', cta: 'SPIN & ACCELERATE' },
+        'real_estate': { primary: '#0284c7', secondary: '#0f172a', accent: '#d4af37', bg: '#0b1329', font: 'outfit', cta: 'SPIN LUXURY ESTATES' },
+        'janmashtami': { primary: '#00e5ff', secondary: '#3b185f', accent: '#ffd700', bg: '#060b1e', font: 'cinzel', cta: 'SPIN KRISHNA BLESSINGS' },
+        'janmashtami_jewellery': { primary: '#ffd700', secondary: '#1e1b4b', accent: '#ffd700', bg: '#040714', font: 'cinzel', cta: 'SPIN ROYAL JEWELLERY' },
+        'janmashtami_sweets': { primary: '#f59e0b', secondary: '#4c1d95', accent: '#fef08a', bg: '#0a0d24', font: 'poppins', cta: 'SPIN DAHI HANDI REWARD' },
+        'janmashtami_clothing': { primary: '#00c49f', secondary: '#581c87', accent: '#ffd700', bg: '#070c20', font: 'playfair', cta: 'SPIN FESTIVE OFFERS' },
+        'janmashtami_kids': { primary: '#00f2fe', secondary: '#8b5cf6', accent: '#fbbf24', bg: '#080e28', font: 'poppins', cta: 'SPIN BAL GOPAL GIFTS' },
+        'diwali': { primary: '#d4af37', secondary: '#6d28d9', accent: '#f59e0b', bg: '#0d0614', font: 'playfair', cta: 'SPIN DIWALI DHAMAKA' },
+        'navratri': { primary: '#ec4899', secondary: '#8b5cf6', accent: '#f59e0b', bg: '#180828', font: 'poppins', cta: 'SPIN GARBA WHEEL' },
+        'holi': { primary: '#f43f5e', secondary: '#06b6d4', accent: '#eab308', bg: '#111827', font: 'poppins', cta: 'SPIN HOLI COLORS' },
+        'christmas': { primary: '#dc2626', secondary: '#16a34a', accent: '#fef08a', bg: '#051b11', font: 'playfair', cta: 'SPIN XMAS REWARD' },
+        'new_year': { primary: '#d4af37', secondary: '#3b82f6', accent: '#ffffff', bg: '#030712', font: 'cinzel', cta: 'SPIN NEW YEAR LUCK' },
+        'eid': { primary: '#10b981', secondary: '#065f46', accent: '#d4af37', bg: '#022c22', font: 'cinzel', cta: 'SPIN EID BLESSINGS' },
+        'eid_ul_fitr': { primary: '#10b981', secondary: '#047857', accent: '#fbbf24', bg: '#01261d', font: 'cinzel', cta: 'SPIN EID CELEBRATION' },
+        'onam': { primary: '#eab308', secondary: '#15803d', accent: '#f97316', bg: '#0f2918', font: 'playfair', cta: 'SPIN POOKALAM REWARD' },
+        'makar_sankranti': { primary: '#f59e0b', secondary: '#0284c7', accent: '#10b981', bg: '#082032', font: 'outfit', cta: 'SPIN KITE FESTIVAL' },
+        'uttarayan': { primary: '#f59e0b', secondary: '#0284c7', accent: '#10b981', bg: '#082032', font: 'poppins', cta: 'SPIN KAI PO CHE' },
+        'durga_puja': { primary: '#dc2626', secondary: '#7f1d1d', accent: '#facc15', bg: '#1c0606', font: 'cinzel', cta: 'SPIN PUJA BLESSINGS' },
+        'valentines': { primary: '#f43f5e', secondary: '#831843', accent: '#fda4af', bg: '#1a050f', font: 'playfair', cta: 'SPIN LOVE REWARD' },
+        'womens_day': { primary: '#c084fc', secondary: '#86198f', accent: '#f472b6', bg: '#1c0a24', font: 'playfair', cta: "SPIN WOMEN'S SPECIAL" },
+        'halloween': { primary: '#ff6b00', secondary: '#4a0e4e', accent: '#a855f7', bg: '#0d0214', font: 'cinzel', cta: 'SPIN OR TRICK' },
+        'earth_eco': { primary: '#22c55e', secondary: '#166534', accent: '#86efac', bg: '#052e16', font: 'outfit', cta: 'SPIN GREEN REWARDS' },
+        'emerald': { primary: '#10b981', secondary: '#065f46', accent: '#fef08a', bg: '#022c22', font: 'outfit', cta: 'SPIN EMERALD WHEEL' },
+        'burgundy': { primary: '#f472b6', secondary: '#831843', accent: '#fbbf24', bg: '#1c0a14', font: 'cinzel', cta: 'SPIN BURGUNDY' },
+        'playful': { primary: '#06b6d4', secondary: '#8b5cf6', accent: '#fbbf24', bg: '#0a0e27', font: 'poppins', cta: 'SPIN PLAYFUL TOYS' },
+        'kids': { primary: '#06b6d4', secondary: '#8b5cf6', accent: '#fbbf24', bg: '#0a0e27', font: 'poppins', cta: 'SPIN KIDS TOYS' },
+        'candy': { primary: '#f472b6', secondary: '#8b5cf6', accent: '#fde047', bg: '#1a0a20', font: 'poppins', cta: 'SPIN SWEET CANDY' },
+        'festival': { primary: '#d4af37', secondary: '#8b5cf6', accent: '#ec4899', bg: '#14061a', font: 'playfair', cta: 'SPIN FESTIVAL WHEEL' },
+        'sunset': { primary: '#f97316', secondary: '#db2777', accent: '#fbbf24', bg: '#180b1e', font: 'outfit', cta: 'SPIN SUNSET GOLD' },
+        'ocean': { primary: '#06b6d4', secondary: '#0284c7', accent: '#38bdf8', bg: '#021b2b', font: 'inter', cta: 'SPIN OCEAN WAVE' },
+        'floral': { primary: '#a855f7', secondary: '#ec4899', accent: '#fbcfe8', bg: '#130820', font: 'playfair', cta: 'SPIN BLOSSOM' },
+        'modern_blue': { primary: '#3b82f6', secondary: '#1d4ed8', accent: '#60a5fa', bg: '#0f172a', font: 'inter', cta: 'SPIN MODERN BLUE' },
+        'premium_white': { primary: '#0f172a', secondary: '#f1f5f9', accent: '#6366f1', bg: '#ffffff', font: 'inter', cta: 'SPIN REWARDS' },
+        'summer_sale': { primary: '#f59e0b', secondary: '#0284c7', accent: '#10b981', bg: '#0c4a6e', font: 'outfit', cta: 'SPIN SUMMER SALE' },
+        'winter_sale': { primary: '#38bdf8', secondary: '#1e3a8a', accent: '#ffffff', bg: '#030712', font: 'outfit', cta: 'SPIN WINTER FROST' },
+        'monsoon_sale': { primary: '#0ea5e9', secondary: '#0369a1', accent: '#38bdf8', bg: '#082f49', font: 'inter', cta: 'SPIN MONSOON REWARD' },
+        'flash_sale': { primary: '#ef4444', secondary: '#f59e0b', accent: '#fbbf24', bg: '#18181b', font: 'space_grotesk', cta: 'SPIN FLASH SALE' },
+        'mega_sale': { primary: '#dc2626', secondary: '#991b1b', accent: '#facc15', bg: '#09090b', font: 'space_grotesk', cta: 'SPIN MEGA SALE' },
+        'clearance': { primary: '#dc2626', secondary: '#991b1b', accent: '#facc15', bg: '#111827', font: 'space_grotesk', cta: 'SPIN CLEARANCE SALE' },
+        'grand_opening': { primary: '#8b5cf6', secondary: '#ec4899', accent: '#f59e0b', bg: '#0f172a', font: 'outfit', cta: 'SPIN OPENING SPECIAL' },
+        'weekend_flash': { primary: '#f43f5e', secondary: '#6366f1', accent: '#fbbf24', bg: '#0f172a', font: 'space_grotesk', cta: 'SPIN WEEKEND FLASH' },
+    };
+
+    let previewWheel = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initPreviewWheel();
+        updateLivePreview();
+
+        // Listen for all input/change events to update whole panel live
+        ['primaryColor', 'secondaryColor', 'accentColor', 'bgColor', 'fontFamilySelect', 'intensitySelect', 'spinButtonText'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', updateLivePreview);
+                el.addEventListener('change', updateLivePreview);
+            }
+        });
+    });
+
+    function initPreviewWheel() {
+        const samplePrizes = [
+            { name: '20% OFF', display_color: '#6366f1' },
+            { name: 'Flat ₹100', display_color: '#f59e0b' },
+            { name: 'Free Drink', display_color: '#10b981' },
+            { name: '10% OFF', display_color: '#ec4899' },
+            { name: '₹50 Voucher', display_color: '#8b5cf6' },
+            { name: 'Try Again', display_color: '#64748b' }
+        ];
+        const theme = document.getElementById('themeSelect') ? document.getElementById('themeSelect').value : 'royal';
+        if (window.SpinWheel) {
+            previewWheel = new SpinWheel('previewWheelCanvas', {
+                prizes: samplePrizes,
+                theme: theme,
+                spinButtonId: 'previewSpinBtn'
+            });
+        }
+    }
+
+    function selectThemePreset(themeCode) {
+        const select = document.getElementById('themeSelect');
+        select.value = themeCode;
+        onThemePresetChange(themeCode);
+    }
+
+    function onThemePresetChange(themeCode) {
+        const def = THEME_PRESET_DEFAULTS[themeCode] || THEME_PRESET_DEFAULTS['royal_jewellery'];
+        document.getElementById('primaryColor').value = def.primary;
+        document.getElementById('primaryColorText').value = def.primary;
+        document.getElementById('secondaryColor').value = def.secondary;
+        document.getElementById('secondaryColorText').value = def.secondary;
+        document.getElementById('accentColor').value = def.accent;
+        document.getElementById('accentColorText').value = def.accent;
+        document.getElementById('bgColor').value = def.bg;
+        document.getElementById('bgColorText').value = def.bg;
+        document.getElementById('fontFamilySelect').value = def.font;
+        document.getElementById('spinButtonText').value = def.cta;
+
+        updateLivePreview();
+    }
+
+    function syncColorInput(inputId, hexVal) {
+        if (/^#[0-9A-F]{6}$/i.test(hexVal)) {
+            document.getElementById(inputId).value = hexVal;
+            const textId = inputId + 'Text';
+            const textEl = document.getElementById(textId);
+            if (textEl) textEl.value = hexVal;
+            updateLivePreview();
+        }
+    }
+
+    function resetToPresetDefaults() {
+        const theme = document.getElementById('themeSelect').value;
+        onThemePresetChange(theme);
+    }
+
+    function switchDeviceMode(mode) {
+        const frame = document.getElementById('previewFrame');
+        document.getElementById('btnDeviceMobile').classList.remove('btn-primary');
+        document.getElementById('btnDeviceTablet').classList.remove('btn-primary');
+        document.getElementById('btnDeviceDesktop').classList.remove('btn-primary');
+
+        frame.className = `device-frame-${mode}`;
+        if (mode === 'mobile') document.getElementById('btnDeviceMobile').classList.add('btn-primary');
+        if (mode === 'tablet') document.getElementById('btnDeviceTablet').classList.add('btn-primary');
+        if (mode === 'desktop') document.getElementById('btnDeviceDesktop').classList.add('btn-primary');
+    }
+
+    function updateLivePreview() {
+        const theme = document.getElementById('themeSelect').value;
+        const font = document.getElementById('fontFamilySelect').value;
+        const intensity = document.getElementById('intensitySelect') ? document.getElementById('intensitySelect').value : 'balanced';
+        const primary = document.getElementById('primaryColor').value;
+        const secondary = document.getElementById('secondaryColor').value;
+        const accent = document.getElementById('accentColor').value;
+        const bg = document.getElementById('bgColor').value;
+        const cta = document.getElementById('spinButtonText').value;
+
+        // 1. LIVE UPDATE THE WHOLE SHOP OWNER PANEL (Page, background, typography, and atmosphere)
+        document.body.setAttribute('data-theme', theme);
+        document.body.setAttribute('data-intensity', intensity);
+        document.body.className = document.body.className.replace(/font-\w+/g, '') + ' font-' + font;
+        document.body.style.setProperty('--color-primary', primary);
+        document.body.style.setProperty('--color-secondary', secondary);
+        document.body.style.setProperty('--color-accent', accent);
+        document.body.style.setProperty('--bg-main', bg);
+
+        // Update header active badge
+        const badge = document.getElementById('activeThemeBadge');
+        if (badge) {
+            badge.innerHTML = `<i data-lucide="check-circle" style="width:12px;height:12px;"></i> Active Preview: ${theme.toUpperCase()}`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        // Live update 3D procedural atmosphere particles & models for whole page
+        if (window.ThemeEngineInstance) {
+            window.ThemeEngineInstance.applyTheme(theme, {
+                primary_color: primary,
+                secondary_color: secondary,
+                accent_color: accent,
+                background_color: bg,
+                font_family: font,
+                intensity: intensity
+            });
+        }
+
+        // 2. LIVE UPDATE THE DEVICE PREVIEW FRAME
+        const frame = document.getElementById('previewFrame');
+        if (frame) {
+            frame.setAttribute('data-theme', theme);
+            frame.setAttribute('data-intensity', intensity);
+            frame.style.fontFamily = getFontCss(font);
+        }
+
+        const spinBtn = document.getElementById('previewSpinBtn');
+        if (spinBtn) {
+            spinBtn.textContent = cta || 'SPIN NOW';
+        }
+
+        // Re-draw Canvas Wheel Outer Rims, Jewel Hub & Colors
+        if (previewWheel) {
+            previewWheel.theme = theme;
+            previewWheel.draw();
+        }
+    }
+
+    function getFontCss(f) {
+        switch (f) {
+            case 'cinzel': return "'Cinzel', serif, Georgia";
+            case 'playfair': return "'Playfair Display', serif, Georgia";
+            case 'space_grotesk': return "'Space Grotesk', system-ui, sans-serif";
+            case 'poppins': return "'Poppins', system-ui, sans-serif";
+            case 'outfit': return "'Outfit', system-ui, sans-serif";
+            default: return "'Inter', system-ui, sans-serif";
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Subscription Management — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .billing-bento-wrap {
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="billing-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Overview
+        </a>
+    </div>
+
+    {% if not is_valid %}
+    <!-- Expired Warning Banner -->
+    <div class="bento-card" style="background:var(--color-danger-bg);border:2px solid rgba(239,68,68,0.5);margin-bottom:24px;padding:24px 20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(239,68,68,0.2);display:flex;align-items:center;justify-content:center;color:var(--color-danger);flex-shrink:0;">
+                    <i data-lucide="alert-triangle" style="width:24px;height:24px;"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:1.15rem;font-weight:800;color:var(--color-danger);margin:0 0 2px 0;">Subscription Plan Expired</h3>
+                    <p style="font-size:0.85rem;color:var(--text-primary);margin:0;">
+                        Customer spins on your wheel are temporarily paused. <strong>Renew your subscription below to instantly reactivate customer spins with your existing QR code and wheel settings.</strong>
+                    </p>
+                </div>
+            </div>
+            <form method="POST" action="{% url 'subscription_renew' %}">
+                {% csrf_token %}
+                <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                <button type="submit" class="btn-primary" style="background:var(--color-danger);border-color:var(--color-danger);font-size:0.9rem;padding:12px 24px;">
+                    <i data-lucide="refresh-cw" style="width:16px;height:16px;"></i> Renew Plan ({{ plan.formatted_price }})
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Active Plan Bento Feature Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
+            <div>
+                <span class="badge {% if is_valid %}badge-gold{% else %}badge-ended{% endif %}" style="margin-bottom:8px;">
+                    <i data-lucide="credit-card" style="width:12px;height:12px;"></i>
+                    {% if is_valid %}CURRENT ACTIVE SUBSCRIPTION{% else %}SUBSCRIPTION EXPIRED{% endif %}
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">{{ plan.name }}</h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">
+                    Plan Pricing: <strong style="color:var(--color-accent);font-family:'Space Grotesk', monospace;">{{ plan.formatted_price }}</strong> ·
+                    Status:
+                    {% if is_valid %}
+                    <span class="badge badge-active">{{ subscription.status|upper }}</span>
+                    {% else %}
+                    <span class="badge badge-ended">EXPIRED</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div style="font-size:0.82rem;color:var(--text-muted);text-align:right;">
+                Starts: {{ subscription.starts_at|date:"d M Y" }}<br>
+                Expires: {% if subscription.expires_at %}{{ subscription.expires_at|date:"d M Y" }}{% else %}Never{% endif %}<br>
+                {% if days_left != None %}
+                    {% if is_valid %}
+                    <strong style="color:var(--color-success);">{{ days_left }} days remaining</strong>
+                    {% else %}
+                    <strong style="color:var(--color-danger);">Expired {{ days_left }} days ago</strong>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <h3 style="font-size:1.05rem;font-weight:800;margin:0 0 16px 0;"><i data-lucide="bar-chart-3" style="width:16px;height:16px;"></i> Subscription Usage & Limits</h3>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;">
+            <!-- Metric 1: Total Campaigns -->
+            <div style="background:var(--bg-elevated);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;">
+                    <span style="color:var(--text-secondary);font-weight:700;">Total Campaigns</span>
+                    <strong style="color:var(--text-primary);">{{ campaign_count }} / {{ plan.max_campaigns }}</strong>
+                </div>
+                <div class="bento-meter">
+                    <div class="bento-meter-fill" style="width: {% widthratio campaign_count plan.max_campaigns 100 %}%;"></div>
+                </div>
+            </div>
+
+            <!-- Metric 2: Active Campaigns -->
+            <div style="background:var(--bg-elevated);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;">
+                    <span style="color:var(--text-secondary);font-weight:700;">Active Live Campaigns</span>
+                    <strong style="color:var(--text-primary);">{{ active_campaign_count }} / {{ plan.max_active_campaigns }}</strong>
+                </div>
+                <div class="bento-meter">
+                    <div class="bento-meter-fill" style="width: {% widthratio active_campaign_count plan.max_active_campaigns 100 %}%;"></div>
+                </div>
+            </div>
+
+            <!-- Metric 3: Total Spins -->
+            <div style="background:var(--bg-elevated);padding:16px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;">
+                    <span style="color:var(--text-secondary);font-weight:700;">Monthly Spins Executed</span>
+                    <strong style="color:var(--text-primary);">{{ spin_count }} / {{ plan.max_spins_per_month }}</strong>
+                </div>
+                <div class="bento-meter">
+                    <div class="bento-meter-fill" style="width: {% widthratio spin_count plan.max_spins_per_month 100 %}%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Plans Bento Grid in ₹ -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <h3 style="font-size:1.2rem;font-weight:800;margin:0;"><i data-lucide="layers" style="width:18px;height:18px;"></i> Available Subscription Plans (in ₹)</h3>
+        <span style="font-size:0.8rem;color:var(--text-muted);">All renewals instantly preserve your existing QR Code & Settings</span>
+    </div>
+
+    <div class="bento-grid">
+        {% for p in all_plans %}
+        <div class="bento-card col-span-4 {% if p == plan %}bento-feature{% endif %}" style="text-align:center;display:flex;flex-direction:column;">
+            {% if p == plan %}
+                <span class="badge badge-gold" style="margin-bottom:12px;">CURRENT ACTIVE PLAN</span>
+            {% endif %}
+            <h4 style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin:0 0 4px 0;">{{ p.name }}</h4>
+            <div style="font-size:1.6rem;font-weight:800;color:var(--color-accent);margin-bottom:4px;font-family:'Space Grotesk', monospace;">
+                {{ p.formatted_price }}
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:16px;">Duration: {{ p.billing_period_days }} Days</div>
+
+            <ul style="list-style:none;padding:0;margin:0 0 20px 0;font-size:0.85rem;color:var(--text-secondary);line-height:2;text-align:left;flex:1;">
+                <li><i data-lucide="check" style="width:14px;height:14px;color:var(--color-success);"></i> Max {{ p.max_campaigns }} Total Campaigns</li>
+                <li><i data-lucide="check" style="width:14px;height:14px;color:var(--color-success);"></i> Max {{ p.max_active_campaigns }} Active Campaign</li>
+                <li><i data-lucide="check" style="width:14px;height:14px;color:var(--color-success);"></i> {{ p.max_prizes_per_campaign }} Prizes per Wheel</li>
+                <li><i data-lucide="check" style="width:14px;height:14px;color:var(--color-success);"></i> Up to {{ p.max_spins_per_month }} Spins/mo</li>
+                <li><i data-lucide="check" style="width:14px;height:14px;color:var(--color-success);"></i> Permanent Scannable QR Code</li>
+            </ul>
+
+            <form method="POST" action="{% url 'subscription_renew' %}" style="margin-top:auto;">
+                {% csrf_token %}
+                <input type="hidden" name="plan_id" value="{{ p.id }}">
+                {% if p == plan %}
+                    <button type="submit" class="btn-primary" style="width:100%;">
+                        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Renew Current Plan
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn-accent" style="width:100%;">
+                        <i data-lucide="arrow-up-right" style="width:14px;height:14px;"></i> Switch to {{ p.name }}
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+        {% empty %}
+        <div class="bento-card col-span-12 bento-feature" style="text-align:center;">
+            <h4 style="font-size:1.3rem;font-weight:800;margin:0 0 4px 0;">Starter Plan</h4>
+            <div style="font-size:1.6rem;font-weight:800;color:var(--color-accent);margin-bottom:16px;">₹499 / month</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+

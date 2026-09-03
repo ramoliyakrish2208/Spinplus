@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Account Security & Profile — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .account-bento-wrap {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="account-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Overview
+        </a>
+    </div>
+
+    <!-- Header Bento Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <span class="badge badge-gold" style="margin-bottom:8px;">
+            <i data-lucide="shield-check" style="width:12px;height:12px;"></i> ACCOUNT SECURITY
+        </span>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Security & Account Settings</h1>
+        <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Manage your user profile details, email contact, and security password.</p>
+    </div>
+
+    {% if message %}
+        <div style="background:var(--color-success-bg);border:1px solid rgba(16,185,129,0.35);color:var(--color-success);padding:14px 20px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:24px;display:flex;align-items:center;gap:10px;">
+            <i data-lucide="check-circle-2"></i> {{ message }}
+        </div>
+    {% endif %}
+
+    {% if error %}
+        <div style="background:var(--color-danger-bg);border:1px solid rgba(239,68,68,0.35);color:var(--color-danger);padding:14px 20px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:24px;display:flex;align-items:center;gap:10px;">
+            <i data-lucide="alert-circle"></i> {{ error }}
+        </div>
+    {% endif %}
+
+    <!-- 12-Column Grid Layout -->
+    <div class="bento-grid">
+        <!-- User Profile Details Card (Span 6 Cols) -->
+        <div class="bento-card col-span-6">
+            <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;"><i data-lucide="user" style="width:16px;height:16px;"></i> Profile Identity</h3>
+            
+            <form method="POST" action="{% url 'account_settings' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_profile">
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">First Name</label>
+                        <input type="text" name="first_name" class="form-input" value="{{ request.user.first_name }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" name="last_name" class="form-input" value="{{ request.user.last_name }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="email" class="form-input" value="{{ request.user.email }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" name="phone" class="form-input" value="{{ request.user.phone }}">
+                </div>
+
+                <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;">
+                    <i data-lucide="save" style="width:14px;height:14px;"></i> Save Profile
+                </button>
+            </form>
+        </div>
+
+        <!-- Security Password Form Card (Span 6 Cols) -->
+        <div class="bento-card col-span-6">
+            <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;"><i data-lucide="key" style="width:16px;height:16px;"></i> Security & Password</h3>
+            
+            <form method="POST" action="{% url 'account_settings' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_password">
+
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" name="old_password" required class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" name="new_password1" required class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" name="new_password2" required class="form-input">
+                </div>
+
+                <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;">
+                    <i data-lucide="lock" style="width:14px;height:14px;"></i> Update Password
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}System Production Capacity & Performance Dashboard — Spin & Win SaaS{% endblock %}
+
+{% block content %}
+<div class="bento-container" style="max-width:1280px;margin:0 auto;padding:24px 16px;">
+
+    <!-- Topbar Header -->
+    <div
+        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:16px;">
+        <div>
+            <h1 style="font-size:1.6rem;font-weight:800;margin:0;display:flex;align-items:center;gap:10px;">
+                <i data-lucide="gauge" style="width:28px;height:28px;color:var(--color-primary);"></i>
+                System Capacity & Performance Dashboard
+            </h1>
+            <p style="font-size:0.9rem;color:var(--text-muted);margin:4px 0 0 0;">
+                Empirical load test metrics, SQLite WAL concurrency, and multi-tier production capacity.
+            </p>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span class="badge"
+                style="background:#1e293b;color:#cbd5e1;font-size:0.8rem;padding:6px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);">
+                <i data-lucide="cpu" style="width:14px;height:14px;vertical-align:-2px;"></i> {{ benchmark_data.test_environment.type|default:"LOCAL DEVELOPMENT BENCHMARK" }}
+            </span>
+            <span class="badge"
+                style="background:#0284c7;color:#fff;font-size:0.8rem;padding:6px 14px;border-radius:20px;">
+                <i data-lucide="shield-alert" style="width:14px;height:14px;vertical-align:-2px;"></i> CONFIDENCE: {{ benchmark_data.confidence_level.rating|default:"MEDIUM" }}
+            </span>
+
+            {% if health_status == 'GREEN' %}
+            <span class="badge"
+                style="background:#059669;color:#fff;font-size:0.85rem;padding:6px 14px;border-radius:20px;">
+                <i data-lucide="check-circle" style="width:15px;height:15px;vertical-align:-2px;"></i> HEALTHY (GREEN)
+            </span>
+            {% elif health_status == 'YELLOW' %}
+            <span class="badge"
+                style="background:#d97706;color:#fff;font-size:0.85rem;padding:6px 14px;border-radius:20px;">
+                <i data-lucide="alert-triangle" style="width:15px;height:15px;vertical-align:-2px;"></i> WARNING
+                (YELLOW)
+            </span>
+            {% else %}
+            <span class="badge"
+                style="background:#dc2626;color:#fff;font-size:0.85rem;padding:6px 14px;border-radius:20px;">
+                <i data-lucide="alert-octagram" style="width:15px;height:15px;vertical-align:-2px;"></i> HIGH LOAD (RED)
+            </span>
+            {% endif %}
+
+            <a href="{% url 'admin_dashboard' %}" class="btn-secondary" style="font-size:0.85rem;">
+                <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Admin
+            </a>
+        </div>
+    </div>
+
+    <!-- Metric Bento Grid -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;margin-bottom:24px;">
+        <div class="bento-card" style="padding:20px;">
+            <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">SQLite DB
+                Size</div>
+            <div style="font-size:1.8rem;font-weight:800;color:var(--text-primary);margin:6px 0;">{{ db_size_mb }} MB
+            </div>
+            <div style="font-size:0.78rem;color:#10b981;">WAL Mode Active (PRAGMA WAL)</div>
+        </div>
+
+        <div class="bento-card" style="padding:20px;">
+            <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Disk Usage
+            </div>
+            <div style="font-size:1.8rem;font-weight:800;color:var(--text-primary);margin:6px 0;">{{ disk_used_percent }}%</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);">{{ disk_free_gb }} GB Storage Available</div>
+        </div>
+
+        <div class="bento-card" style="padding:20px;">
+            <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Safe
+                Concurrency</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#6366f1;margin:6px 0;">{{ safe_capacity.safe_concurrent_users }} Sessions</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);">Tested Stable Limit: {{ safe_capacity.stable_concurrent_users }}</div>
+        </div>
+
+        <div class="bento-card" style="padding:20px;">
+            <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Safe
+                Throughput</div>
+            <div style="font-size:1.8rem;font-weight:800;color:#10b981;margin:6px 0;">{{ safe_capacity.safe_rps }}
+                Req/Sec</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);">Peak Tested: {{ safe_capacity.highest_rps }} Req/Sec
+            </div>
+        </div>
+    </div>
+
+    <!-- Safe Production Capacity Recommendations Card -->
+    <div class="bento-card" style="margin-bottom:24px;padding:24px;">
+        <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;display:flex;align-items:center;gap:8px;">
+            <i data-lucide="shield-check" style="width:20px;height:20px;color:#10b981;"></i>
+            Empirical Safe Production Limits (SQLite WAL Engine)
+        </h3>
+
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.88rem;text-align:left;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-subtle);color:var(--text-muted);">
+                        <th style="padding:10px;">Capacity Metric</th>
+                        <th style="padding:10px;">Safe Operating Level</th>
+                        <th style="padding:10px;">Warning Threshold</th>
+                        <th style="padding:10px;">Critical Limit</th>
+                        <th style="padding:10px;">Highest Tested</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                        <td style="padding:12px;font-weight:700;">Concurrent Customer Sessions</td>
+                        <td style="padding:12px;color:#10b981;font-weight:700;">{{ safe_capacity.safe_concurrent_users }} Sessions</td>
+                        <td style="padding:12px;color:#f59e0b;">50 – {{ safe_capacity.stable_concurrent_users }}
+                            Sessions</td>
+                        <td style="padding:12px;color:#ef4444;">> 125 Sessions</td>
+                        <td style="padding:12px;color:var(--text-muted);font-weight:600;">250 Sessions</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                        <td style="padding:12px;font-weight:700;">Requests / Second (RPS)</td>
+                        <td style="padding:12px;color:#10b981;font-weight:700;">{{ safe_capacity.safe_rps }} req/sec
+                        </td>
+                        <td style="padding:12px;color:#f59e0b;">25.0 – 30.0 req/sec</td>
+                        <td style="padding:12px;color:#ef4444;">> 35.0 req/sec</td>
+                        <td style="padding:12px;color:var(--text-muted);font-weight:600;">{{ safe_capacity.highest_rps }} req/sec</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                        <td style="padding:12px;font-weight:700;">Spin Engine Throughput</td>
+                        <td style="padding:12px;color:#10b981;font-weight:700;">{{ safe_capacity.safe_spins_per_min }}
+                            spins / min</td>
+                        <td style="padding:12px;color:#f59e0b;">2,500 spins / min</td>
+                        <td style="padding:12px;color:#ef4444;">> 3,500 spins / min</td>
+                        <td style="padding:12px;color:var(--text-muted);font-weight:600;">3,654 spins / min</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                        <td style="padding:12px;font-weight:700;">Recommended Daily Spin Volume</td>
+                        <td style="padding:12px;color:#10b981;font-weight:700;">{{ safe_capacity.safe_spins_per_day }}
+                            spins / day</td>
+                        <td style="padding:12px;color:#f59e0b;">15,000 spins / day</td>
+                        <td style="padding:12px;color:#ef4444;">> 30,000 spins / day</td>
+                        <td style="padding:12px;color:var(--text-muted);font-weight:600;">50,000 spins / day</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:12px;font-weight:700;">Registered Merchant Shops</td>
+                        <td style="padding:12px;color:#10b981;font-weight:700;">{{ safe_capacity.registered_shops }}
+                            Registered Shops</td>
+                        <td style="padding:12px;color:#f59e0b;">1,000 Shops</td>
+                        <td style="padding:12px;color:#ef4444;">> 2,500 Shops</td>
+                        <td style="padding:12px;color:var(--text-muted);font-weight:600;">{{ safe_capacity.registered_shops }} Shops</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empirical Concurrency Tier Test Results Table -->
+    {% if benchmark_data.customer_concurrency_tiers %}
+    <div class="bento-card" style="margin-bottom:24px;padding:24px;">
+        <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;display:flex;align-items:center;gap:8px;">
+            <i data-lucide="bar-chart-2" style="width:20px;height:20px;color:#6366f1;"></i>
+            Empirical Customer Concurrency Scaling Benchmark Results
+        </h3>
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.85rem;text-align:center;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-subtle);color:var(--text-muted);text-align:left;">
+                        <th style="padding:8px;">Virtual Users</th>
+                        <th style="padding:8px;">RPS</th>
+                        <th style="padding:8px;">P50 (ms)</th>
+                        <th style="padding:8px;">P95 (ms)</th>
+                        <th style="padding:8px;">P99 (ms)</th>
+                        <th style="padding:8px;">Success Rate</th>
+                        <th style="padding:8px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tier_key, tier in benchmark_data.customer_concurrency_tiers.items %}
+                    <tr style="border-bottom:1px solid var(--border-subtle);text-align:left;">
+                        <td style="padding:10px;font-weight:700;">{{ tier.users }} Users</td>
+                        <td style="padding:10px;">{{ tier.rps }} req/s</td>
+                        <td style="padding:10px;">{{ tier.p50_ms }} ms</td>
+                        <td style="padding:10px;">{{ tier.p95_ms }} ms</td>
+                        <td style="padding:10px;">{{ tier.p99_ms }} ms</td>
+                        <td
+                            style="padding:10px;font-weight:700;{% if tier.success_rate >= 99.5 %}color:#10b981;{% elif tier.success_rate >= 98.0 %}color:#f59e0b;{% else %}color:#ef4444;{% endif %}">
+                            {{ tier.success_rate }}%
+                        </td>
+                        <td style="padding:10px;">
+                            {% if tier.status == 'SAFE' %}
+                            <span
+                                style="background:#059669;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">SAFE</span>
+                            {% elif tier.status == 'WARNING' %}
+                            <span
+                                style="background:#d97706;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">WARNING</span>
+                            {% else %}
+                            <span
+                                style="background:#dc2626;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.75rem;font-weight:700;">CRITICAL</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Live Database Table Record Summary -->
+    <div class="bento-card" style="padding:24px;">
+        <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;display:flex;align-items:center;gap:8px;">
+            <i data-lucide="database" style="width:20px;height:20px;color:var(--color-primary);"></i>
+            Live Database Inventory & Audit Counts
+        </h3>
+
+        <div
+            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;text-align:center;">
+            <div style="background:var(--bg-elevated);padding:14px;border-radius:var(--radius-md);">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ counts.shops }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Shops</div>
+            </div>
+            <div style="background:var(--bg-elevated);padding:14px;border-radius:var(--radius-md);">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ counts.campaigns }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Campaigns</div>
+            </div>
+            <div style="background:var(--bg-elevated);padding:14px;border-radius:var(--radius-md);">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ counts.prizes }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Prizes</div>
+            </div>
+            <div style="background:var(--bg-elevated);padding:14px;border-radius:var(--radius-md);">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ counts.coupons }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Coupons</div>
+            </div>
+            <div style="background:var(--bg-elevated);padding:14px;border-radius:var(--radius-md);">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ counts.spins }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Spin Results</div>
+            </div>
+            <div style="background:var(--bg-elevated);padding:14px;border-radius:var(--radius-md);">
+                <div style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ counts.redemptions }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Redemptions</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

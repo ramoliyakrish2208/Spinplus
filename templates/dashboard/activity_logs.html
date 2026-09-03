@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Activity & Audit Timeline — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .logs-bento-wrap {
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logs-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Overview
+        </a>
+    </div>
+
+    <!-- Header Bento Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="history" style="width:12px;height:12px;"></i> AUDIT TRAIL
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Activity Timeline</h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Audit log of campaign updates, redemptions, settings changes, and tenant actions for {{ shop.name }}.</p>
+            </div>
+            <div style="position:relative;width:240px;">
+                <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-muted);"></i>
+                <input type="text" id="logFilter" placeholder="Filter logs..." class="form-input" style="padding-left:32px;font-size:0.82rem;" onkeyup="filterLogs()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Bento Table Card -->
+    <div class="bento-card">
+        {% if logs %}
+            <div class="responsive-bento-table">
+                <table class="data-table" id="logsTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                            <th>Actor</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td data-label="Timestamp" style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;">{{ log.timestamp|date:"d M Y, H:i:s" }}</td>
+                            <td data-label="Action"><strong style="color:var(--text-primary);">{{ log.action }}</strong></td>
+                            <td data-label="Actor">
+                                {% if log.actor %}
+                                    <span class="badge badge-gold">{{ log.actor.username }}</span>
+                                {% else %}
+                                    <span style="color:var(--text-muted);font-size:0.78rem;">System</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Details" style="color:var(--text-secondary);">{{ log.details }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color:var(--text-muted);font-size:0.88rem;margin:0;text-align:center;padding:36px 0;">No activity recorded for this shop yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function filterLogs() {
+        const input = document.getElementById('logFilter').value.toLowerCase();
+        const rows = document.querySelectorAll('#logsTable tbody tr');
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(input) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

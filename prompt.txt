@@ -1,0 +1,2149 @@
+# SPIN & WIN — THEME 3.0
+
+# GLOBAL SHOP EXPERIENCE THEME ENGINE
+
+## FULL IMPLEMENTATION — DO NOT ONLY ANALYZE
+
+---
+
+## 🚨 CRITICAL INSTRUCTION
+
+**IMPLEMENT THIS. DO NOT ONLY ANALYZE THE PROJECT.**
+
+You have permission to inspect the existing Spin & Win Django project and then **MODIFY THE ACTUAL PROJECT FILES**.
+
+Do NOT return only:
+
+* Analysis
+* Recommendations
+* Architecture
+* Implementation plan
+* Mockups
+* TODO lists
+* Suggestions
+
+You MUST:
+
+1. Inspect the existing implementation.
+2. Identify the existing theme/branding architecture.
+3. Modify the actual Django/Python/HTML/CSS/JavaScript/static files.
+4. Create or modify database models/migrations when required.
+5. Implement the complete theme engine.
+6. Connect the theme engine to the existing Shop Owner panel.
+7. Connect it to all relevant customer-facing pages.
+8. Make themes persistent.
+9. Apply the selected theme automatically.
+10. Test the implementation.
+11. Fix errors you encounter.
+12. Run the Django test suite.
+13. Do NOT stop after analysis.
+
+At the end, report exactly what files were changed and what was implemented.
+
+---
+
+# 1. PROJECT OBJECTIVE
+
+Transform Spin & Win into a **complete dynamic promotional experience platform** where every Shop can select a visual theme based on:
+
+* Festival
+* Season
+* Business category
+* Campaign
+* Promotion
+* Brand identity
+
+The selected theme must not be limited to the spinner.
+
+It must transform the **entire Shop Experience**.
+
+The theme should control:
+
+```text
+Shop Owner Panel
+Customer Promotional Pages
+Spinner
+Campaign Preview
+Reward Experience
+Coupon Experience
+QR Experience
+Branding Components
+Background
+Colors
+Typography
+Icons
+Decorations
+3D objects
+Lighting
+Animations
+Cards
+Buttons
+Navigation
+Empty states
+Success states
+```
+
+---
+
+# 2. IMPORTANT DISTINCTION
+
+There are TWO visual systems.
+
+## SUPER ADMIN
+
+Keep:
+
+> Premium Spin & Win SaaS Admin UI.
+
+Super Admin dashboard should NOT be replaced by individual shop festival themes.
+
+---
+
+## SHOP OWNER
+
+The Shop Owner's entire shop-management experience should inherit the selected **Shop Theme**.
+
+Example:
+
+```text
+Shop Theme = Diwali Royal
+```
+
+Then the Owner's relevant shop pages should visually become:
+
+```text
+Dashboard
+Campaigns
+Campaign Editor
+Prize Manager
+Appearance Studio
+QR Studio
+Analytics
+Coupons
+Preview
+Settings
+```
+
+with the selected Shop Theme.
+
+---
+
+## CUSTOMER
+
+The public QR experience must use the same selected theme.
+
+Therefore:
+
+```text
+Shop Theme
+       ↓
+Owner Shop Panel
+       ↓
+Campaign Preview
+       ↓
+Customer QR Experience
+       ↓
+Spinner
+       ↓
+Reward
+       ↓
+Coupon
+```
+
+All must feel like one coherent brand experience.
+
+---
+
+# 3. THEME MUST BE GLOBAL AND PERSISTENT
+
+The selected theme MUST be saved permanently.
+
+Do NOT store the currently selected theme only in:
+
+* JavaScript
+* localStorage
+* session
+* browser state
+
+It must be persisted in Django's database.
+
+Recommended architecture:
+
+```text
+Shop
+ ↓
+ShopTheme / ThemeConfiguration
+ ↓
+Theme preset
+ ↓
+Custom overrides
+```
+
+If the project already has suitable models, extend them instead of unnecessarily duplicating them.
+
+---
+
+# 4. THEME SCOPE
+
+Implement a clear theme hierarchy:
+
+```text
+GLOBAL THEME PRESET
+        ↓
+SHOP THEME
+        ↓
+CAMPAIGN OVERRIDES
+        ↓
+CUSTOM BRANDING
+```
+
+The Shop Owner should be able to select a global shop theme.
+
+Campaigns may optionally override it.
+
+If no campaign override exists:
+
+```text
+Campaign
+ ↓
+Shop Theme
+```
+
+If a campaign override exists:
+
+```text
+Campaign Theme
+ ↓
+Campaign Experience
+```
+
+Never affect another Shop.
+
+---
+
+# 5. COMPLETE THEME OBJECT
+
+A theme must control much more than colors.
+
+Implement configuration for:
+
+```text
+theme_id
+theme_name
+theme_category
+business_categories
+
+colors
+gradients
+background
+background_image
+background_pattern
+
+typography
+heading_font
+body_font
+button_font
+
+layout
+hero_layout
+card_layout
+navigation_style
+
+spinner
+spinner_geometry
+spinner_material
+spinner_lighting
+spinner_depth
+pointer_style
+center_hub
+
+buttons
+button_shape
+button_effect
+button_animation
+
+cards
+card_material
+card_radius
+card_shadow
+card_border
+glass_effect
+
+icons
+icon_style
+icon_color
+icon_animation
+
+lighting
+ambient_light
+glow
+bloom
+spotlight
+
+particles
+particle_type
+particle_density
+particle_speed
+
+3d
+3d_model
+3d_position
+3d_scale
+3d_rotation
+3d_animation
+
+decorations
+
+reward
+coupon
+success_state
+
+page_transition
+animation_intensity
+
+mobile_layout
+desktop_layout
+```
+
+---
+
+# 6. FESTIVAL THEMES MUST BE COMPLETELY DIFFERENT
+
+Do NOT create:
+
+```text
+Diwali
+= same UI + orange color
+
+Christmas
+= same UI + red color
+```
+
+This is NOT acceptable.
+
+Instead:
+
+```text
+Diwali
+→ completely different visual world
+
+Christmas
+→ completely different visual world
+
+Navratri
+→ completely different visual world
+
+Holi
+→ completely different visual world
+```
+
+Every major festival must have its own:
+
+* Visual language
+* Background
+* Lighting
+* Objects
+* Icons
+* Spinner
+* Decorations
+* Typography
+* Animations
+* 3D elements
+* Reward presentation
+
+---
+
+# 7. DIWALI THEME
+
+Create a complete:
+
+## "Royal Diwali"
+
+### Environment
+
+* Deep royal background
+* Purple / burgundy atmosphere
+* Gold lighting
+* Warm ambient glow
+* Subtle gradient depth
+
+### 3D / Decorative Objects
+
+Use lightweight 3D-style assets/models where practical:
+
+* Diyas
+* Decorative lamps
+* Golden ornaments
+* Rangoli-inspired geometry
+
+If true 3D models are used, optimize them heavily.
+
+Use:
+
+* GLB/GLTF where appropriate
+* CSS 3D
+* Canvas
+* SVG
+* layered lighting
+
+Do NOT add massive assets that make mobile loading slow.
+
+### Lighting
+
+* Warm point lights
+* Gold glow
+* Flickering diya light
+* Subtle bloom effect
+
+### Background
+
+Animated atmospheric background.
+
+### Icons
+
+Festival-inspired iconography.
+
+### Spinner
+
+Create a Diwali-specific 3D wheel:
+
+* Gold rim
+* Decorative center
+* Jewel-like hub
+* Warm lighting
+* Festival segments
+
+### Animation
+
+```text
+Diya glow
++
+floating particles
++
+gold sparkles
++
+subtle light movement
+```
+
+### Win
+
+Winner celebration should feel like Diwali.
+
+---
+
+# 8. NAVRATRI THEME
+
+Create a completely different visual identity.
+
+Use:
+
+* Vibrant festive colors
+* Deep purple
+* Magenta
+* Orange
+* Gold
+* Decorative circular geometry
+
+### 3D Elements
+
+Use:
+
+* Rotating decorative discs
+* Garba-inspired circular patterns
+* Floating ornaments
+
+### Background
+
+Animated festival patterns.
+
+### Spinner
+
+Circular decorative 3D treatment.
+
+### Animation
+
+* Rhythmic movement
+* Rotating patterns
+* Sparkles
+* Celebration burst
+
+Do NOT reuse Diwali's visual structure.
+
+---
+
+# 9. HOLI THEME
+
+Create a completely different visual world.
+
+### Background
+
+Bright dynamic gradient environment.
+
+### Colors
+
+Use multiple vibrant colors.
+
+### 3D / Visual Effects
+
+Create:
+
+* Floating color blobs
+* Paint splash shapes
+* Color powder particles
+* Dynamic color bursts
+
+### Spinner
+
+Colorful 3D spinner.
+
+### Button
+
+Playful dynamic CTA.
+
+### Win
+
+Color explosion.
+
+Do NOT reuse festival gold styling.
+
+---
+
+# 10. CHRISTMAS THEME
+
+Create a completely different visual experience.
+
+### Environment
+
+* Winter atmosphere
+* Deep blue / red / green
+* Warm lights
+
+### 3D / Decorative Elements
+
+Use lightweight:
+
+* Christmas tree
+* Snowflakes
+* Gift boxes
+* Ornaments
+* Stars
+
+### Background
+
+Animated snow.
+
+### Lighting
+
+Warm Christmas lights.
+
+### Spinner
+
+Christmas-themed wheel.
+
+### Animation
+
+```text
+snow
++
+floating stars
++
+light twinkle
++
+gift/reward reveal
+```
+
+---
+
+# 11. NEW YEAR THEME
+
+Create a completely different premium celebration environment.
+
+### Environment
+
+* Midnight background
+* Black
+* Deep blue
+* Gold
+* Silver
+
+### 3D Objects
+
+* Champagne-style decorative geometry
+* Celebration objects
+* Metallic shapes
+
+### Lighting
+
+* City-light style glow
+* Gold illumination
+
+### Animation
+
+Realistic-feeling:
+
+* Fireworks
+* Sparkles
+* Light trails
+* Celebration bursts
+
+### Spinner
+
+Metallic 3D celebration spinner.
+
+---
+
+# 12. VALENTINE'S THEME
+
+Create a romantic visual identity.
+
+Use:
+
+* Burgundy
+* Rose
+* Pink
+* Champagne
+* Soft lighting
+
+### Objects
+
+* Hearts
+* Roses
+* Elegant particles
+
+### Spinner
+
+Elegant romantic wheel.
+
+### Animation
+
+Soft floating particles and heart effects.
+
+---
+
+# 13. EID / RAMADAN THEME
+
+Create a separate visual identity.
+
+Use:
+
+* Deep emerald
+* Midnight blue
+* Gold
+
+Elements:
+
+* Crescent-inspired geometry
+* Lantern-inspired decoration
+* Stars
+* Islamic geometric patterns
+
+Do NOT use generic festival decorations.
+
+---
+
+# 14. INDEPENDENCE / REPUBLIC DAY THEMES
+
+Create dedicated patriotic promotional themes.
+
+Use appropriate:
+
+* Tricolor-inspired visual system
+* Geometric patterns
+* Flag-inspired motion
+* Celebration particles
+
+Do not simply change the background color.
+
+---
+
+# 15. SUMMER SALE
+
+Completely different from festival themes.
+
+Use:
+
+* Bright sky atmosphere
+* Sunlight
+* Tropical visual elements
+* Soft 3D objects
+* Fresh colors
+
+Spinner:
+
+* Bright 3D summer wheel
+
+Animation:
+
+* Floating sunlight
+* Bubbles
+* Summer particles
+
+---
+
+# 16. WINTER SALE
+
+Use:
+
+* Frost
+* Snow
+* Cool gradients
+* Ice-like surfaces
+* Soft blue lighting
+
+Spinner:
+
+* Frosted/glass wheel
+
+Animation:
+
+* Snow
+* Ice sparkle
+* Cool lighting
+
+---
+
+# 17. MONSOON SALE
+
+Create:
+
+* Rain atmosphere
+* Blue/teal environment
+* Water droplets
+* Reflections
+
+Spinner:
+
+* Glass/water-inspired wheel
+
+Animation:
+
+* Rain particles
+* Ripple effects
+
+---
+
+# 18. FLASH SALE
+
+Create a high-energy commercial theme.
+
+Use:
+
+* Strong contrast
+* Dynamic gradients
+* Energy lines
+* Countdown visual language
+
+Spinner:
+
+* High-energy 3D wheel
+
+Animation:
+
+* Pulsing glow
+* Speed lines
+* Flash effects
+
+---
+
+# 19. CLEARANCE SALE
+
+Create a bold retail-sale identity.
+
+Use:
+
+* Large sale typography
+* Strong visual hierarchy
+* Discount-focused design
+* Dynamic badges
+
+Spinner and reward must visually match.
+
+---
+
+# 20. BUSINESS CATEGORY THEMES
+
+Create category-aware recommendations.
+
+### Jewellery
+
+Recommend:
+
+* Royal Gold
+* Luxury Black
+* Pearl
+* Minimal Luxury
+
+### Restaurant
+
+Recommend:
+
+* Restaurant Warm
+* Coffee
+* Festive
+* Bento
+
+### Electronics
+
+Recommend:
+
+* Cyber Neon
+* Aurora
+* Modern Blue
+
+### Fashion
+
+Recommend:
+
+* Editorial Luxury
+* Minimal Luxury
+* Burgundy
+
+### Beauty
+
+Recommend:
+
+* Pearl
+* Floral
+* Aurora
+
+### Kids
+
+Recommend:
+
+* Playful 3D
+* Candy
+
+Recommendations must NOT restrict the owner.
+
+---
+
+# 21. SHOP OWNER PANEL THEME APPLICATION
+
+This is critical.
+
+The selected theme must be visible throughout the Shop Owner's relevant management pages.
+
+Update the Shop Owner base template/layout so the theme is loaded globally.
+
+Every relevant page should inherit:
+
+```text
+Theme CSS variables
+Theme classes
+Theme decorations
+Theme background
+Theme typography
+Theme component styles
+```
+
+Pages include:
+
+```text
+Dashboard
+Campaigns
+Campaign creation
+Campaign editing
+Prize manager
+Appearance Studio
+QR Studio
+Analytics
+Coupons
+Preview
+Settings
+```
+
+Do not leave old pages visually disconnected.
+
+---
+
+# 22. THE SHOP PANEL MUST FEEL LIKE ONE EXPERIENCE
+
+For example, if:
+
+```text
+Shop Theme = Royal Diwali
+```
+
+the Owner panel should visually feel like:
+
+```text
+Royal Diwali Shop Management
+```
+
+Dashboard:
+
+* Diwali atmosphere
+* Gold accents
+* Festival background
+* Themed cards
+
+Campaigns:
+
+* Same theme
+
+Prize Manager:
+
+* Same theme
+
+QR Studio:
+
+* Same theme
+
+Analytics:
+
+* Same theme
+
+Appearance Studio:
+
+* Same theme
+
+But keep the SaaS usability and professional information hierarchy.
+
+---
+
+# 23. DO NOT DESTROY USABILITY
+
+The theme must not make the management interface difficult to use.
+
+Maintain:
+
+* Clear navigation
+* Readable text
+* Good contrast
+* Familiar controls
+* Tables
+* Forms
+* Search
+* Filters
+* Buttons
+* Modals
+
+The theme changes the visual identity, not the business logic.
+
+---
+
+# 24. THEME HEADER
+
+Create a global themed Shop Owner header.
+
+Include:
+
+* Shop logo
+* Shop name
+* Current theme
+* Campaign status
+* Profile
+* Notifications if already supported
+
+Theme-specific:
+
+* Background
+* Lighting
+* Icons
+* Accent
+* Decoration
+
+---
+
+# 25. THEME SIDEBAR
+
+The Shop Owner navigation should inherit the theme.
+
+Example:
+
+Diwali:
+
+* Gold highlights
+* Festival icon treatment
+* Soft glow
+
+Neon:
+
+* Neon active state
+* Glow
+* Dark surface
+
+Minimal:
+
+* Clean white/black
+* Minimal active state
+
+---
+
+# 26. THEME CARDS
+
+Every Shop Owner dashboard card should inherit:
+
+* Theme surface
+* Border
+* Radius
+* Shadow
+* Accent
+* Hover animation
+
+But keep data readable.
+
+---
+
+# 27. THEME BUTTONS
+
+Buttons must inherit the selected theme.
+
+Support:
+
+```text
+Primary
+Secondary
+Danger
+Success
+Ghost
+Icon
+```
+
+Do not force every button to have excessive animation.
+
+---
+
+# 28. THEME ICONS
+
+Create a theme-aware icon system.
+
+Icons can change:
+
+* Style
+* Weight
+* Background
+* Glow
+* Decoration
+
+Festival themes can use additional decorative icons.
+
+---
+
+# 29. THEME BACKGROUND ENGINE
+
+Implement layered backgrounds.
+
+Layers:
+
+```text
+Base
+↓
+Gradient
+↓
+Pattern
+↓
+Ambient glow
+↓
+Particles
+↓
+Decorative objects
+↓
+Content
+```
+
+Each theme can enable/disable layers.
+
+---
+
+# 30. 3D MODEL SYSTEM
+
+Where appropriate, support lightweight 3D models.
+
+Architecture:
+
+```text
+Theme
+ ↓
+3D configuration
+ ↓
+Model asset
+ ↓
+Position
+ ↓
+Scale
+ ↓
+Rotation
+ ↓
+Lighting
+ ↓
+Animation
+```
+
+Possible objects:
+
+```text
+Diya
+Lantern
+Gift
+Snow globe
+Star
+Jewellery
+Geometric ornaments
+Festival objects
+```
+
+Do NOT use copyrighted commercial assets without proper rights.
+
+Prefer:
+
+* Original assets
+* CSS 3D
+* SVG
+* Procedural shapes
+* Open-licensed assets
+
+---
+
+# 31. MOBILE 3D OPTIMIZATION
+
+This is extremely important because most customers scan QR codes using phones.
+
+On mobile:
+
+```text
+Reduce model complexity
+Reduce particle count
+Reduce lighting
+Reduce blur
+Reduce background animation
+```
+
+If a device is weak:
+
+```text
+3D model
+↓
+Fallback
+↓
+CSS/SVG equivalent
+```
+
+Never let 3D break the page.
+
+---
+
+# 32. MOBILE CUSTOMER PRIORITY
+
+Customer mobile layout:
+
+```text
+Shop identity
+↓
+Campaign headline
+↓
+Offer
+↓
+Spinner
+↓
+Spin button
+↓
+Reward
+```
+
+The user should understand the offer within seconds.
+
+---
+
+# 33. MOBILE OWNER PANEL
+
+Shop Owner panel must be fully responsive.
+
+Support:
+
+```text
+320px
+360px
+375px
+390px
+412px
+430px
+768px
+1024px
+1280px+
+```
+
+Avoid:
+
+* Horizontal overflow
+* Broken tables
+* Tiny buttons
+* Overlapping decorations
+* Fixed desktop layouts
+
+---
+
+# 34. RESPONSIVE THEME DECORATIONS
+
+Decorations must adapt.
+
+Desktop:
+
+```text
+More atmospheric objects
+More particles
+More visual depth
+```
+
+Mobile:
+
+```text
+Fewer objects
+Smaller objects
+Reduced particles
+Reduced blur
+```
+
+---
+
+# 35. THEME INTENSITY
+
+Support:
+
+```text
+Subtle
+Balanced
+Dynamic
+```
+
+Apply this globally.
+
+### Subtle
+
+Minimal movement.
+
+### Balanced
+
+Normal visual effects.
+
+### Dynamic
+
+Strong celebration effects.
+
+---
+
+# 36. PERFORMANCE MODE
+
+Add automatic performance detection.
+
+If:
+
+* low memory
+* slow device
+* reduced motion
+* mobile
+* low FPS
+
+then reduce:
+
+```text
+Particles
+3D
+Blur
+Shadows
+Animations
+```
+
+The experience must remain premium.
+
+---
+
+# 37. PREFERS-REDUCED-MOTION
+
+Respect:
+
+```css
+prefers-reduced-motion
+```
+
+When enabled:
+
+* Stop unnecessary animations
+* Reduce 3D
+* Reduce particles
+* Keep functionality
+
+---
+
+# 38. THEME PREVIEW
+
+Appearance Studio must show the **entire Shop Experience**, not only the spinner.
+
+Preview:
+
+```text
+Dashboard
+Campaign
+Spinner
+Reward
+Coupon
+QR
+```
+
+Provide:
+
+```text
+Mobile
+Tablet
+Desktop
+```
+
+---
+
+# 39. THEME COMPARISON
+
+Allow Owner to compare themes.
+
+Example:
+
+```text
+Royal Diwali
+vs
+Aurora
+vs
+Minimal Luxury
+```
+
+Show complete visual previews.
+
+Not just color palettes.
+
+---
+
+# 40. SAVE / APPLY SYSTEM
+
+When Owner selects:
+
+```text
+Royal Diwali
+```
+
+show:
+
+```text
+[ Apply Theme ]
+```
+
+After applying:
+
+```text
+Theme saved successfully
+```
+
+Persist it in database.
+
+Refresh browser.
+
+Theme must remain.
+
+Log out.
+
+Log back in.
+
+Theme must remain.
+
+Open another device.
+
+Theme must remain.
+
+---
+
+# 41. LIVE PREVIEW
+
+Changing:
+
+```text
+Theme
+Color
+Typography
+Spinner
+Animation
+```
+
+should update preview immediately.
+
+Do not require page reload for preview.
+
+Saving should persist only when the Owner explicitly saves/applies.
+
+---
+
+# 42. RESET
+
+Add:
+
+```text
+Reset Theme
+```
+
+This should restore the selected preset defaults.
+
+Do not delete the global theme.
+
+---
+
+# 43. CUSTOMER QR FLOW
+
+Maintain the permanent QR architecture.
+
+```text
+QR
+ ↓
+/s/<public_token>/
+ ↓
+Shop
+ ↓
+Active Campaign
+ ↓
+Theme Resolution
+ ↓
+Customer Experience
+```
+
+The QR code itself does NOT need to change when:
+
+* Theme changes
+* Campaign changes
+* Festival changes
+
+The same QR continues working.
+
+---
+
+# 44. THEME RESOLUTION PRIORITY
+
+Use:
+
+```text
+Campaign Theme Override
+        ↓
+Shop Theme
+        ↓
+Default Theme
+```
+
+Therefore:
+
+```text
+Shop Theme = Minimal Luxury
+
+Campaign = Diwali
+Campaign Override = Diwali Royal
+
+Customer
+→ Diwali Royal
+```
+
+After campaign ends:
+
+```text
+Shop Theme
+→ Minimal Luxury
+```
+
+if another campaign does not override it.
+
+---
+
+# 45. THEME-SPECIFIC QR STUDIO
+
+QR Studio should inherit the current Shop Theme.
+
+The QR itself must remain scannable.
+
+Provide:
+
+* Themed poster
+* Shop logo
+* Campaign information
+* QR code
+* CTA
+* Theme decorations
+
+But maintain sufficient QR contrast and quiet zone.
+
+Never compromise QR scanning for decoration.
+
+---
+
+# 46. THEME-SPECIFIC EMPTY STATES
+
+Create themed:
+
+```text
+No campaign
+Campaign ended
+Shop unavailable
+No prizes
+No rewards
+No analytics
+```
+
+Do not display a generic unrelated UI.
+
+---
+
+# 47. THEME-SPECIFIC LOADING STATES
+
+Create theme-aware:
+
+```text
+Skeleton
+Spinner loader
+Page transition
+Button loading
+```
+
+Keep loading lightweight.
+
+---
+
+# 48. THEME-SPECIFIC ERROR STATES
+
+Errors must maintain:
+
+* Theme
+* Branding
+* Typography
+* Colors
+* Layout
+
+But error messages must remain clear.
+
+---
+
+# 49. DATA ISOLATION
+
+Theme data MUST be tenant isolated.
+
+Guarantee:
+
+```text
+Shop A Theme
+≠
+Shop B Theme
+```
+
+Shop Owner A must never modify Shop B's theme.
+
+Use the existing multi-tenant security architecture.
+
+---
+
+# 50. SUPER ADMIN
+
+Super Admin should be able to:
+
+* View available theme presets
+* Enable/disable presets if supported
+* View shops using themes
+* Inspect theme configuration if appropriate
+
+But do NOT let Shop Owners access global system administration.
+
+---
+
+# 51. DATABASE
+
+Inspect the current models first.
+
+If existing branding/theme models can support this, extend them.
+
+Otherwise create appropriate models.
+
+Create migrations.
+
+Run:
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Do NOT leave model changes unmigrated.
+
+---
+
+# 52. STATIC ARCHITECTURE
+
+Keep theme assets organized.
+
+Recommended:
+
+```text
+static/
+    css/
+        themes/
+            base.css
+            royal.css
+            diwali.css
+            navratri.css
+            holi.css
+            christmas.css
+            new_year.css
+            aurora.css
+            neon.css
+            luxury.css
+
+    js/
+        theme-engine.js
+        theme-particles.js
+        theme-3d.js
+        theme-preview.js
+
+    assets/
+        themes/
+            diwali/
+            navratri/
+            holi/
+            christmas/
+            new_year/
+```
+
+Adapt to the existing project structure rather than blindly creating duplicates.
+
+---
+
+# 53. DO NOT DUPLICATE TEMPLATES UNNECESSARILY
+
+Do NOT create:
+
+```text
+diwali_dashboard.html
+christmas_dashboard.html
+holi_dashboard.html
+```
+
+unless absolutely required.
+
+Prefer:
+
+```text
+Base Template
++
+Theme Engine
++
+Theme Configuration
+```
+
+This keeps the platform maintainable.
+
+---
+
+# 54. THEME ENGINE
+
+Create a reusable frontend theme engine.
+
+Concept:
+
+```javascript
+applyTheme(themeConfig)
+```
+
+It should:
+
+```text
+Set CSS variables
+Set theme classes
+Load decorations
+Configure animations
+Configure spinner
+Configure particles
+Configure 3D
+Configure typography
+```
+
+Do not put business logic in the theme engine.
+
+---
+
+# 55. THEME CSS VARIABLES
+
+Support variables such as:
+
+```text
+--theme-primary
+--theme-secondary
+--theme-accent
+--theme-background
+--theme-surface
+--theme-text
+--theme-muted
+--theme-border
+--theme-shadow
+--theme-glow
+--theme-radius
+--theme-font-heading
+--theme-font-body
+--theme-button
+--theme-spinner
+```
+
+Add additional variables where useful.
+
+---
+
+# 56. 3D LIGHTING SYSTEM
+
+Implement theme-controlled lighting.
+
+Configuration:
+
+```text
+ambient intensity
+key light
+accent light
+glow intensity
+shadow intensity
+```
+
+Example:
+
+Diwali:
+
+```text
+warm + gold
+```
+
+Christmas:
+
+```text
+cool environment + warm lights
+```
+
+Neon:
+
+```text
+blue/purple glow
+```
+
+Minimal:
+
+```text
+very low lighting effects
+```
+
+---
+
+# 57. ANIMATION SYSTEM
+
+Create reusable animation categories:
+
+```text
+entrance
+hover
+idle
+spin
+celebration
+particles
+background
+floating
+glow
+success
+```
+
+Theme selects the appropriate animations.
+
+---
+
+# 58. NO ANIMATION OVERLOAD
+
+Premium design ≠ maximum animation.
+
+Animations must have purpose.
+
+Avoid:
+
+* Constant shaking
+* Excessive flashing
+* Excessive bouncing
+* Distracting particles
+* Heavy GPU effects
+
+The page should feel expensive and polished.
+
+---
+
+# 59. ACCESSIBILITY
+
+Maintain:
+
+* Keyboard navigation
+* Focus indicators
+* Accessible labels
+* Good contrast
+* Reduced motion
+* Touch-friendly buttons
+
+Sound must remain optional.
+
+---
+
+# 60. BROWSER SUPPORT
+
+Test the customer experience on modern:
+
+* Chrome Android
+* Safari iPhone
+* Edge
+* Chrome desktop
+* Safari desktop where practical
+
+Do not rely on unsupported experimental APIs without fallback.
+
+---
+
+# 61. TESTING
+
+After implementation run:
+
+```bash
+python manage.py check
+```
+
+Then:
+
+```bash
+python manage.py makemigrations --check --dry-run
+```
+
+Then:
+
+```bash
+python manage.py test core
+```
+
+All existing tests must continue passing.
+
+Add tests for:
+
+### Theme persistence
+
+```text
+Owner selects theme
+→ save
+→ reload
+→ same theme
+```
+
+### Tenant isolation
+
+```text
+Shop A
+→ cannot modify Shop B theme
+```
+
+### Theme resolution
+
+```text
+Campaign override
+→ wins
+
+otherwise
+→ Shop theme
+
+otherwise
+→ default
+```
+
+### Fallback
+
+Invalid theme:
+
+```text
+→ Default theme
+```
+
+### Preview
+
+Preview must not modify production campaign data.
+
+---
+
+# 62. MANUAL QA
+
+Test every major festival theme.
+
+For each theme test:
+
+```text
+Owner Dashboard
+Campaigns
+Campaign Editor
+Prize Manager
+Appearance Studio
+QR Studio
+Analytics
+Coupons
+Preview
+Customer QR page
+Spinner
+Win state
+Coupon
+```
+
+Check:
+
+```text
+Desktop
+Tablet
+Mobile
+```
+
+---
+
+# 63. VISUAL QA CHECKLIST
+
+For every theme:
+
+### Background
+
+✓ Completely transformed
+
+### Lighting
+
+✓ Theme-specific
+
+### Colors
+
+✓ Theme-specific
+
+### Typography
+
+✓ Theme-specific
+
+### Icons
+
+✓ Theme-specific
+
+### Cards
+
+✓ Theme-specific
+
+### Navigation
+
+✓ Theme-specific
+
+### Spinner
+
+✓ Theme-specific
+
+### 3D
+
+✓ Theme-specific
+
+### Decorations
+
+✓ Theme-specific
+
+### Particles
+
+✓ Theme-specific
+
+### Buttons
+
+✓ Theme-specific
+
+### Reward
+
+✓ Theme-specific
+
+### Coupon
+
+✓ Theme-specific
+
+### Empty states
+
+✓ Theme-specific
+
+### Error states
+
+✓ Theme-specific
+
+### Mobile
+
+✓ Fully responsive
+
+---
+
+# 64. FINAL EXPECTED EXPERIENCE
+
+Example:
+
+## Shop A
+
+```text
+Business:
+Jewellery
+
+Theme:
+Royal Diwali
+```
+
+Everything becomes:
+
+```text
+Dashboard
+→ Royal Diwali
+
+Campaigns
+→ Royal Diwali
+
+Prize Manager
+→ Royal Diwali
+
+QR Studio
+→ Royal Diwali
+
+Analytics
+→ Royal Diwali
+
+Customer QR
+→ Royal Diwali
+
+Spinner
+→ Royal Diwali
+
+Reward
+→ Royal Diwali
+
+Coupon
+→ Royal Diwali
+```
+
+---
+
+## Shop B
+
+```text
+Business:
+Electronics
+
+Theme:
+Cyber Neon
+```
+
+Everything becomes:
+
+```text
+Dashboard
+→ Cyber Neon
+
+Campaigns
+→ Cyber Neon
+
+Prize Manager
+→ Cyber Neon
+
+QR Studio
+→ Cyber Neon
+
+Analytics
+→ Cyber Neon
+
+Customer QR
+→ Cyber Neon
+
+Spinner
+→ Cyber Neon
+
+Reward
+→ Cyber Neon
+
+Coupon
+→ Cyber Neon
+```
+
+---
+
+# 65. FINAL PRODUCT CONCEPT
+
+The platform should now behave as:
+
+```text
+                 SPIN & WIN
+                      │
+             ┌────────┴────────┐
+             │                 │
+          SHOP A             SHOP B
+             │                 │
+       Royal Diwali       Cyber Neon
+             │                 │
+       Entire Experience  Entire Experience
+             │                 │
+       Owner + Customer   Owner + Customer
+```
+
+The theme is the Shop's **visual identity layer**.
+
+It must not be treated as:
+
+> "a spinner color preset."
+
+It must be treated as:
+
+> **a complete visual operating system for that Shop's promotional experience.**
+
+---
+
+# 🚨 FINAL IMPLEMENTATION RULE
+
+**DO NOT STOP AFTER ANALYZING.**
+
+After reading this specification:
+
+```text
+INSPECT
+↓
+IMPLEMENT
+↓
+MODIFY FILES
+↓
+CREATE MIGRATIONS
+↓
+CONNECT DATABASE
+↓
+UPDATE TEMPLATES
+↓
+UPDATE CSS
+↓
+UPDATE JAVASCRIPT
+↓
+IMPLEMENT 3D / PARTICLES / LIGHTING
+↓
+CONNECT OWNER PANEL
+↓
+CONNECT CUSTOMER EXPERIENCE
+↓
+CONNECT QR
+↓
+TEST
+↓
+FIX ERRORS
+↓
+TEST AGAIN
+```
+
+Do not merely tell me how it could be implemented.
+
+**Actually implement the changes in the existing project.**
+
+Do not remove existing working features.
+
+Do not break:
+
+* Authentication
+* Tenant isolation
+* Campaigns
+* Prizes
+* Spin engine
+* Probability
+* Coupons
+* Redemption
+* QR routing
+* Analytics
+* Subscription limits
+* Preview
+* Existing tests
+
+The final result must be a **production-quality, persistent, multi-tenant, responsive Theme 3.0 system** where changing a Shop's theme genuinely transforms the entire visual experience.

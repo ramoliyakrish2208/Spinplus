@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block title %}{{ shop.name }} — Promotion Command Center{% endblock %}
+
+{% block extra_css %}
+<style>
+    .owner-bento-wrap {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="owner-bento-wrap">
+    <!-- Top Action & Greeting Header -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="store" style="width:12px;height:12px;"></i> PROMOTION COMMAND CENTER
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Good evening 👋</h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Here's how your promotions are performing for <strong>{{ shop.name }}</strong>.</p>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <a href="{% url 'public_shop' shop.public_token %}" target="_blank" class="btn-secondary">
+                    <i data-lucide="external-link" style="width:16px;height:16px;"></i> Preview Live Page
+                </a>
+                <a href="{% url 'campaign_list' %}" class="btn-primary">
+                    <i data-lucide="plus" style="width:16px;height:16px;"></i> Create Campaign
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if not has_active_subscription %}
+    <!-- Expired Subscription Warning Banner -->
+    <div class="bento-card" style="background:var(--color-danger-bg);border:2px solid rgba(239,68,68,0.5);margin-bottom:24px;padding:20px 24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:44px;height:44px;border-radius:50%;background:rgba(239,68,68,0.2);display:flex;align-items:center;justify-content:center;color:var(--color-danger);flex-shrink:0;">
+                    <i data-lucide="alert-circle" style="width:24px;height:24px;"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:1.1rem;font-weight:800;color:var(--color-danger);margin:0 0 2px 0;">Subscription Plan Expired</h3>
+                    <p style="font-size:0.85rem;color:var(--text-primary);margin:0;">
+                        Customer spins on your wheel are temporarily paused. Renew your subscription to instantly reactivate customer spins with your existing QR code and rewards.
+                    </p>
+                </div>
+            </div>
+            <a href="{% url 'subscription' %}" class="btn-primary" style="background:var(--color-danger);border-color:var(--color-danger);font-size:0.85rem;padding:10px 20px;">
+                <i data-lucide="credit-card" style="width:16px;height:16px;"></i> Renew Subscription (in ₹)
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Smart Theme Engine Status Card -->
+    {% if current_resolution %}
+    <div class="bento-card bento-glass" style="margin-bottom: 24px; border-left: 4px solid var(--color-accent); background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div style="width:46px;height:46px;border-radius:12px;background:rgba(245, 158, 11, 0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">
+                    {% if current_resolution.event %}{{ current_resolution.event.icon }}{% else %}🎨{% endif %}
+                </div>
+                <div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="badge badge-gold" style="font-size:0.7rem;text-transform:uppercase;">SMART THEME ENGINE</span>
+                        {% if current_resolution.is_auto %}<span class="badge badge-purple" style="font-size:0.7rem;">CALENDAR AUTOMATIC</span>{% endif %}
+                        {% if current_resolution.is_override %}<span class="badge badge-pink" style="font-size:0.7rem;">MANUAL OVERRIDE</span>{% endif %}
+                    </div>
+                    <h3 style="font-size:1.15rem;font-weight:800;margin:4px 0 2px 0;">Active Theme: <span style="color:var(--color-accent);text-transform:capitalize;">{{ current_resolution.theme }}</span></h3>
+                    <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">
+                        Reason: <strong>{{ current_resolution.reason }}</strong>
+                        {% if current_resolution.expires_at %} • Reverts on <strong>{{ current_resolution.expires_at|date:"d M Y" }}</strong> to <em>{{ current_resolution.normal_theme }}</em>{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div>
+                <a href="{% url 'update_branding' %}" class="btn-secondary" style="font-size:0.82rem;">
+                    <i data-lucide="settings" style="width:14px;height:14px;"></i> Manage Smart Themes
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Onboarding Setup Checklist -->
+    {% if completed_steps < total_checklist_steps %}
+    <div class="bento-card bento-glass" style="margin-bottom: 24px; border-color: rgba(109, 40, 217, 0.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i data-lucide="rocket" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                <h3 style="font-size:1.05rem;font-weight:800;margin:0;">🚀 Shop Onboarding Checklist</h3>
+            </div>
+            <span class="badge badge-gold">{{ completed_steps }}/{{ total_checklist_steps }} Completed</span>
+        </div>
+        <div class="bento-meter" style="margin-bottom:16px;">
+            <div class="bento-meter-fill" style="width:{% widthratio completed_steps total_checklist_steps 100 %}%;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;font-size:0.85rem;">
+            {% for item in checklist %}
+                <div style="display:flex;align-items:center;gap:10px;opacity:{% if item.done %}1{% else %}0.55{% endif %};">
+                    <i data-lucide="{% if item.done %}check-circle-2{% else %}circle{% endif %}" style="width:16px;height:16px;color:{% if item.done %}var(--color-success){% else %}var(--text-muted){% endif %};"></i>
+                    <span style="{% if item.done %}text-decoration:line-through;{% endif %}">{{ item.title }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Date Range Filter Bar -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);margin-right:4px;">Period:</span>
+        <a href="?range=today" class="btn-secondary {% if range_filter == 'today' %}btn-primary{% endif %}" style="font-size:0.78rem;padding:4px 12px;min-height:34px;">Today</a>
+        <a href="?range=7d" class="btn-secondary {% if range_filter == '7d' %}btn-primary{% endif %}" style="font-size:0.78rem;padding:4px 12px;min-height:34px;">7 Days</a>
+        <a href="?range=30d" class="btn-secondary {% if range_filter == '30d' %}btn-primary{% endif %}" style="font-size:0.78rem;padding:4px 12px;min-height:34px;">30 Days</a>
+        <a href="?range=all" class="btn-secondary {% if range_filter == 'all' %}btn-primary{% endif %}" style="font-size:0.78rem;padding:4px 12px;min-height:34px;">All Time</a>
+    </div>
+
+    <!-- 12-Column Bento Grid Layout -->
+    <div class="bento-grid">
+        <!-- Active Campaign Feature Card (Span 7 Cols) -->
+        <div class="bento-card bento-feature col-span-7">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="sparkles"></i> Active Promotion</span>
+                {% if active_campaign %}
+                    <span class="badge badge-live"><i data-lucide="radio" style="width:10px;height:10px;"></i> LIVE</span>
+                {% else %}
+                    <span class="badge badge-draft">No Active Campaign</span>
+                {% endif %}
+            </div>
+
+            {% if active_campaign %}
+                <div style="margin-bottom:16px;">
+                    <h2 style="font-size:1.4rem;font-weight:800;color:var(--color-accent);margin:0 0 6px 0;">{{ active_campaign.name }}</h2>
+                    <p style="font-size:0.88rem;color:var(--text-secondary);margin:0 0 8px 0;">{{ active_campaign.description|default:"Instant spin-and-win customer offer" }}</p>
+                    <span style="font-size:0.78rem;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;">
+                        <i data-lucide="calendar" style="width:14px;height:14px;"></i> {{ active_campaign.start_date|date:"d M Y" }} — {{ active_campaign.end_date|date:"d M Y" }}
+                    </span>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px;">Wheel Prizes Configuration</span>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        {% for prize in active_campaign.prizes.all %}
+                            <span class="badge" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-subtle);">
+                                <span style="width:8px;height:8px;border-radius:50%;background:{{ prize.display_color }};display:inline-block;"></span>
+                                {{ prize.name }} ({{ prize.probability }}%)
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:auto;flex-wrap:wrap;">
+                    <a href="{% url 'prize_manager' active_campaign.id %}" class="btn-primary" style="font-size:0.82rem;">
+                        <i data-lucide="settings-2" style="width:14px;height:14px;"></i> Manage Rewards
+                    </a>
+                    <a href="{% url 'preview_campaign' active_campaign.id %}" target="_blank" class="btn-secondary" style="font-size:0.82rem;">
+                        <i data-lucide="eye" style="width:14px;height:14px;"></i> Preview Wheel
+                    </a>
+                </div>
+            {% else %}
+                <div style="text-align:center;padding:28px 16px;margin:auto;">
+                    <i data-lucide="gift" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:12px;"></i>
+                    <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 6px 0;">No Campaign Currently Active</h3>
+                    <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 16px 0;">Launch your seasonal promo offer to start generating scans and spins.</p>
+                    <a href="{% url 'campaign_list' %}" class="btn-primary" style="font-size:0.85rem;">
+                        <i data-lucide="plus-circle" style="width:14px;height:14px;"></i> Launch Campaign Now
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Metric Cards Container (Span 5 Cols) -->
+        <div class="col-span-5" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:var(--space-4);">
+            <!-- Metric: QR Scans -->
+            <div class="bento-card bento-metric">
+                <div class="bento-header">
+                    <span class="bento-title"><i data-lucide="qr-code"></i> QR SCANS</span>
+                </div>
+                <div class="bento-value">{{ scans_count }}</div>
+                <div class="bento-trend up"><i data-lucide="trending-up" style="width:12px;height:12px;"></i> ↑ 18.4% vs last mo</div>
+            </div>
+
+            <!-- Metric: Spins -->
+            <div class="bento-card bento-metric">
+                <div class="bento-header">
+                    <span class="bento-title"><i data-lucide="rotate-cw"></i> SPINS</span>
+                </div>
+                <div class="bento-value" style="color:var(--color-primary);">{{ spins_count }}</div>
+                <div class="bento-meter">
+                    <div class="bento-meter-fill" style="width: {{ spin_conversion_rate }}%;"></div>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">{{ spin_conversion_rate }}% scan-to-spin</div>
+            </div>
+
+            <!-- Metric: Rewards Won -->
+            <div class="bento-card bento-metric">
+                <div class="bento-header">
+                    <span class="bento-title"><i data-lucide="gift"></i> REWARDS</span>
+                </div>
+                <div class="bento-value" style="color:var(--color-accent);">{{ coupons_won }}</div>
+                <div class="bento-trend neutral">Issued coupons</div>
+            </div>
+
+            <!-- Metric: Redemptions -->
+            <div class="bento-card bento-metric">
+                <div class="bento-header">
+                    <span class="bento-title"><i data-lucide="check-circle-2"></i> REDEEMED</span>
+                </div>
+                <div class="bento-value" style="color:var(--color-success);">{{ coupons_redeemed }}</div>
+                <div class="bento-meter">
+                    <div class="bento-meter-fill" style="width: {{ redemption_rate }}%; background: var(--color-success);"></div>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">{{ redemption_rate }}% redemption</div>
+            </div>
+        </div>
+
+        <!-- Conversion Funnel Bento Card (Span 12 Cols) -->
+        <div class="bento-card col-span-12">
+            <div class="bento-header">
+                <h3 style="font-size:1.05rem;font-weight:800;margin:0;"><i data-lucide="filter" style="width:16px;height:16px;"></i> Conversion Funnel</h3>
+                <span style="font-size:0.78rem;color:var(--text-muted);">Real-time customer journey</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:16px;margin-top:12px;text-align:center;">
+                <div style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-subtle);">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">1. QR Scans</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:var(--text-primary);margin:6px 0;">{{ scans_count }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">100% Traffic</div>
+                </div>
+
+                <div style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-subtle);">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">2. Spins Executed</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:var(--color-primary);margin:6px 0;">{{ spins_count }}</div>
+                    <div style="font-size:0.72rem;color:var(--color-success);font-weight:700;">{{ spin_conversion_rate }}% Engaged</div>
+                </div>
+
+                <div style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-subtle);">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">3. Rewards Won</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:var(--color-accent);margin:6px 0;">{{ coupons_won }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Coupons Issued</div>
+                </div>
+
+                <div style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-subtle);">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">4. In-Store Redeemed</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:var(--color-success);margin:6px 0;">{{ coupons_redeemed }}</div>
+                    <div style="font-size:0.72rem;color:var(--color-success);font-weight:700;">{{ redemption_rate }}% Converted</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permanent QR Studio Bento Card (Span 4 Cols) -->
+        <div class="bento-card col-span-4" style="text-align:center;">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="qr-code"></i> PERMANENT QR STUDIO</span>
+                <span class="badge badge-active">Permanent</span>
+            </div>
+
+            <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 16px 0;">Your printed QR never changes. Points dynamically to active offers.</p>
+
+            {% if qr_code.qr_image %}
+                <div style="background:#ffffff;padding:12px;border-radius:var(--radius-md);display:inline-block;box-shadow:var(--shadow-md);margin-bottom:14px;">
+                    <img src="{{ qr_code.qr_image.url }}" alt="Shop QR" style="width:160px;height:160px;display:block;">
+                </div>
+            {% endif %}
+
+            <div style="font-size:0.75rem;color:var(--text-muted);word-break:break-all;margin-bottom:16px;">
+                <code style="background:var(--bg-elevated);padding:4px 8px;border-radius:var(--radius-sm);">{{ public_url }}</code>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                <a href="{% url 'download_qr' %}" class="btn-secondary" style="font-size:0.8rem;flex:1;">
+                    <i data-lucide="download" style="width:14px;height:14px;"></i> Download
+                </a>
+                <a href="{% url 'qr_poster' %}" class="btn-primary" style="font-size:0.8rem;flex:1;">
+                    <i data-lucide="printer" style="width:14px;height:14px;"></i> A4 Poster
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Coupons Bento Card (Span 8 Cols) -->
+        <div class="bento-card col-span-8">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <h3 style="font-size:1.05rem;font-weight:800;margin:0 0 2px 0;"><i data-lucide="ticket" style="width:16px;height:16px;"></i> Recent Coupons Issued</h3>
+                    <p style="font-size:0.78rem;color:var(--text-muted);margin:0;">Live log of customer spin results</p>
+                </div>
+                <a href="{% url 'export_coupons_csv' %}" class="btn-secondary" style="font-size:0.78rem;padding:6px 12px;min-height:34px;">
+                    <i data-lucide="file-spread-sheet" style="width:14px;height:14px;"></i> Export CSV
+                </a>
+            </div>
+
+            {% if recent_coupons %}
+                <div class="responsive-bento-table">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Coupon Code</th>
+                                <th>Prize Reward</th>
+                                <th>Status</th>
+                                <th>Issued At</th>
+                                <th>Expires</th>
+                                <th>Verify</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coupon in recent_coupons %}
+                            <tr>
+                                <td data-label="Code"><code style="font-size:0.85rem;font-weight:700;color:var(--color-accent);">{{ coupon.code }}</code></td>
+                                <td data-label="Prize"><strong>{{ coupon.prize.name }}</strong></td>
+                                <td data-label="Status">
+                                    {% if coupon.status == 'active' %}
+                                        <span class="badge badge-active">Active</span>
+                                    {% elif coupon.status == 'redeemed' %}
+                                        <span class="badge badge-gold">Redeemed</span>
+                                    {% else %}
+                                        <span class="badge badge-draft">{{ coupon.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td data-label="Issued" style="font-size:0.78rem;color:var(--text-muted);">{{ coupon.created_at|date:"d M H:i" }}</td>
+                                <td data-label="Expires" style="font-size:0.78rem;color:var(--text-muted);">{{ coupon.expires_at|date:"d M Y" }}</td>
+                                <td data-label="Action">
+                                    <a href="{% url 'verify_coupon_token' coupon.verify_token %}" target="_blank" class="btn-ghost" style="font-size:0.75rem;padding:2px 6px;">
+                                        Verify →
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p style="color:var(--text-muted);font-size:0.85rem;margin:0;text-align:center;padding:24px 0;">No coupons issued yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Alerts & Notifications — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notif-bento-wrap {
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notif-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Overview
+        </a>
+    </div>
+
+    <!-- Header Bento Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <span class="badge badge-gold" style="margin-bottom:8px;">
+            <i data-lucide="bell" style="width:12px;height:12px;"></i> PLATFORM ALERTS
+        </span>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Alerts & System Notifications</h1>
+        <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Stay informed on offer expirations, reward stock levels, and system events for {{ shop.name }}.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        {% for notif in notifications %}
+        <div class="bento-card {% if not notif.is_read %}bento-glass{% endif %}" id="notif-{{ notif.id }}" style="padding:20px;{% if not notif.is_read %}border-color:var(--color-primary);{% endif %}">
+            <div style="display:flex;align-items:flex-start;gap:16px;">
+                <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;{% if notif.level == 'warning' %}background:var(--color-warning-bg);color:var(--color-warning);{% elif notif.level == 'error' %}background:var(--color-danger-bg);color:var(--color-danger);{% else %}background:rgba(109,40,217,0.12);color:var(--color-primary);{% endif %}">
+                    <i data-lucide="{% if notif.level == 'warning' %}alert-triangle{% elif notif.level == 'error' %}alert-circle{% else %}info{% endif %}" style="width:20px;height:20px;"></i>
+                </div>
+
+                <div style="flex:1;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:8px;">
+                        <h3 style="font-size:1rem;font-weight:800;color:var(--text-primary);margin:0;">{{ notif.title }}</h3>
+                        <span style="font-size:0.75rem;color:var(--text-muted);">{{ notif.created_at|date:"d M Y, H:i" }}</span>
+                    </div>
+                    <p style="font-size:0.88rem;color:var(--text-secondary);margin:0 0 10px 0;line-height:1.5;">{{ notif.message }}</p>
+                    {% if not notif.is_read %}
+                        <button onclick="markRead({{ notif.id }})" class="btn-secondary" style="font-size:0.72rem;padding:2px 10px;min-height:30px;">
+                            Mark as read
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bento-card" style="text-align:center;padding:48px 24px;">
+            <i data-lucide="bell-off" style="width:40px;height:40px;color:var(--text-muted);margin-bottom:12px;"></i>
+            <p style="font-size:0.9rem;color:var(--text-muted);margin:0;">No unread notifications at this time.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function markRead(id) {
+        fetch("/dashboard/notifications/" + id + "/read/", {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        }).then(r => r.json()).then(data => {
+            if (data.status === 'success') {
+                const el = document.getElementById('notif-' + id);
+                if (el) el.style.borderColor = 'var(--border-subtle)';
+            }
+        });
+    }
+</script>
+{% endblock %}

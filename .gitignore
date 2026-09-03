@@ -1,0 +1,58 @@
+# Environment, Secrets, and Private Keys
+.env
+*.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+*.secret
+secrets/
+id_rsa*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite Database & Backups
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+db.sqlite3
+backups/
+*.bak
+*.sql
+*.dump
+
+# Media Files
+media/
+shop_logos/
+shop_covers/
+qr_codes/
+campaign_heroes/
+
+# Static Collection
+staticfiles/
+
+# Logs
+logs/
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db

@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Reward Manager — Bento Prize Builder — {{ campaign.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prize-bento-wrap {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="prize-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'campaign_list' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Campaigns
+        </a>
+    </div>
+
+    <!-- Header Bento Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="sparkles" style="width:12px;height:12px;"></i> BENTO REWARD BUILDER
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Wheel Segment Prizes</h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Campaign: <strong>{{ campaign.name }}</strong></p>
+            </div>
+            <div>
+                {% if total_probability == 100.0 %}
+                    <span class="badge badge-active"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Probability: 100% ✓ Valid</span>
+                {% elif total_probability > 100.0 %}
+                    <span class="badge badge-ended"><i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Probability: {{ total_probability }}% ⚠️ Exceeds 100%</span>
+                {% else %}
+                    <span class="badge badge-gold"><i data-lucide="alert-triangle" style="width:12px;height:12px;"></i> Probability: {{ total_probability }}% (Under 100%)</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Probability Panel Bento Card -->
+    <div class="bento-card" style="margin-bottom: 24px;">
+        <div class="bento-header">
+            <h3 style="font-size:1.05rem;font-weight:800;margin:0;"><i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i> Reward Probability Meter</h3>
+            <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);">Total Wheel Weight</span>
+        </div>
+
+        <div class="bento-meter" style="height:10px;margin-bottom:12px;">
+            <div class="bento-meter-fill" style="width: min({{ total_probability }}%, 100%); background: {% if total_probability == 100.0 %}var(--color-success){% elif total_probability > 100.0 %}var(--color-danger){% else %}var(--color-warning){% endif %};"></div>
+        </div>
+
+        {% if total_probability == 0.0 %}
+            <div style="font-size:0.85rem;color:var(--color-danger);background:var(--color-danger-bg);border:1px solid rgba(239,68,68,0.3);padding:10px 14px;border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px;">
+                <i data-lucide="alert-triangle"></i> Total wheel weight is <strong>0%</strong> (All prizes have 0% probability). At least one reward or "Try Again" segment must have a positive weight (e.g. 100%) so that 0% teaser segments never win.
+            </div>
+        {% elif total_probability > 100.0 %}
+            <div style="font-size:0.85rem;color:var(--color-danger);background:var(--color-danger-bg);border:1px solid rgba(239,68,68,0.3);padding:10px 14px;border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px;">
+                <i data-lucide="alert-triangle"></i> Total probability is <strong>{{ total_probability }}%</strong>. Exceeds 100% by {{ total_probability|add:"-100" }}%. Adjust prize weights to reach 100%.
+            </div>
+        {% elif total_probability < 100.0 %}
+            <div style="font-size:0.85rem;color:var(--color-warning);background:var(--color-warning-bg);border:1px solid rgba(245,158,11,0.3);padding:10px 14px;border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px;">
+                <i data-lucide="info"></i> Current total is <strong>{{ total_probability }}%</strong>. Remaining weight to allocate: <strong>{{ 100|add:"-total_probability" }}%</strong>.
+            </div>
+        {% else %}
+            <div style="font-size:0.85rem;color:var(--color-success);background:var(--color-success-bg);border:1px solid rgba(16,185,129,0.3);padding:10px 14px;border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px;">
+                <i data-lucide="check-circle-2"></i> Perfect! Wheel probability is balanced at exactly 100%.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 12-Column Grid Layout: Prizes List + Form (Left 8 Cols) & Live Wheel Canvas (Right 4 Cols) -->
+    <div class="bento-grid">
+        <!-- Left: Prizes Bento Grid + Add Form (Span 8 Cols) -->
+        <div class="col-span-8" style="display:flex;flex-direction:column;gap:var(--space-5);">
+            <!-- Visual Prizes Grid -->
+            <div>
+                <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;">🎁 Configured Wheel Segment Rewards</h3>
+
+                {% if prizes %}
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;">
+                        {% for p in prizes %}
+                        <div class="bento-card {% if forloop.first %}bento-feature{% endif %}" style="padding:18px;">
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="width:14px;height:14px;border-radius:50%;background:{{ p.display_color }};border:2px solid #fff;display:inline-block;box-shadow:var(--shadow-sm);"></span>
+                                    <h4 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin:0;">{{ p.name }}</h4>
+                                </div>
+                                <span class="badge" style="background:var(--bg-elevated);color:var(--text-secondary);font-size:0.7rem;">{{ p.get_prize_type_display }}</span>
+                            </div>
+
+                            <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px 0;">{{ p.coupon_text|default:"Valid for single spin transaction" }}</p>
+
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;font-weight:700;margin-bottom:4px;">
+                                    <span style="color:var(--text-muted);">Probability Weight</span>
+                                    {% if p.probability == 0 %}
+                                        <span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;font-size:0.68rem;padding:2px 6px;border:1px solid rgba(239,68,68,0.3);">🚫 0% (Teaser / Never Won)</span>
+                                    {% else %}
+                                        <span style="color:var(--color-accent);">{{ p.probability }}%</span>
+                                    {% endif %}
+                                </div>
+                                <div class="bento-meter">
+                                    <div class="bento-meter-fill" style="width:{{ p.probability }}%;background:{{ p.display_color }};"></div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:10px;border-top:1px solid var(--border-subtle);">
+                                <span style="font-size:0.78rem;color:var(--text-muted);">
+                                    Stock: 
+                                    {% if p.remaining_quantity <= 0 %}
+                                        <strong style="color:var(--color-danger);">SOLD OUT</strong>
+                                    {% else %}
+                                        <strong>{{ p.remaining_quantity }}</strong> left
+                                    {% endif %}
+                                </span>
+
+                                <div style="display:flex;align-items:center;gap:4px;">
+                                    <button type="button" onclick="openEditPrizeModal({{ p.id }}, '{{ p.name|escapejs }}', '{{ p.prize_type }}', '{{ p.discount_percentage }}', '{{ p.fixed_discount_amount }}', '{{ p.probability }}', '{{ p.display_color }}', '{{ p.coupon_text|escapejs }}', '{{ p.remaining_quantity }}')" class="btn-ghost" style="color:var(--color-primary);padding:3px 8px;font-size:0.75rem;">
+                                        <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
+                                    </button>
+                                    <form method="POST" action="{% url 'prize_manager' campaign.id %}" id="deleteForm-{{ p.id }}" style="margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="delete_prize">
+                                        <input type="hidden" name="prize_id" value="{{ p.id }}">
+                                        <button type="button" onclick="confirmDeletePrize({{ p.id }}, '{{ p.name|escapejs }}')" class="btn-ghost" style="color:var(--color-danger);padding:3px 6px;font-size:0.75rem;" title="Delete Prize">
+                                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="bento-card" style="text-align:center;padding:32px;">
+                        <p style="color:var(--text-muted);font-size:0.88rem;margin:0;">No wheel segments added yet. Add your first reward below.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Add Prize Form Bento Card -->
+            <div class="bento-card">
+                <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;"><i data-lucide="plus-circle" style="width:16px;height:16px;"></i> + Add Wheel Segment Prize</h3>
+                
+                <form method="POST" action="{% url 'prize_manager' campaign.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_prize">
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div class="form-group">
+                            <label class="form-label">Reward Name</label>
+                            <input type="text" name="name" required placeholder="e.g. 20% OFF Total Bill" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Reward Type</label>
+                            <select name="prize_type" class="form-select">
+                                <option value="percentage">Percentage Discount</option>
+                                <option value="fixed">Fixed Amount Discount</option>
+                                <option value="freebie">Free Gift / Item</option>
+                                <option value="no_win">Try Again / No Win</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+                        <div class="form-group">
+                            <label class="form-label">Discount %</label>
+                            <input type="number" step="0.1" name="discount_percentage" value="10" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Weight % (Probability)</label>
+                            <input type="number" step="0.1" min="0" max="100" name="probability" value="20" required class="form-input">
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Set to <strong>0%</strong> for a teaser segment that never wins.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Segment Color</label>
+                            <input type="color" name="display_color" value="#6366f1" style="width:100%;height:44px;padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);background:var(--bg-elevated);cursor:pointer;">
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div class="form-group">
+                            <label class="form-label">Coupon Condition / Terms</label>
+                            <input type="text" name="coupon_text" placeholder="e.g. Valid on minimum $20 spend" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Quantity (Stock)</label>
+                            <input type="number" name="remaining_quantity" value="500" class="form-input">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;">
+                        <i data-lucide="check" style="width:16px;height:16px;"></i> Save Prize Segment
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: Live Wheel Preview (Span 4 Cols Sticky) -->
+        <div class="col-span-4">
+            <div class="bento-card" style="text-align:center;position:sticky;top:84px;">
+                <span class="bento-title" style="justify-content:center;margin-bottom:16px;">
+                    <i data-lucide="disc-3"></i> LIVE CANVAS WHEEL PREVIEW
+                </span>
+
+                <div class="wheel-container" style="transform:scale(0.85);margin:-15px auto;">
+                    <canvas id="prizeWheel" width="340" height="340"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Prize Modal -->
+<div id="editPrizeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:480px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <h3 style="font-size:1.25rem;font-weight:800;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                <i data-lucide="edit-3" style="width:18px;height:18px;color:var(--color-primary);"></i> Edit Reward Segment
+            </h3>
+            <button onclick="closeEditPrizeModal()" class="btn-ghost" style="padding:4px 8px;font-size:1rem;">✕</button>
+        </div>
+
+        <form method="POST" action="{% url 'prize_manager' campaign.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_prize">
+            <input type="hidden" name="prize_id" id="editPrizeId">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Reward Name</label>
+                    <input type="text" name="name" id="editPrizeName" required class="form-input">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Reward Type</label>
+                    <select name="prize_type" id="editPrizeType" class="form-select">
+                        <option value="percentage">Percentage Discount</option>
+                        <option value="fixed">Fixed Amount Discount</option>
+                        <option value="freebie">Free Gift / Item</option>
+                        <option value="no_win">Try Again / No Win</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Discount %</label>
+                    <input type="number" step="0.1" name="discount_percentage" id="editDiscountPct" class="form-input">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Fixed Amount (₹/$)</label>
+                    <input type="number" step="0.1" name="fixed_discount_amount" id="editFixedAmt" class="form-input">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Weight % (Probability)</label>
+                    <input type="number" step="0.1" min="0" max="100" name="probability" id="editProbability" required class="form-input">
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Set to <strong>0%</strong> to make this prize never win.</div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Coupon Condition / Terms</label>
+                    <input type="text" name="coupon_text" id="editCouponText" placeholder="e.g. Valid on minimum $20 spend" class="form-input">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Segment Color</label>
+                    <input type="color" name="display_color" id="editDisplayColor" style="width:100%;height:42px;padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);background:var(--bg-elevated);cursor:pointer;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:20px;">
+                <label class="form-label">Max Quantity (Stock)</label>
+                <input type="number" name="remaining_quantity" id="editRemainingQty" required class="form-input">
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;">
+                <button type="button" onclick="closeEditPrizeModal()" class="btn-secondary" style="flex:1;">Cancel</button>
+                <button type="submit" class="btn-primary" style="flex:2;">
+                    <i data-lucide="check" style="width:14px;height:14px;"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const prizes = {{ prizes_json|safe }};
+        new SpinWheel('prizeWheel', {
+            prizes: prizes,
+            theme: '{{ active_theme|default:"royal" }}'
+        });
+    });
+
+    function openEditPrizeModal(id, name, type, discPct, fixedAmt, prob, color, couponText, qty) {
+        document.getElementById('editPrizeId').value = id;
+        document.getElementById('editPrizeName').value = name;
+        document.getElementById('editPrizeType').value = type;
+        document.getElementById('editDiscountPct').value = parseFloat(discPct) || 0;
+        document.getElementById('editFixedAmt').value = parseFloat(fixedAmt) || 0;
+        document.getElementById('editProbability').value = parseFloat(prob) || 10;
+        document.getElementById('editDisplayColor').value = color || '#6366f1';
+        document.getElementById('editCouponText').value = couponText || '';
+        document.getElementById('editRemainingQty').value = parseInt(qty) || 100;
+        document.getElementById('editPrizeModal').style.display = 'flex';
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function closeEditPrizeModal() {
+        document.getElementById('editPrizeModal').style.display = 'none';
+    }
+
+    function confirmDeletePrize(id, name) {
+        showConfirmModal(
+            'Delete Reward Segment?',
+            `Are you sure you want to remove "${name}" from this wheel campaign?`,
+            function() {
+                document.getElementById('deleteForm-' + id).submit();
+            }
+        );
+    }
+</script>
+{% endblock %}

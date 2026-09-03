@@ -1,0 +1,644 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ shop.name }} — Spin & Win{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="{{ shop.name }} — Spin & Win">
+<meta property="og:description" content="Spin the wheel to win exclusive rewards and discounts at {{ shop.name }}!">
+<meta property="og:type" content="website">
+{% if shop.logo %}
+<meta property="og:image" content="{{ shop.logo.url }}">
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/themes.css' %}">
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: var(--bg-gradient, #09090b);
+        color: var(--text-primary, #f8fafc);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow-x: hidden;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    .customer-container {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 440px;
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 24px 20px 48px 20px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    /* Poster Header */
+    .shop-header-box {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .shop-brand-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 18px;
+        border-radius: var(--radius-full, 9999px);
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.8px;
+        color: var(--text-accent, #ffd700);
+        margin-bottom: 10px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .poster-main-title {
+        font-size: 2.3rem;
+        font-weight: 900;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin: 0 0 4px 0;
+        line-height: 1.1;
+        color: var(--text-primary, #ffffff);
+        text-shadow: 0 0 24px var(--color-accent-glow, rgba(255, 215, 0, 0.45));
+    }
+
+    .poster-theme-subtitle {
+        font-size: 1.0rem;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        color: var(--text-secondary, #94a3b8);
+        margin: 0 0 12px 0;
+        opacity: 0.95;
+    }
+
+    /* 3D Real Floating Decor Layer */
+    .theme-real-decor-container {
+        position: relative;
+        width: 100%;
+        max-width: 380px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Wheel Box & Canvas */
+    .wheel-box {
+        position: relative;
+        width: 330px;
+        height: 330px;
+        margin: 10px auto 18px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    #wheelCanvas {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.7));
+    }
+
+    /* 3D Tactile Spin Button */
+    .spin-btn {
+        width: 100%;
+        max-width: 330px;
+        min-height: 54px;
+        padding: 14px 28px;
+        font-size: 1.15rem;
+        font-weight: 900;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        border-radius: var(--radius-full, 9999px);
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        color: #ffffff;
+        background: var(--btn-gradient, linear-gradient(135deg, #d4af37 0%, #b45309 100%));
+        box-shadow: 0 10px 25px var(--btn-glow, rgba(212, 175, 55, 0.45)), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        margin-bottom: 24px;
+        z-index: 20;
+    }
+
+    .spin-btn:hover:not(:disabled) {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 14px 30px var(--btn-glow, rgba(212, 175, 55, 0.6)), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+    }
+
+    .spin-btn:active:not(:disabled) {
+        transform: translateY(2px) scale(0.98);
+    }
+
+    .spin-btn:disabled {
+        opacity: 0.75;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Win / No-Win Result Card */
+    .win-result-card {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 24px 20px;
+        border-radius: 20px;
+        background: var(--card-bg, rgba(24, 24, 27, 0.85));
+        border: 2px solid var(--border-highlight, rgba(255, 215, 0, 0.4));
+        backdrop-filter: blur(14px);
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+        text-align: center;
+        margin-bottom: 20px;
+        animation: scaleUpResult 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 20;
+    }
+
+    @keyframes scaleUpResult {
+        0% { transform: scale(0.85); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .code-display-box {
+        font-family: 'Courier New', monospace;
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: 3px;
+        padding: 12px 18px;
+        margin: 14px 0;
+        background: rgba(0, 0, 0, 0.45);
+        border: 2px dashed var(--color-accent, #ffd700);
+        border-radius: 12px;
+        color: var(--color-accent, #ffd700);
+        user-select: all;
+    }
+
+    /* How It Works Bento */
+    .how-it-works-grid {
+        width: 100%;
+        max-width: 380px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+        margin-bottom: 20px;
+        z-index: 10;
+    }
+
+    .how-step-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 12px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.72rem;
+        color: var(--text-secondary, #94a3b8);
+        backdrop-filter: blur(6px);
+    }
+
+    .how-step-icon {
+        margin-bottom: 6px;
+    }
+
+    .how-step-title {
+        font-weight: 800;
+        color: var(--text-primary, #ffffff);
+        margin-bottom: 2px;
+    }
+
+    /* Trust Badges */
+    .trust-box {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        font-size: 0.75rem;
+        color: var(--text-muted, #64748b);
+        margin-top: 8px;
+        flex-wrap: wrap;
+        z-index: 10;
+    }
+
+    .trust-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="customer-container">
+    {% if is_preview %}
+    <div style="background:var(--color-warning-bg, rgba(245, 158, 11, 0.15));border:1px solid rgba(245, 158, 11, 0.5);color:var(--text-accent, #ffd700);padding:8px 18px;border-radius:var(--radius-md, 10px);font-size:0.8rem;margin-bottom:12px;font-weight:700;z-index:20;">
+        ⚠️ PREVIEW MODE — Testing customer experience for "{{ campaign.name }}" (No inventory or coupons affected).
+    </div>
+    {% endif %}
+
+    <!-- Sound & Ambient Audio Control -->
+    <div style="display:flex;justify-content:flex-end;width:100%;max-width:380px;margin-bottom:4px;z-index:20;">
+        <button id="soundToggleBtn" class="btn-ghost" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">
+            <i data-lucide="volume-2" style="width:14px;height:14px;"></i> Sound On
+        </button>
+    </div>
+
+    <!-- Shop Brand & Promotional Poster Header (Matching Reference Design) -->
+    <div class="shop-header-box">
+        <div class="shop-brand-badge-pill">
+            {% if shop.logo %}
+            <img src="{{ shop.logo.url }}" alt="{{ shop.name }}" style="width:16px;height:16px;border-radius:50%;object-fit:cover;">
+            {% else %}
+            <i data-lucide="crown" style="width:14px;height:14px;color:var(--color-primary, #ffd700);"></i>
+            {% endif %}
+            <span>{{ shop.name|upper }}</span>
+        </div>
+
+        <h1 class="poster-main-title">SPIN & WIN</h1>
+
+        <div class="poster-theme-subtitle">
+            {% if 'sports' in active_theme %}
+            Gear Up & Win
+            {% elif 'jewellery' in active_theme or 'royal' in active_theme %}
+            Win Exclusive Jewellery
+            {% elif 'restaurant' in active_theme %}
+            Get Delicious Rewards
+            {% elif 'fashion' in active_theme %}
+            Style Your Rewards
+            {% elif 'beauty' in active_theme or 'pearl' in active_theme %}
+            Glow with Rewards
+            {% elif 'electronics' in active_theme or 'neon' in active_theme %}
+            Tech Rewards Await
+            {% elif 'kids' in active_theme %}
+            Fun Rewards for Kids
+            {% elif 'coffee' in active_theme %}
+            Sip & Win
+            {% elif 'diwali' in active_theme %}
+            Light Up Your Rewards
+            {% elif 'christmas' in active_theme %}
+            Christmas Rewards
+            {% elif 'new_year' in active_theme %}
+            Start the Year with Rewards
+            {% elif 'holi' in active_theme %}
+            Play & Win
+            {% elif 'valentines' in active_theme %}
+            Share the Love
+            {% elif 'eid' in active_theme %}
+            Celebrate with Rewards
+            {% elif 'summer' in active_theme %}
+            Beat the Heat
+            {% elif 'halloween' in active_theme %}
+            Trick or Treat
+            {% elif 'janmashtami' in active_theme %}
+            Krishna's Divine Celebration
+            {% else %}
+            {{ campaign.name }}
+            {% endif %}
+        </div>
+
+        {% if theme_resolution.is_pre_festival %}
+        <span class="badge badge-janmashtami">JANMASHTAMI COMING SOON ({{ theme_resolution.pre_festival_days_left }}d)</span>
+        {% elif 'sports' in active_theme %}
+        <span class="badge badge-sports">SPORTY RED • ATHLETIC REWARDS</span>
+        {% elif 'jewellery' in active_theme or 'royal' in active_theme %}
+        <span class="badge badge-jewellery">ROYAL GOLD • EXCLUSIVE REWARDS</span>
+        {% elif 'restaurant' in active_theme %}
+        <span class="badge badge-restaurant">FOOD & FEAST • DINE & WIN</span>
+        {% elif 'fashion' in active_theme %}
+        <span class="badge badge-fashion">BURGUNDY ELEGANCE • RUNWAY OFFERS</span>
+        {% elif 'beauty' in active_theme or 'pearl' in active_theme %}
+        <span class="badge badge-beauty">PEARL BEAUTY • GLOW SPECIAL</span>
+        {% elif 'electronics' in active_theme or 'neon' in active_theme %}
+        <span class="badge badge-electronics">NEON CYBER • TECH DROPS</span>
+        {% elif 'kids' in active_theme %}
+        <span class="badge badge-kids">PLAYFUL KIDS • TOYS & GIFTS</span>
+        {% elif 'coffee' in active_theme %}
+        <span class="badge badge-coffee">ARTISAN CAFÉ • SIP & WIN</span>
+        {% elif 'diwali' in active_theme %}
+        <span class="badge badge-diwali">DIWALI GRAND FESTIVAL OFFERS</span>
+        {% elif 'christmas' in active_theme %}
+        <span class="badge badge-christmas">CHRISTMAS WINTER MAGIC</span>
+        {% elif 'new_year' in active_theme %}
+        <span class="badge badge-newyear">NEW YEAR GOLDEN CELEBRATION</span>
+        {% elif 'holi' in active_theme %}
+        <span class="badge badge-holi">HOLI FESTIVAL OF COLORS</span>
+        {% elif 'valentines' in active_theme %}
+        <span class="badge badge-valentines">VALENTINE'S DAY LOVE & REWARDS</span>
+        {% elif 'eid' in active_theme %}
+        <span class="badge badge-eid">EID BLESSINGS & REWARDS</span>
+        {% elif 'summer' in active_theme %}
+        <span class="badge badge-summer">SUMMER SALE COOL OFFERS</span>
+        {% elif 'halloween' in active_theme %}
+        <span class="badge badge-halloween">HALLOWEEN SPOOKY REWARDS</span>
+        {% else %}
+        <span class="badge badge-gold">SCAN · SPIN · WIN</span>
+        {% endif %}
+    </div>
+
+    {% if existing_coupon %}
+    <!-- Active / Previously Spun Coupon -->
+    <div class="win-result-card">
+        <h2 style="font-size:1.3rem;font-weight:800;margin:0 0 6px 0;">
+            {% if 'janmashtami' in active_theme %}Your Janmashtami Reward{% elif 'diwali' in active_theme %}Your Diwali Reward{% elif 'coffee' in active_theme %}Your Café Reward{% else %}Your Active Coupon{% endif %}
+        </h2>
+        <p style="font-size:0.82rem;color:var(--text-secondary, #94a3b8);margin:0;">You have already spun for this offer!</p>
+
+        <div class="code-display-box">{{ existing_coupon.code }}</div>
+
+        <!-- High-Contrast Scannable Barcode Box for Existing Coupon -->
+        <div style="background:#ffffff;padding:10px 14px;border-radius:12px;margin:12px auto;box-shadow:0 4px 16px rgba(0,0,0,0.3);max-width:300px;text-align:center;">
+            <svg id="existingBarcodeSVG" style="width:100%;height:55px;display:block;margin:0 auto;"></svg>
+            <div style="font-size:0.7rem;color:#0f172a;font-weight:800;margin-top:4px;letter-spacing:1px;font-family:'Space Grotesk',sans-serif;">
+                <i data-lucide="scan-line" style="width:12px;height:12px;vertical-align:middle;display:inline-block;"></i> SCAN AT CHECKOUT TO REDEEM
+            </div>
+        </div>
+
+        <p style="font-weight:800;font-size:1.2rem;color:var(--color-accent, #ffd700);margin:0 0 4px 0;">{{ existing_coupon.prize.name }}</p>
+        <p style="font-size:0.88rem;color:var(--text-secondary, #94a3b8);margin:0 0 8px 0;">{{ existing_coupon.prize.coupon_text }}</p>
+        <p style="font-size:0.78rem;color:var(--text-muted, #64748b);margin:0 0 18px 0;">Expires: {{ existing_coupon.expires_at|date:"d M Y" }}</p>
+
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button
+                onclick="navigator.clipboard.writeText('{{ existing_coupon.code }}'); showToast('Coupon code copied to clipboard!', 'success');"
+                class="btn-primary" style="font-size:0.85rem;">
+                <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy Code
+            </button>
+            <a href="{% url 'public_coupon' existing_coupon.verify_token %}" class="btn-secondary"
+                style="font-size:0.85rem;text-decoration:none;">
+                <i data-lucide="ticket" style="width:14px;height:14px;"></i> Digital Voucher
+            </a>
+        </div>
+    </div>
+    {% elif is_in_cooldown %}
+    <!-- Cooldown Active Card (Already Spun / Next Spin Countdown) -->
+    <div class="win-result-card" style="border-color: rgba(245, 158, 11, 0.45);">
+        <div style="font-size:1.8rem;margin-bottom:8px;color:var(--color-accent, #ffd700);">
+            <i data-lucide="clock" style="width:36px;height:36px;"></i>
+        </div>
+        <h2 style="font-size:1.4rem;font-weight:800;margin:0 0 6px 0;color:var(--text-primary, #ffffff);">
+            WHEEL RESTING
+        </h2>
+        <p style="font-size:0.9rem;color:var(--text-secondary, #94a3b8);margin:0 0 14px 0;">
+            You tested your luck on the wheel earlier today!
+        </p>
+
+        <div style="background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:12px 18px;margin-bottom:16px;display:inline-block;">
+            <span style="font-size:0.75rem;color:var(--text-muted, #94a3b8);display:block;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Next Spin Unlocks In</span>
+            <span style="font-size:1.3rem;font-weight:800;color:var(--color-accent, #ffd700);font-family:'Space Grotesk', monospace;">
+                {{ cooldown_remaining_formatted }}
+            </span>
+        </div>
+
+        <p style="font-size:0.82rem;color:var(--text-muted, #64748b);margin:0;">
+            Visit {{ shop.name }} again tomorrow for another chance to spin & win!
+        </p>
+    </div>
+    {% else %}
+    <!-- Wheel Box & Canvas Engine -->
+    <div class="theme-real-decor-container">
+        <div class="wheel-box">
+            <canvas id="wheelCanvas" width="330" height="330"></canvas>
+        </div>
+    </div>
+
+    <!-- 3D Tactile Spin Button -->
+    <button id="spinBtn" class="spin-btn">
+        {{ branding.spin_button_text|default:"SPIN NOW" }}
+    </button>
+
+
+    <!-- Winning Coupon Card Reveal -->
+    <div id="couponResult" style="display: none; width: 100%;">
+        <div class="win-result-card">
+            <div style="font-size:1.8rem;margin-bottom:8px;color:var(--color-primary, #ffd700);">
+                <i data-lucide="sparkles" style="width:36px;height:36px;"></i>
+            </div>
+            <h2 style="font-size:1.4rem;font-weight:800;margin:0 0 4px 0;color:var(--text-primary, #ffffff);">
+                {% if 'janmashtami' in active_theme %}KRISHNA'S BLESSING UNLOCKED!{% elif 'diwali' in active_theme %}DIWALI BLESSING UNLOCKED!{% elif 'coffee' in active_theme %}BARISTA REWARD UNLOCKED!{% else %}REWARD UNLOCKED!{% endif %}
+            </h2>
+            <p style="font-size:0.85rem;color:var(--text-secondary, #94a3b8);margin:0 0 10px 0;">Exclusive reward for {{ shop.name }}</p>
+
+            <h3 id="winPrizeName" style="font-size:1.5rem;font-weight:800;color:var(--color-accent, #ffd700);margin:0 0 4px 0;"></h3>
+            <p id="winCouponText" style="font-size:0.88rem;color:var(--text-secondary, #94a3b8);margin:0 0 12px 0;"></p>
+
+            <div class="code-display-box" id="winCouponCode">SW-XXXX-XXXX</div>
+
+            <!-- High-Contrast Scannable Barcode Box in Win Modal -->
+            <div id="winBarcodeContainer" style="background:#ffffff;padding:10px 14px;border-radius:12px;margin:14px auto;box-shadow:0 4px 16px rgba(0,0,0,0.3);max-width:300px;text-align:center;">
+                <svg id="winBarcodeSVG" style="width:100%;height:55px;display:block;margin:0 auto;"></svg>
+                <div style="font-size:0.7rem;color:#0f172a;font-weight:800;margin-top:4px;letter-spacing:1px;font-family:'Space Grotesk',sans-serif;">
+                    <i data-lucide="scan-line" style="width:12px;height:12px;vertical-align:middle;display:inline-block;"></i> SCAN AT CHECKOUT TO REDEEM
+                </div>
+            </div>
+
+            <p style="font-size:0.8rem;color:var(--text-muted, #64748b);margin:0 0 4px 0;">Show this coupon code to staff at checkout</p>
+            <p style="font-size:0.78rem;color:var(--text-muted, #64748b);margin:0 0 18px 0;">Expires: <span id="winExpires"></span></p>
+
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                <button id="copyBtn" class="btn-primary" style="font-size:0.85rem;">
+                    <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy Code
+                </button>
+                <a id="voucherLink" href="#" class="btn-secondary" style="font-size:0.85rem;text-decoration:none;">
+                    <i data-lucide="ticket" style="width:14px;height:14px;"></i> View Voucher
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- No-Win Result Card Reveal -->
+    <div id="noWinResult" style="display: none; width: 100%;">
+        <div class="win-result-card" style="border-color: rgba(245, 158, 11, 0.4);">
+            <div style="font-size:1.8rem;margin-bottom:8px;color:var(--color-accent, #ffd700);">
+                <i data-lucide="target" style="width:36px;height:36px;"></i>
+            </div>
+            <h2 style="font-size:1.4rem;font-weight:800;color:var(--color-accent, #ffd700);margin:0 0 6px 0;">SO CLOSE!</h2>
+            <p style="font-size:1.05rem;font-weight:700;margin:0 0 4px 0;" id="noWinPrizeName"></p>
+            <p style="font-size:0.88rem;color:var(--text-secondary, #94a3b8);margin:0 0 12px 0;" id="noWinCouponText"></p>
+            <p style="font-size:0.8rem;color:var(--text-muted, #64748b);margin:0;">Thank you for visiting {{ shop.name }}! Check back next promotion.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Interactive 3-Step "How It Works" Bento -->
+    <div class="how-it-works-grid">
+        <div class="how-step-card">
+            <span class="how-step-icon"><i data-lucide="rotate-cw" style="width:20px;height:20px;color:var(--color-primary, #ffd700);"></i></span>
+            <span class="how-step-title">1. Tap Spin</span>
+            <span>Test your luck on the wheel</span>
+        </div>
+        <div class="how-step-card">
+            <span class="how-step-icon"><i data-lucide="gift" style="width:20px;height:20px;color:var(--color-primary, #ffd700);"></i></span>
+            <span class="how-step-title">2. Win Prize</span>
+            <span>Receive exclusive discount</span>
+        </div>
+        <div class="how-step-card">
+            <span class="how-step-icon"><i data-lucide="ticket" style="width:20px;height:20px;color:var(--color-primary, #ffd700);"></i></span>
+            <span class="how-step-title">3. Redeem</span>
+            <span>Present code at checkout</span>
+        </div>
+    </div>
+
+    <!-- Trust & Verification Info -->
+    <div class="trust-box">
+        <div class="trust-item"><i data-lucide="shield-check" style="width:14px;height:14px;color:var(--color-accent, #ffd700);"></i> Verified Merchant</div>
+        <div class="trust-item"><i data-lucide="sparkles" style="width:14px;height:14px;color:var(--color-accent, #ffd700);"></i> Instant Digital Coupon</div>
+        <div class="trust-item"><i data-lucide="clock" style="width:14px;height:14px;color:var(--color-accent, #ffd700);"></i> 1 Spin Per Visit</div>
+    </div>
+
+    <!-- Terms Trigger -->
+    <div style="margin-top:20px;font-size:0.8rem;color:var(--text-muted, #64748b);z-index:10;">
+        <a href="#" onclick="event.preventDefault(); showConfirmModal('Terms & Conditions', '• Valid for single spin per customer visit.\n• Coupon must be presented to staff at checkout.\n• Cannot be combined with other promotional offers.\n• Non-transferable and no cash value.', null);" style="color:var(--text-secondary, #94a3b8);text-decoration:underline;">
+            Terms & Conditions
+        </a>
+    </div>
+
+    <footer style="margin-top:20px;font-size:0.75rem;color:var(--text-muted, #64748b);opacity:0.6;z-index:10;">
+        Powered by Spin & Win SaaS Platform
+    </footer>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        const activeTheme = "{{ active_theme|default:'royal' }}";
+        document.body.setAttribute('data-theme', activeTheme);
+        document.documentElement.setAttribute('data-theme', activeTheme);
+
+        // 1. Initialize Theme Atmosphere
+        if (window.ThemeEngine) {
+            window.ThemeEngineInstance = new ThemeEngine('themeAtmosphereCanvas', activeTheme, {
+                intensity: "{{ theme_resolution.intensity|default:'balanced' }}"
+            });
+        }
+
+        {% if not existing_coupon %}
+        // 2. Initialize 3D Canvas Spin Wheel
+        const prizes = {{ prizes_json|safe }};
+        const spinApiUrl = {% if is_preview %}"{% url 'preview_spin_api' campaign.id %}"{% else %}"{% url 'spin_wheel_api' shop.public_token %}"{% endif %};
+        const csrfToken = "{{ csrf_token }}";
+
+        const wheel = new SpinWheel('wheelCanvas', {
+            theme: activeTheme,
+            prizes: prizes,
+            spinButtonId: 'spinBtn',
+            soundToggleId: 'soundToggleBtn',
+            onSpinClick: function () {
+                const btn = document.getElementById('spinBtn');
+                if (!btn || btn.dataset.spinning === 'true' || btn.disabled) return;
+                btn.dataset.spinning = 'true';
+                btn.disabled = true;
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.65';
+                btn.style.cursor = 'not-allowed';
+                btn.innerText = "SPINNING...";
+
+                fetch(spinApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        wheel.spinToSegment(data.winning_segment_index, function () {
+                            btn.style.display = 'none';
+
+                            if (data.prize.prize_type === 'no_win') {
+                                document.getElementById('noWinPrizeName').innerText = data.prize.name;
+                                document.getElementById('noWinCouponText').innerText = data.prize.coupon_text || 'Better luck next time!';
+                                document.getElementById('noWinResult').style.display = 'block';
+                            } else {
+                                if (window.ThemeEngineInstance && window.ThemeEngineInstance.triggerWinCelebration) {
+                                    window.ThemeEngineInstance.triggerWinCelebration();
+                                }
+
+                                document.getElementById('winPrizeName').innerText = data.prize.name;
+                                document.getElementById('winCouponText').innerText = data.prize.coupon_text || '';
+
+                                if (data.coupon) {
+                                    document.getElementById('winCouponCode').innerText = data.coupon.code;
+                                    document.getElementById('winExpires').innerText = data.coupon.expires_at;
+                                    document.getElementById('voucherLink').href = "/coupon/" + data.coupon.verify_token + "/";
+                                    document.getElementById('copyBtn').onclick = function () {
+                                        navigator.clipboard.writeText(data.coupon.code);
+                                        showToast('Coupon code copied to clipboard!', 'success');
+                                    };
+
+                                    if (window.JsBarcode) {
+                                        try {
+                                            JsBarcode("#winBarcodeSVG", data.coupon.code, {
+                                                format: "CODE128",
+                                                lineColor: "#0f172a",
+                                                width: 2,
+                                                height: 50,
+                                                displayValue: false,
+                                                margin: 4
+                                            });
+                                        } catch (e) {
+                                            console.warn("Win barcode render warning:", e);
+                                        }
+                                    }
+                                }
+                                document.getElementById('couponResult').style.display = 'block';
+                            }
+                        });
+                    } else {
+                        showToast(data.message || 'Spin failed. Please try again.', 'error');
+                        btn.disabled = false;
+                        btn.innerText = "{{ branding.spin_button_text|default:'SPIN NOW' }}";
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast('Connection error. Please try again.', 'error');
+                    btn.disabled = false;
+                    btn.innerText = "{{ branding.spin_button_text|default:'SPIN NOW' }}";
+                });
+            }
+        });
+        {% else %}
+        {% if existing_coupon %}
+        if (window.JsBarcode) {
+            try {
+                JsBarcode("#existingBarcodeSVG", "{{ existing_coupon.code }}", {
+                    format: "CODE128",
+                    lineColor: "#0f172a",
+                    width: 2,
+                    height: 50,
+                    displayValue: false,
+                    margin: 4
+                });
+            } catch (e) {
+                console.warn("Existing barcode render warning:", e);
+            }
+        }
+        {% endif %}
+        {% endif %}
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Business Profile — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-bento-wrap {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="bento-card bento-feature">
+        <span class="badge badge-gold" style="margin-bottom:8px;">
+            <i data-lucide="store" style="width:12px;height:12px;"></i> BUSINESS PROFILE
+        </span>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Shop Identity & Details</h1>
+        <p style="font-size:0.88rem;color:var(--text-secondary);margin:0 0 24px 0;">Manage your store name, business category, currency symbol, location, and brand logo.</p>
+
+        <form method="POST" action="{% url 'shop_profile' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Shop / Business Name</label>
+                <input type="text" name="name" value="{{ shop.name }}" required class="form-input">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Business Category</label>
+                    <select name="category" class="form-select">
+                        <option value="Café & Bakery" {% if shop.category == 'Café & Bakery' %}selected{% endif %}>Café & Bakery</option>
+                        <option value="Restaurant" {% if shop.category == 'Restaurant' %}selected{% endif %}>Restaurant</option>
+                        <option value="Fashion & Apparel" {% if shop.category == 'Fashion & Apparel' %}selected{% endif %}>Fashion & Apparel</option>
+                        <option value="Salon & Spa" {% if shop.category == 'Salon & Spa' %}selected{% endif %}>Salon & Spa</option>
+                        <option value="Supermarket & Grocery" {% if shop.category == 'Supermarket & Grocery' %}selected{% endif %}>Supermarket & Grocery</option>
+                        <option value="Gym & Fitness" {% if shop.category == 'Gym & Fitness' %}selected{% endif %}>Gym & Fitness</option>
+                        <option value="Electronics & Tech" {% if shop.category == 'Electronics & Tech' %}selected{% endif %}>Electronics & Tech</option>
+                        <option value="Retail Store" {% if shop.category == 'Retail Store' %}selected{% endif %}>Retail Store</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Currency Symbol</label>
+                    <select name="currency_symbol" class="form-select">
+                        <option value="$" {% if shop.currency_symbol == '$' %}selected{% endif %}>$ (USD / AUD / CAD)</option>
+                        <option value="₹" {% if shop.currency_symbol == '₹' %}selected{% endif %}>₹ (INR)</option>
+                        <option value="€" {% if shop.currency_symbol == '€' %}selected{% endif %}>€ (EUR)</option>
+                        <option value="£" {% if shop.currency_symbol == '£' %}selected{% endif %}>£ (GBP)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Contact Phone</label>
+                    <input type="text" name="phone" value="{{ shop.phone }}" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Business Email</label>
+                    <input type="email" name="email" value="{{ shop.email }}" class="form-input">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Store Location / Address</label>
+                <input type="text" name="address" value="{{ shop.address }}" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Shop Description</label>
+                <textarea name="description" rows="3" class="form-input">{{ shop.description }}</textarea>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Logo Image</label>
+                    <input type="file" name="logo" accept="image/*" class="form-input" style="padding:8px;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cover Header Image</label>
+                    <input type="file" name="cover_image" accept="image/*" class="form-input" style="padding:8px;">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width:100%;margin-top:12px;">
+                <i data-lucide="save" style="width:16px;height:16px;"></i> Save Business Profile
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

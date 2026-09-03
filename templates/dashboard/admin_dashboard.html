@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Platform Oversight — Super Admin Bento Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-bento-wrap {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-bento-wrap">
+    <!-- Top Hero Section -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="crown" style="width:12px;height:12px;"></i> PLATFORM COMMAND CENTER
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Good evening, Admin 👋</h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Monitor platform tenants, campaigns, spins, and system performance in real-time.</p>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <a href="{% url 'admin_capacity_dashboard' %}" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;">
+                    <i data-lucide="gauge" style="width:16px;height:16px;color:#10b981;"></i> System Capacity
+                </a>
+                <a href="{% url 'admin_subscriptions' %}" class="btn-accent">
+                    <i data-lucide="layers" style="width:16px;height:16px;"></i> Subscriptions & Plans (₹)
+                </a>
+                <a href="{% url 'shop_dashboard' %}" class="btn-secondary">
+                    <i data-lucide="store" style="width:16px;height:16px;"></i> Shop View
+                </a>
+                <a href="{% url 'onboarding' %}" class="btn-primary">
+                    <i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Create Shop Wizard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 12-Column Bento Grid Engine -->
+    <div class="bento-grid">
+        <!-- Metric 1: Total Shops -->
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="building-2"></i> Total Shops</span>
+                <span class="badge badge-live">Live</span>
+            </div>
+            <div class="bento-value">{{ total_shops }}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <span class="bento-trend up"><i data-lucide="trending-up" style="width:14px;height:14px;"></i> ↑ 14% this month</span>
+                <span style="font-size:0.75rem;color:var(--text-muted);">Multi-tenant</span>
+            </div>
+        </div>
+
+        <!-- Metric 2: Total Spins -->
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="rotate-cw"></i> Platform Spins</span>
+                <i data-lucide="zap" style="width:16px;height:16px;color:var(--color-primary);"></i>
+            </div>
+            <div class="bento-value" style="color:var(--color-primary);">{{ total_spins }}</div>
+            <div class="bento-meter">
+                <div class="bento-meter-fill" style="width: 82%;"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">High spin throughput</div>
+        </div>
+
+        <!-- Metric 3: Coupons Issued -->
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="gift"></i> Coupons Issued</span>
+                <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--color-success);"></i>
+            </div>
+            <div class="bento-value" style="color:var(--color-success);">{{ total_coupons }}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <span class="bento-trend up"><i data-lucide="trending-up" style="width:14px;height:14px;"></i> ↑ 22% growth</span>
+                <span style="font-size:0.75rem;color:var(--text-muted);">Issued</span>
+            </div>
+        </div>
+
+        <!-- Metric 4: Total Redeemed -->
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="ticket"></i> Total Redeemed</span>
+                <i data-lucide="award" style="width:16px;height:16px;color:var(--color-accent);"></i>
+            </div>
+            <div class="bento-value" style="color:var(--color-accent);">{{ total_redeemed }}</div>
+            <div class="bento-meter">
+                <div class="bento-meter-fill" style="width: 65%; background: var(--color-accent);"></div>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">Strong redemption rate</div>
+        </div>
+
+        <!-- Bento Card: Tenant Shops Table & Filter (Span 8 Cols) -->
+        <div class="bento-card col-span-8">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 2px 0;">🏬 Tenant Shops Oversight</h3>
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Active SaaS shop accounts across categories</p>
+                </div>
+                <div>
+                    <form method="GET" action="{% url 'admin_dashboard' %}" style="display:flex;gap:6px;align-items:center;">
+                        <div style="position:relative;width:240px;">
+                            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-muted);"></i>
+                            <input type="text" name="q" value="{{ search_q }}" placeholder="Search shops, owners, tokens..." class="form-input" style="padding-left:32px;font-size:0.82rem;width:100%;">
+                        </div>
+                        <button type="submit" class="btn-secondary" style="font-size:0.82rem;padding:6px 12px;min-height:36px;">
+                            Search
+                        </button>
+                        {% if search_q %}
+                        <a href="{% url 'admin_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;padding:6px 10px;min-height:36px;" title="Clear search">
+                            <i data-lucide="x" style="width:14px;height:14px;"></i>
+                        </a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <div class="responsive-bento-table">
+                <table class="data-table" id="shopsTable">
+                    <thead>
+                        <tr>
+                            <th>Shop Name</th>
+                            <th>Owner</th>
+                            <th>Category</th>
+                            <th>Public Token</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in shops %}
+                        <tr>
+                            <td data-label="Shop Name">
+                                <strong style="color:var(--text-primary);">{{ s.name }}</strong>
+                            </td>
+                            <td data-label="Owner">{{ s.owner.username }}</td>
+                            <td data-label="Category">{{ s.category|default:"Retail" }}</td>
+                            <td data-label="Token"><code style="font-size:0.78rem;">{{ s.public_token }}</code></td>
+                            <td data-label="Status">
+                                {% if s.status == 'active' %}
+                                    <span class="badge badge-active"><i data-lucide="check" style="width:10px;height:10px;"></i> Active</span>
+                                {% else %}
+                                    <span class="badge badge-ended">Disabled</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Action">
+                                <a href="{% url 'public_shop' s.public_token %}" target="_blank" class="btn-secondary" style="font-size:0.78rem;padding:4px 10px;min-height:32px;">
+                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i> View Page
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">
+                                <i data-lucide="store" style="width:28px;height:28px;margin-bottom:8px;opacity:0.4;"></i>
+                                <div style="font-size:0.9rem;font-weight:600;">No shops found{% if search_q %} matching "{{ search_q }}"{% endif %}</div>
+                                <div style="font-size:0.8rem;margin-top:4px;">Try checking for typos or clear your search query.</div>
+                                {% if search_q %}
+                                <a href="{% url 'admin_dashboard' %}" class="btn-secondary" style="font-size:0.8rem;margin-top:12px;display:inline-flex;padding:4px 12px;">
+                                    Clear Search Filter
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            {% if shops.has_other_pages %}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);flex-wrap:wrap;gap:12px;">
+                <div style="font-size:0.8rem;color:var(--text-muted);">
+                    Showing <strong style="color:var(--text-primary);">{{ shops.start_index }}</strong> to <strong style="color:var(--text-primary);">{{ shops.end_index }}</strong> of <strong style="color:var(--text-primary);">{{ shops.paginator.count }}</strong> shops
+                </div>
+
+                <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                    {% if shops.has_previous %}
+                    <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page=1" class="btn-secondary" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="First Page">«</a>
+                    <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ shops.previous_page_number }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">
+                        <i data-lucide="chevron-left" style="width:12px;height:12px;"></i> Prev
+                    </a>
+                    {% endif %}
+
+                    {% for page_num in shops.paginator.page_range %}
+                        {% if page_num == shops.number %}
+                        <span class="btn-primary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;pointer-events:none;background:var(--color-primary);">{{ page_num }}</span>
+                        {% elif page_num > shops.number|add:'-3' and page_num < shops.number|add:'3' %}
+                        <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ page_num }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">{{ page_num }}</a>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if shops.has_next %}
+                    <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ shops.next_page_number }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">
+                        Next <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+                    </a>
+                    <a href="?{% if search_q %}q={{ search_q }}&{% endif %}page={{ shops.paginator.num_pages }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="Last Page">»</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% elif shops.paginator.count > 0 %}
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:14px;padding-top:10px;border-top:1px solid var(--border-subtle);text-align:right;">
+                Showing all {{ shops.paginator.count }} shop{% if shops.paginator.count != 1 %}s{% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bento Card: Activity Audit Log Timeline (Span 4 Cols) -->
+        <div class="bento-card col-span-4">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="font-size:1.1rem;font-weight:800;margin:0;">📜 Activity Timeline</h3>
+                <a href="{% url 'activity_logs' %}" style="font-size:0.78rem;color:var(--color-primary);text-decoration:none;font-weight:700;">View All →</a>
+            </div>
+
+            {% if logs %}
+                <div style="display:flex;flex-direction:column;gap:12px;max-height:420px;overflow-y:auto;">
+                    {% for log in logs %}
+                    <div style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border-subtle);font-size:0.83rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <strong style="color:var(--text-primary);">{{ log.action }}</strong>
+                            <span style="font-size:0.72rem;color:var(--text-muted);">{{ log.timestamp|date:"d M H:i" }}</span>
+                        </div>
+                        <p style="color:var(--text-secondary);margin:0;font-size:0.8rem;line-height:1.4;">{{ log.details }}</p>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">Actor: {{ log.actor.username|default:"System" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color:var(--text-muted);font-size:0.85rem;margin:0;text-align:center;padding:24px 0;">No system logs recorded yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Promotional Campaigns — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .camp-bento-wrap {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="camp-bento-wrap">
+    <div style="margin-bottom:16px;">
+        <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Header Bento Card -->
+    {% if error %}
+    <div
+        style="background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.4); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 20px; color: #fca5a5; display:flex; align-items:center; gap:10px;">
+        <i data-lucide="alert-circle" style="width:18px;height:18px;color:#ef4444;"></i>
+        <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="target" style="width:12px;height:12px;"></i> PROMOTIONS ENGINE
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Offers & Campaigns
+                </h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Create seasonal promotions with
+                    optional Theme Overrides (e.g. Diwali, Christmas, Flash Sale) that automatically revert to your Shop
+                    Theme when ended.</p>
+            </div>
+            <div>
+                <button onclick="document.getElementById('createModal').style.display='flex';" class="btn-primary">
+                    <i data-lucide="plus" style="width:16px;height:16px;"></i> Create New Campaign
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;">
+        <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);margin-right:4px;">Filter:</span>
+        <button class="btn-secondary btn-primary" onclick="filterCampaigns('all', this)"
+            style="font-size:0.78rem;padding:4px 12px;min-height:34px;">All Campaigns ({{ campaigns.count }})</button>
+        <button class="btn-secondary" onclick="filterCampaigns('active', this)"
+            style="font-size:0.78rem;padding:4px 12px;min-height:34px;">Active / Live</button>
+        <button class="btn-secondary" onclick="filterCampaigns('draft', this)"
+            style="font-size:0.78rem;padding:4px 12px;min-height:34px;">Drafts</button>
+    </div>
+
+    <!-- Campaign Bento Cards Grid (12-Col) -->
+    {% if campaigns %}
+    <div class="bento-grid" id="campaignsGrid">
+        {% for c in campaigns %}
+        <div class="bento-card col-span-6 campaign-bento-item"
+            data-status="{% if c.is_active %}active{% else %}draft{% endif %}">
+            <div
+                style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                <div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
+                        <span class="badge {% if c.is_active %}badge-active{% else %}badge-draft{% endif %}">
+                            <i data-lucide="{% if c.is_active %}radio{% else %}file-text{% endif %}"
+                                style="width:10px;height:10px;"></i>
+                            {% if c.is_active %}ACTIVE / LIVE{% else %}DRAFT / INACTIVE{% endif %}
+                        </span>
+                        {% if c.theme %}
+                        <span class="badge badge-gold" title="Theme Override Active">
+                            <i data-lucide="palette" style="width:10px;height:10px;"></i> {{ c.theme|upper }} THEME
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background:var(--bg-elevated);color:var(--text-muted);font-size:0.68rem;">
+                            ✨ Inherits Shop Theme
+                        </span>
+                        {% endif %}
+                    </div>
+                    <h3 style="font-size:1.25rem;font-weight:800;color:var(--text-primary);margin:4px 0 2px 0;">{{ c.name }}</h3>
+                </div>
+                <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);background:var(--bg-elevated);padding:4px 10px;border-radius:var(--radius-full);">
+                    ⏱️ {{ c.spin_cooldown_hours }}h Cooldown
+                </span>
+            </div>
+
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 16px 0;line-height:1.5;">
+                {{ c.description|default:"Instant store discounts and rewards for visiting customers." }}
+            </p>
+
+            <div style="display:flex;align-items:center;gap:12px;font-size:0.78rem;color:var(--text-muted);margin-bottom:16px;">
+                <span><i data-lucide="calendar" style="width:12px;height:12px;"></i> {{ c.start_date|date:"d M Y" }} — {{ c.end_date|date:"d M Y" }}</span>
+            </div>
+
+            <!-- Prize Chips -->
+            <div
+                style="background:var(--bg-elevated);border-radius:var(--radius-md);padding:12px;margin-bottom:20px;border:1px solid var(--border-subtle);">
+                <div
+                    style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">
+                    Prizes Included</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    {% for prize in c.prizes.all %}
+                    <span class="badge"
+                        style="background:var(--bg-surface);color:var(--text-primary);border:1px solid var(--border-subtle);font-size:0.7rem;">
+                        <span
+                            style="width:6px;height:6px;border-radius:50%;background:{{ prize.display_color }};display:inline-block;"></span>
+                        {{ prize.name }}
+                    </span>
+                    {% empty %}
+                    <span style="font-size:0.75rem;color:var(--text-muted);">No rewards configured yet.</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div style="display:flex;gap:8px;margin-top:auto;flex-wrap:wrap;">
+                <a href="{% url 'prize_manager' c.id %}" class="btn-primary" style="font-size:0.8rem;padding:8px 14px;">
+                    <i data-lucide="settings-2" style="width:14px;height:14px;"></i> Manage Prizes
+                </a>
+                <a href="{% url 'preview_campaign' c.id %}" target="_blank" class="btn-secondary"
+                    style="font-size:0.8rem;padding:8px 14px;">
+                    <i data-lucide="eye" style="width:14px;height:14px;"></i> Preview
+                </a>
+                <button onclick="confirmDuplicate('{% url 'duplicate_campaign' c.id %}', '{{ c.name|escapejs }}')"
+                    class="btn-secondary" style="font-size:0.8rem;padding:8px 14px;">
+                    <i data-lucide="copy" style="width:14px;height:14px;"></i> Duplicate
+                </button>
+                <form method="POST" action="{% url 'campaign_list' %}" style="display:inline;margin-left:auto;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle_status">
+                    <input type="hidden" name="campaign_id" value="{{ c.id }}">
+                    <button type="submit" class="btn-ghost" style="font-size:0.8rem;padding:8px 12px;">
+                        {% if c.is_active %}Deactivate{% else %}Set Live{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bento-card" style="text-align:center;padding:48px 24px;">
+        <div
+            style="width:64px;height:64px;border-radius:50%;background:rgba(109,40,217,0.12);border:1px solid rgba(109,40,217,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--color-primary);">
+            <i data-lucide="gift" style="width:32px;height:32px;"></i>
+        </div>
+        <h3 style="font-size:1.3rem;font-weight:800;margin:0 0 8px 0;color:var(--text-primary);">No Promotional Campaigns Yet</h3>
+        <p style="color:var(--text-secondary);font-size:0.88rem;max-width:440px;margin:0 auto 20px;">Create your first seasonal offer to give customers exciting spin-and-win discounts.</p>
+        <button onclick="document.getElementById('createModal').style.display='flex';" class="btn-primary">
+            <i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Create First Campaign
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Campaign Modal -->
+<div id="createModal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div
+        style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:32px;width:100%;max-width:480px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="font-size:1.3rem;font-weight:800;margin:0;color:var(--text-primary);">Create Campaign Wizard</h3>
+            <button onclick="document.getElementById('createModal').style.display='none';" class="btn-ghost"
+                style="padding:4px 8px;">✕</button>
+        </div>
+
+        <form method="POST" action="{% url 'campaign_list' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+
+            <div class="form-group">
+                <label class="form-label">Seasonal Template Preset</label>
+                <select name="template_type" class="form-select">
+                    <option value="">Custom (Blank Configuration)</option>
+                    <option value="festival">Festival Celebration Offer (20% OFF, ₹100 Gift, Free Drink)</option>
+                    <option value="weekend">Weekend Flash Sale (15% OFF, BOGO Free)</option>
+                    <option value="grand_opening">Grand Opening Special (25% OFF, ₹200 Voucher)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Campaign Theme Override (Optional)</label>
+                <select name="theme" class="form-select">
+                    <option value="">✨ Inherit Global Shop Theme</option>
+                    <optgroup label="🎉 Festivals">
+                        <option value="diwali">🪔 Royal Diwali Lights</option>
+                        <option value="navratri">💃 Navratri Garba Celebration</option>
+                        <option value="holi">🎨 Holi Color Splash</option>
+                        <option value="christmas">🎄 Christmas Holiday Snow</option>
+                        <option value="new_year">🎆 New Year Sparkle</option>
+                        <option value="eid">🌙 Eid Celebration</option>
+                        <option value="valentines">💖 Valentine Romance</option>
+                    </optgroup>
+                    <optgroup label="🛍️ Sales & Promotions">
+                        <option value="summer_sale">☀️ Summer Tropical Sale</option>
+                        <option value="winter_sale">❄️ Winter Frost Sale</option>
+                        <option value="monsoon_sale">🌧️ Monsoon Splash Sale</option>
+                        <option value="flash_sale">⚡ Flash Sale Lightning</option>
+                        <option value="clearance">🏷️ Clearance Sale</option>
+                    </optgroup>
+                    <optgroup label="✨ Modern & Luxury">
+                        <option value="luxury_black">🖤 Luxury Black</option>
+                        <option value="pearl">💎 Pearl Luxury</option>
+                        <option value="aurora">🌌 Aurora Atmosphere</option>
+                        <option value="glass">🧊 Glassmorphism</option>
+                        <option value="neon">🔮 Cyber Neon</option>
+                        <option value="restaurant">🍽️ Restaurant Dining</option>
+                        <option value="coffee">☕ Coffee & Café Warmth</option>
+                        <option value="fashion">👗 Haute Couture Fashion</option>
+                        <option value="electronics">⚡ Electronics & Tech</option>
+                    </optgroup>
+                </select>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Overrides shop theme while this campaign is live. When campaign ends, shop returns to normal theme.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Campaign Name</label>
+                <input type="text" name="name" required placeholder="e.g. Diwali Dhamaka 2026" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description / Tagline</label>
+                <textarea name="description" rows="2" placeholder="Spin the wheel for instant store discounts!" class="form-input"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Spin Cooldown (Hours)</label>
+                <input type="number" name="spin_cooldown_hours" value="24" required class="form-input">
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Minimum hours before a customer session can spin again.</div>
+            </div>
+
+            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:28px;">
+                <button type="button" onclick="document.getElementById('createModal').style.display='none';"
+                    class="btn-secondary" style="flex:1;">Cancel</button>
+                <button type="submit" class="btn-primary" style="flex:2;">Create Offer →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filterCampaigns(status, btn) {
+        document.querySelectorAll('.camp-bento-wrap .btn-secondary').forEach(p => p.classList.remove('btn-primary'));
+        btn.classList.add('btn-primary');
+
+        const items = document.querySelectorAll('#campaignsGrid .campaign-bento-item');
+        items.forEach(item => {
+            if (status === 'all') {
+                item.style.display = '';
+            } else {
+                item.style.display = item.getAttribute('data-status') === status ? '' : 'none';
+            }
+        });
+    }
+
+    function confirmDuplicate(url, name) {
+        showConfirmModal(
+            'Duplicate Campaign',
+            `Are you sure you want to duplicate "${name}"? This will copy all reward configurations into a draft campaign.`,
+            () => { window.location.href = url; }
+        );
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Shop Setup Wizard — Spin & Win SaaS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wizard-bento-wrap {
+        max-width: 860px;
+        margin: 40px auto;
+        padding: 0 24px;
+    }
+    .stepper-bento {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 36px;
+        position: relative;
+    }
+    .stepper-bento::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--border-subtle);
+        z-index: 0;
+    }
+    .step-bento-item {
+        position: relative;
+        z-index: 1;
+        background: var(--bg-surface);
+        padding: 0 12px;
+        text-align: center;
+    }
+    .step-bento-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--bg-elevated);
+        border: 2px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.95rem;
+        margin: 0 auto 8px;
+        color: var(--text-muted);
+        transition: all var(--transition-normal);
+    }
+    .step-bento-item.active .step-bento-number {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);
+    }
+    .step-bento-item.completed .step-bento-number {
+        border-color: var(--color-accent);
+        background: var(--color-accent);
+        color: #000000;
+    }
+    .step-bento-label {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .step-bento-item.active .step-bento-label {
+        color: var(--text-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-bento-wrap">
+    <div class="bento-card bento-feature" style="padding:40px 32px;">
+        <div style="text-align:center;margin-bottom:32px;">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(109,40,217,0.12);border:1px solid rgba(109,40,217,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--color-primary);">
+                <i data-lucide="rocket" style="width:28px;height:28px;"></i>
+            </div>
+            <h1 style="font-size:1.8rem;font-weight:800;margin:0 0 6px 0;color:var(--text-primary);letter-spacing:-0.4px;">Welcome to Spin & Win SaaS</h1>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Set up business identity, choose branding preset, launch rewards, and generate your permanent QR code.</p>
+        </div>
+
+        <!-- Bento Stepper Header -->
+        <div class="stepper-bento">
+            <div class="step-bento-item active" id="step1-indicator">
+                <div class="step-bento-number">1</div>
+                <div class="step-bento-label">Shop Info</div>
+            </div>
+            <div class="step-bento-item" id="step2-indicator">
+                <div class="step-bento-number">2</div>
+                <div class="step-bento-label">Branding</div>
+            </div>
+            <div class="step-bento-item" id="step3-indicator">
+                <div class="step-bento-number">3</div>
+                <div class="step-bento-label">First Offer</div>
+            </div>
+            <div class="step-bento-item" id="step4-indicator">
+                <div class="step-bento-number">4</div>
+                <div class="step-bento-label">Launch QR</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Shop Information -->
+        <div id="step1" class="wizard-step">
+            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 1: Business Identity</h3>
+            <div class="form-group">
+                <label class="form-label">Shop Name</label>
+                <input type="text" id="shopName" class="form-input" value="{{ shop.name }}">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Business Category</label>
+                    <input type="text" id="shopCategory" class="form-input" value="{{ shop.category|default:'Café & Dining' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Currency Symbol</label>
+                    <input type="text" id="shopCurrency" class="form-input" value="{{ shop.currency_symbol|default:'$' }}">
+                </div>
+            </div>
+            <button onclick="saveStep1()" class="btn-primary" style="width:100%;margin-top:16px;">
+                Next: Customize Branding →
+            </button>
+        </div>
+
+        <!-- Step 2: Theme Selection -->
+        <div id="step2" class="wizard-step" style="display:none;">
+            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 2: Choose Experience Theme</h3>
+            <div class="form-group">
+                <label class="form-label">Visual Theme Preset</label>
+                <select id="themeSelect" class="form-select">
+                    <option value="royal" {% if branding.theme == 'royal' %}selected{% endif %}>👑 Royal Luxury Gold (Default)</option>
+                    <option value="midnight" {% if branding.theme == 'midnight' %}selected{% endif %}>🌌 Midnight Indigo Glow</option>
+                    <option value="pearl" {% if branding.theme == 'pearl' %}selected{% endif %}>💎 Pearl Light Luxury</option>
+                    <option value="emerald" {% if branding.theme == 'emerald' %}selected{% endif %}>🌲 Emerald Forest</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Primary Brand Color</label>
+                <input type="color" id="primaryColor" value="{{ branding.primary_color|default:'#6366f1' }}" style="width:100%;height:44px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);cursor:pointer;background:var(--bg-elevated);">
+            </div>
+            <div style="display:flex;gap:12px;margin-top:20px;">
+                <button onclick="showStep(1)" class="btn-secondary" style="flex:1;">← Back</button>
+                <button onclick="saveStep2()" class="btn-primary" style="flex:2;">Next: Offer & Rewards →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: First Offer & Rewards -->
+        <div id="step3" class="wizard-step" style="display:none;">
+            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 3: Initial Promotional Offer</h3>
+            <div class="form-group">
+                <label class="form-label">Offer Title</label>
+                <input type="text" class="form-input" value="{{ campaign.name|default:'Welcome Promotion' }}" readonly>
+            </div>
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px;margin-bottom:20px;">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 8px 0;">Default prize structure initialized with 100% total weight probability.</p>
+                <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--color-accent);font-weight:700;">
+                    <span>✓ 10% OFF Discount (50%)</span>
+                    <span>✓ Try Again / Better Luck (50%)</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:20px;">
+                <button onclick="showStep(2)" class="btn-secondary" style="flex:1;">← Back</button>
+                <button onclick="showStep(4)" class="btn-primary" style="flex:2;">Next: Permanent QR Code →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Permanent QR & Launch -->
+        <div id="step4" class="wizard-step" style="display:none;">
+            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 4: Launch Permanent QR Code</h3>
+            <div style="text-align:center;padding:24px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:24px;">
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0 0 16px 0;">Your shop permanent QR code is live and ready for print!</p>
+                <div style="background:#ffffff;padding:12px;border-radius:var(--radius-sm);display:inline-block;box-shadow:var(--shadow-md);">
+                    <div style="font-size:1.3rem;font-weight:800;color:#000;">📱 SCAN & SPIN TO WIN</div>
+                </div>
+                <p style="font-size:0.78rem;color:var(--text-muted);margin:14px 0 0 0;">Permanent Token Path: <code>/s/{{ shop.public_token }}/</code></p>
+            </div>
+            <form method="POST" action="{% url 'onboarding' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="complete">
+                <button type="submit" class="btn-primary" style="width:100%;">
+                    🎉 Complete Onboarding & Open Command Center →
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showStep(stepNum) {
+        document.querySelectorAll('.wizard-step').forEach(el => el.style.display = 'none');
+        document.getElementById('step' + stepNum).style.display = 'block';
+
+        document.querySelectorAll('.step-bento-item').forEach((el, idx) => {
+            if (idx + 1 === stepNum) {
+                el.classList.add('active');
+            } else if (idx + 1 < stepNum) {
+                el.classList.add('completed');
+                el.classList.remove('active');
+            } else {
+                el.classList.remove('active', 'completed');
+            }
+        });
+    }
+
+    function saveStep1() {
+        const name = document.getElementById('shopName').value;
+        const category = document.getElementById('shopCategory').value;
+        const currency_symbol = document.getElementById('shopCurrency').value;
+
+        fetch("{% url 'onboarding' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({'action': 'save_shop', 'name': name, 'category': category, 'currency_symbol': currency_symbol})
+        }).then(r => r.json()).then(data => {
+            showStep(2);
+        });
+    }
+
+    function saveStep2() {
+        const theme = document.getElementById('themeSelect').value;
+        const primary_color = document.getElementById('primaryColor').value;
+
+        fetch("{% url 'onboarding' %}", {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({'action': 'save_branding', 'theme': theme, 'primary_color': primary_color})
+        }).then(r => r.json()).then(data => {
+            showStep(3);
+        });
+    }
+</script>
+{% endblock %}

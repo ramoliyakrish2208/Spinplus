@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Digital Voucher — {{ shop.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .voucher-bento-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding-top: max(24px, env(safe-area-inset-top));
+        padding-bottom: max(24px, env(safe-area-inset-bottom));
+        padding-left: 16px;
+        padding-right: 16px;
+        background: var(--bg-main);
+        color: var(--text-primary);
+        text-align: center;
+    }
+
+    .voucher-card-bento {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-highlight);
+        border-radius: var(--radius-xl);
+        padding: 36px 28px;
+        width: 100%;
+        max-width: 400px;
+        box-shadow: var(--shadow-gold);
+    }
+
+    .voucher-code-box {
+        background: rgba(0, 0, 0, 0.35);
+        border: 2px dashed var(--color-accent);
+        border-radius: var(--radius-md);
+        padding: 14px 20px;
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: 3.5px;
+        color: var(--color-accent);
+        margin: 20px 0;
+        font-family: 'Space Grotesk', monospace;
+        user-select: all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="voucher-bento-wrap">
+    <div class="voucher-card-bento">
+        {% if shop.logo %}
+        <img src="{{ shop.logo.url }}" alt="{{ shop.name }}"
+            style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--color-accent);margin:0 auto 12px;display:block;">
+        {% else %}
+        <div
+            style="width:72px;height:72px;border-radius:50%;border:3px solid var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--color-primary);margin:0 auto 12px;background:var(--bg-surface);">
+            {{ shop.name|slice:":1" }}
+        </div>
+        {% endif %}
+
+        <h1 style="font-size:1.5rem;font-weight:800;margin:0 0 4px 0;">{{ shop.name }}</h1>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 20px 0;">Official Promotional Digital Voucher</p>
+
+        {% if 'janmashtami' in active_theme %}
+        <span class="badge badge-janmashtami" style="margin-bottom:8px;">🦚 JANMASHTAMI REWARD WINNER 🪈</span>
+        {% elif 'coffee' in active_theme %}
+        <span class="badge badge-coffee" style="margin-bottom:8px;">☕ CAFÉ REWARD WINNER ☕</span>
+        {% else %}
+        <span class="badge badge-gold" style="margin-bottom:8px;">REWARD WINNER</span>
+        {% endif %}
+        <h2 style="font-size:1.6rem;font-weight:800;color:var(--color-accent);margin:8px 0 4px 0;">{{ coupon.prize.name }}</h2>
+        <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">{{ coupon.prize.coupon_text|default:"Present code to staff at checkout" }}</p>
+
+        <div class="voucher-code-box">{{ coupon.code }}</div>
+
+        <!-- High-Contrast Scannable Barcode Card for Shop Owner Redemption -->
+        <div style="background:#ffffff;padding:12px 16px;border-radius:12px;margin:16px 0;box-shadow:0 4px 16px rgba(0,0,0,0.25);text-align:center;">
+            <svg id="voucherBarcodeSVG" style="width:100%;max-width:300px;height:65px;display:block;margin:0 auto;"></svg>
+            <div style="font-size:0.72rem;color:#0f172a;font-weight:800;margin-top:6px;letter-spacing:1px;font-family:'Space Grotesk',sans-serif;">
+                <i data-lucide="scan-line" style="width:12px;height:12px;vertical-align:middle;display:inline-block;"></i> SCAN AT CHECKOUT TO REDEEM
+            </div>
+        </div>
+
+        <div style="font-size:0.85rem;margin-bottom:20px;">
+            Status:
+            {% if coupon.status == 'active' %}
+            <span class="badge badge-active">Active & Valid</span>
+            {% elif coupon.status == 'redeemed' %}
+            <span class="badge badge-gold">Redeemed</span>
+            {% else %}
+            <span class="badge badge-ended">{{ coupon.status|upper }}</span>
+            {% endif %}
+            <br>
+            <span style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;display:inline-block;">Expires: {{ coupon.expires_at|date:"d M Y" }}</span>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button
+                onclick="navigator.clipboard.writeText('{{ coupon.code }}'); showToast('Coupon code copied!', 'success');"
+                class="btn-primary" style="font-size:0.85rem;">
+                <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy Code
+            </button>
+            <button
+                onclick="if(navigator.share){navigator.share({title:'{{ shop.name }} Reward', text:'I won {{ coupon.prize.name }} at {{ shop.name }}!', url:window.location.href});} else {navigator.clipboard.writeText(window.location.href); showToast('Voucher link copied!', 'info');}"
+                class="btn-secondary" style="font-size:0.85rem;">
+                <i data-lucide="share-2" style="width:14px;height:14px;"></i> Share Voucher
+            </button>
+        </div>
+    </div>
+
+    <footer style="margin-top:24px;font-size:0.75rem;color:var(--text-muted);opacity:0.6;">
+        Powered by Spin & Win SaaS Platform
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.JsBarcode) {
+            try {
+                JsBarcode("#voucherBarcodeSVG", "{{ coupon.code }}", {
+                    format: "CODE128",
+                    lineColor: "#0f172a",
+                    width: 2,
+                    height: 55,
+                    displayValue: false,
+                    margin: 4
+                });
+            } catch (e) {
+                console.warn("Barcode rendering exception:", e);
+            }
+        }
+    });
+</script>
+{% endblock %}
