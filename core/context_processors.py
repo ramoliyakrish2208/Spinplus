@@ -1,4 +1,4 @@
-from core.models import Shop, ShopBranding
+from core.models import Shop, ShopBranding, PlanRequest
 from core.services.theme_resolver import get_active_shop_theme
 
 def shop_theme_processor(request):
@@ -43,5 +43,9 @@ def shop_theme_processor(request):
         res['active_theme'] = resolution.theme
         res['theme_resolution'] = resolution.to_dict()
         res['theme_defaults'] = ShopBranding.get_theme_defaults(resolution.theme)
+
+    # Provide pending plan requests count for superadmin notification badge
+    if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_superadmin():
+        res['pending_plan_requests_count'] = PlanRequest.objects.filter(status='pending').count()
 
     return res

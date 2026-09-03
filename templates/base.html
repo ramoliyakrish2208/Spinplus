@@ -522,9 +522,27 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
+                        <a href="{% url 'admin_plan_requests' %}"
+                            class="sidebar-link {% if '/admin/plan-requests' in request.path %}active{% endif %}" style="display:flex;align-items:center;">
+                            <i data-lucide="inbox"></i>
+                            <span>Plan Requests</span>
+                            {% if pending_plan_requests_count > 0 %}
+                            <span class="badge" style="margin-left:auto;background:#ef4444;color:#ffffff;font-size:0.7rem;font-weight:800;padding:2px 7px;border-radius:999px;line-height:1.2;box-shadow:0 2px 8px rgba(239,68,68,0.4);">
+                                {{ pending_plan_requests_count }}
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
                         <a href="{% url 'admin_subscriptions' %}"
                             class="sidebar-link {% if '/admin/subscriptions' in request.path %}active{% endif %}">
                             <i data-lucide="layers"></i> Subscriptions (₹)
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="{% url 'admin_capacity_dashboard' %}"
+                            class="sidebar-link {% if '/admin/capacity' in request.path %}active{% endif %}">
+                            <i data-lucide="gauge"></i> System Capacity
                         </a>
                     </li>
                     {% endif %}
@@ -555,12 +573,14 @@
                             <i data-lucide="palette"></i> Experience Studio
                         </a>
                     </li>
+                    {% if not request.user.is_superadmin %}
                     <li class="sidebar-item">
                         <a href="{% url 'qr_poster' %}"
                             class="sidebar-link {% if '/qr' in request.path %}active{% endif %}">
                             <i data-lucide="qr-code"></i> Permanent QR Code
                         </a>
                     </li>
+                    {% endif %}
                     <li class="sidebar-item">
                         <a href="{% url 'redeem_coupon' %}"
                             class="sidebar-link {% if '/redeem' in request.path %}active{% endif %}">

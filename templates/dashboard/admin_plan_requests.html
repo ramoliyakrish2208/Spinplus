@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}Plan Upgrade Requests — Platform Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-req-wrap {
+        width: 100%;
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 24px;
+    }
+
+    .filter-tab-btn {
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 8px 16px;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all var(--transition-fast);
+        border: 1px solid var(--border-subtle);
+        background: var(--bg-elevated);
+        color: var(--text-secondary);
+    }
+
+    .filter-tab-btn:hover {
+        background: var(--bg-surface);
+        color: var(--text-primary);
+    }
+
+    .filter-tab-btn.active {
+        background: var(--color-primary);
+        color: #ffffff;
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 14px var(--color-accent-glow, rgba(99, 102, 241, 0.35));
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-req-wrap">
+    <!-- Breadcrumb & Top Bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;gap:10px;align-items:center;">
+            <a href="{% url 'admin_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+                <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Platform Admin
+            </a>
+            <span style="color:var(--text-muted);">/</span>
+            <span style="font-size:0.88rem;font-weight:700;color:var(--text-primary);">Plan Upgrade Requests</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="{% url 'admin_subscriptions' %}" class="btn-secondary" style="font-size:0.82rem;">
+                <i data-lucide="layers" style="width:14px;height:14px;"></i> Manage Plans (₹)
+            </a>
+            <a href="{% url 'admin_dashboard' %}" class="btn-secondary" style="font-size:0.82rem;">
+                <i data-lucide="crown" style="width:14px;height:14px;"></i> Platform Overview
+            </a>
+        </div>
+    </div>
+
+    <!-- Hero Card -->
+    <div class="bento-card bento-feature" style="margin-bottom: 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+            <div>
+                <span class="badge badge-gold" style="margin-bottom:8px;">
+                    <i data-lucide="inbox" style="width:12px;height:12px;"></i> INCOMING TENANT REQUESTS
+                </span>
+                <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">
+                    Plan Upgrade & Subscription Requests
+                </h1>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">
+                    Review, approve, and activate subscription plan requests submitted by tenant shops.
+                </p>
+            </div>
+            {% if pending_count > 0 %}
+            <div style="background:rgba(245, 158, 11, 0.15);border:1px solid rgba(245, 158, 11, 0.4);border-radius:var(--radius-md);padding:12px 18px;display:flex;align-items:center;gap:12px;">
+                <i data-lucide="alert-circle" style="width:24px;height:24px;color:var(--color-accent);"></i>
+                <div>
+                    <strong style="color:var(--text-primary);display:block;font-size:0.92rem;">{{ pending_count }} Pending Request{% if pending_count != 1 %}s{% endif %}</strong>
+                    <span style="font-size:0.75rem;color:var(--text-secondary);">Awaiting your review and 1-click activation</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Stats Bento Row -->
+    <div class="bento-grid" style="margin-bottom: 24px;">
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="clock"></i> Pending Review</span>
+                <span class="badge badge-live" style="background:rgba(245, 158, 11, 0.2);color:var(--color-accent);border-color:rgba(245, 158, 11, 0.4);">Pending</span>
+            </div>
+            <div class="bento-value" style="color:var(--color-accent);">{{ pending_count }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Requires administrator action</div>
+        </div>
+
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="check-circle-2"></i> Approved & Active</span>
+                <span class="badge badge-active">Active</span>
+            </div>
+            <div class="bento-value" style="color:var(--color-success);">{{ approved_count }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Plans successfully assigned</div>
+        </div>
+
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="x-circle"></i> Rejected</span>
+                <span class="badge badge-ended">Rejected</span>
+            </div>
+            <div class="bento-value" style="color:var(--color-danger);">{{ rejected_count }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Declined requests</div>
+        </div>
+
+        <div class="bento-card bento-metric col-span-3">
+            <div class="bento-header">
+                <span class="bento-title"><i data-lucide="folder"></i> Total Submissions</span>
+                <span class="badge badge-gold">All</span>
+            </div>
+            <div class="bento-value" style="color:var(--color-primary);">{{ total_count }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">All-time requests received</div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs & Search Bar -->
+    <div class="bento-card" style="margin-bottom: 24px; padding: 16px 20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="?status=all{% if search_q %}&q={{ search_q }}{% endif %}" class="filter-tab-btn {% if status_filter == 'all' %}active{% endif %}">
+                    All ({{ total_count }})
+                </a>
+                <a href="?status=pending{% if search_q %}&q={{ search_q }}{% endif %}" class="filter-tab-btn {% if status_filter == 'pending' %}active{% endif %}">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+                    Pending ({{ pending_count }})
+                </a>
+                <a href="?status=approved{% if search_q %}&q={{ search_q }}{% endif %}" class="filter-tab-btn {% if status_filter == 'approved' %}active{% endif %}">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+                    Approved ({{ approved_count }})
+                </a>
+                <a href="?status=rejected{% if search_q %}&q={{ search_q }}{% endif %}" class="filter-tab-btn {% if status_filter == 'rejected' %}active{% endif %}">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                    Rejected ({{ rejected_count }})
+                </a>
+            </div>
+
+            <div>
+                <form method="GET" action="{% url 'admin_plan_requests' %}" style="display:flex;gap:6px;align-items:center;">
+                    {% if status_filter != 'all' %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+                    <div style="position:relative;width:260px;">
+                        <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-muted);"></i>
+                        <input type="text" name="q" value="{{ search_q }}" placeholder="Search shop, owner, phone..." class="form-input" style="padding-left:32px;font-size:0.82rem;width:100%;">
+                    </div>
+                    <button type="submit" class="btn-secondary" style="font-size:0.82rem;padding:6px 12px;min-height:36px;">
+                        Search
+                    </button>
+                    {% if search_q %}
+                    <a href="?status={{ status_filter }}" class="btn-secondary" style="font-size:0.82rem;padding:6px 10px;min-height:36px;" title="Clear search">
+                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Requests Table Bento Card -->
+    <div class="bento-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-size:1.15rem;font-weight:800;margin:0;">
+                <i data-lucide="list-filter" style="width:18px;height:18px;"></i>
+                Tenant Plan Requests
+            </h3>
+            <span style="font-size:0.8rem;color:var(--text-muted);">Showing {{ requests.paginator.count }} total request{% if requests.paginator.count != 1 %}s{% endif %}</span>
+        </div>
+
+        <div class="responsive-bento-table">
+            <table class="data-table" id="planRequestsTable">
+                <thead>
+                    <tr>
+                        <th>Shop & Token</th>
+                        <th>Owner / Contact</th>
+                        <th>Current Plan</th>
+                        <th>Requested Plan</th>
+                        <th>Submitted At</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <!-- Shop Column -->
+                        <td data-label="Shop">
+                            <strong style="color:var(--text-primary);display:block;font-size:0.92rem;">{{ req.shop.name }}</strong>
+                            <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
+                                <code style="font-size:0.75rem;color:var(--text-muted);">{{ req.shop.public_token }}</code>
+                                <a href="{% url 'public_shop' req.shop.public_token %}" target="_blank" title="View Customer Landing" style="color:var(--color-primary);text-decoration:none;">
+                                    <i data-lucide="external-link" style="width:12px;height:12px;"></i>
+                                </a>
+                            </div>
+                        </td>
+
+                        <!-- Owner Column -->
+                        <td data-label="Owner">
+                            <div style="font-weight:700;color:var(--text-primary);">{{ req.shop.owner.username }}</div>
+                            <div style="font-size:0.78rem;color:var(--text-muted);">{{ req.shop.owner.email|default:"No email" }}</div>
+                            {% if req.contact_phone %}
+                            <div style="font-size:0.78rem;color:var(--color-accent);margin-top:2px;">
+                                <i data-lucide="phone" style="width:10px;height:10px;display:inline-block;"></i> {{ req.contact_phone }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Current Plan Column -->
+                        <td data-label="Current Plan">
+                            {% with current_sub=req.shop.get_subscription %}
+                                <span class="badge {% if current_sub.is_valid %}badge-gold{% else %}badge-ended{% endif %}" style="font-size:0.75rem;">
+                                    {{ current_sub.plan.name|default:"No Plan" }}
+                                </span>
+                                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;">
+                                    {% if current_sub.expires_at %}Expires: {{ current_sub.expires_at|date:"d M Y" }}{% else %}No Expiry{% endif %}
+                                </div>
+                            {% endwith %}
+                        </td>
+
+                        <!-- Requested Plan Column -->
+                        <td data-label="Requested Plan">
+                            <strong style="color:var(--color-accent);font-size:0.95rem;display:block;">{{ req.plan.name }}</strong>
+                            <span style="font-size:0.8rem;color:var(--text-primary);font-family:'Space Grotesk', monospace;font-weight:700;">
+                                {{ req.plan.formatted_price }}
+                            </span>
+                            <div style="font-size:0.72rem;color:var(--text-muted);">
+                                {{ req.plan.billing_period_days }}d · Max {{ req.plan.max_campaigns }} camps · {{ req.plan.max_spins_per_month }} spins
+                            </div>
+                            {% if req.notes %}
+                            <div style="margin-top:4px;font-size:0.75rem;background:var(--bg-elevated);padding:4px 8px;border-radius:var(--radius-sm);color:var(--text-secondary);border:1px solid var(--border-subtle);">
+                                <em>"{{ req.notes }}"</em>
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Submitted Date -->
+                        <td data-label="Submitted">
+                            <div style="font-size:0.82rem;color:var(--text-primary);">{{ req.created_at|date:"d M Y" }}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">{{ req.created_at|date:"H:i" }}</div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td data-label="Status">
+                            {% if req.status == 'pending' %}
+                                <span class="badge" style="background:rgba(245, 158, 11, 0.15);color:var(--color-accent);border:1px solid rgba(245, 158, 11, 0.4);font-weight:800;">
+                                    <i data-lucide="clock" style="width:10px;height:10px;"></i> PENDING
+                                </span>
+                            {% elif req.status == 'approved' %}
+                                <span class="badge badge-active" style="font-weight:800;">
+                                    <i data-lucide="check" style="width:10px;height:10px;"></i> APPROVED
+                                </span>
+                                {% if req.reviewed_at %}
+                                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">
+                                    {{ req.reviewed_at|date:"d M H:i" }}
+                                </div>
+                                {% endif %}
+                            {% elif req.status == 'rejected' %}
+                                <span class="badge badge-ended" style="font-weight:800;">
+                                    <i data-lucide="x" style="width:10px;height:10px;"></i> REJECTED
+                                </span>
+                                {% if req.reviewed_at %}
+                                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">
+                                    {{ req.reviewed_at|date:"d M H:i" }}
+                                </div>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+
+                        <!-- Action Buttons -->
+                        <td data-label="Actions" style="text-align:right;">
+                            {% if req.status == 'pending' %}
+                            <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+                                <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" title="Approve and activate this plan for {{ req.shop.name }}">
+                                        <i data-lucide="check" style="width:12px;height:12px;"></i> Approve & Activate
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="btn-secondary" style="color:var(--color-danger);border-color:rgba(239,68,68,0.3);font-size:0.78rem;padding:6px 10px;min-height:32px;" onclick="return confirm('Reject this plan request?');" title="Reject request">
+                                        <i data-lucide="x" style="width:12px;height:12px;"></i> Reject
+                                    </button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <div style="font-size:0.78rem;color:var(--text-muted);">
+                                {% if req.reviewed_by %}Reviewed by <strong>{{ req.reviewed_by.username }}</strong>{% else %}Processed{% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+                            <i data-lucide="inbox" style="width:36px;height:36px;margin:0 auto 12px;opacity:0.35;display:block;"></i>
+                            <h4 style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin:0 0 6px 0;">No Plan Requests Found</h4>
+                            <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">
+                                {% if status_filter != 'all' %}
+                                No requests found with status "{{ status_filter }}".
+                                {% elif search_q %}
+                                No requests matching "{{ search_q }}".
+                                {% else %}
+                                When shop owners submit upgrade requests from their billing center, they will appear here for 1-click approval.
+                                {% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if requests.has_other_pages %}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);flex-wrap:wrap;gap:12px;">
+            <div style="font-size:0.8rem;color:var(--text-muted);">
+                Showing <strong style="color:var(--text-primary);">{{ requests.start_index }}</strong> to <strong style="color:var(--text-primary);">{{ requests.end_index }}</strong> of <strong style="color:var(--text-primary);">{{ requests.paginator.count }}</strong> requests
+            </div>
+
+            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                {% if requests.has_previous %}
+                <a href="?status={{ status_filter }}{% if search_q %}&q={{ search_q }}{% endif %}&page=1" class="btn-secondary" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="First Page">«</a>
+                <a href="?status={{ status_filter }}{% if search_q %}&q={{ search_q }}{% endif %}&page={{ requests.previous_page_number }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">
+                    <i data-lucide="chevron-left" style="width:12px;height:12px;"></i> Prev
+                </a>
+                {% endif %}
+
+                {% for page_num in requests.paginator.page_range %}
+                    {% if page_num == requests.number %}
+                    <span class="btn-primary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;pointer-events:none;background:var(--color-primary);">{{ page_num }}</span>
+                    {% elif page_num > requests.number|add:'-3' and page_num < requests.number|add:'3' %}
+                    <a href="?status={{ status_filter }}{% if search_q %}&q={{ search_q }}{% endif %}&page={{ page_num }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">{{ page_num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if requests.has_next %}
+                <a href="?status={{ status_filter }}{% if search_q %}&q={{ search_q }}{% endif %}&page={{ requests.next_page_number }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;min-height:30px;">
+                    Next <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+                </a>
+                <a href="?status={{ status_filter }}{% if search_q %}&q={{ search_q }}{% endif %}&page={{ requests.paginator.num_pages }}" class="btn-secondary" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="Last Page">»</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

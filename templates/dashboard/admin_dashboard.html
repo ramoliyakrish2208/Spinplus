@@ -24,17 +24,23 @@
                 <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Good evening, Admin 👋</h1>
                 <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Monitor platform tenants, campaigns, spins, and system performance in real-time.</p>
             </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <a href="{% url 'admin_capacity_dashboard' %}" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;">
-                    <i data-lucide="gauge" style="width:16px;height:16px;color:#10b981;"></i> System Capacity
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <a href="{% url 'admin_plan_requests' %}" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;background:var(--color-primary);">
+                    <i data-lucide="inbox" style="width:16px;height:16px;"></i> Plan Requests
+                    {% if pending_plan_requests_count > 0 %}
+                    <span class="badge" style="background:#ef4444;color:#ffffff;font-size:0.7rem;font-weight:800;padding:2px 6px;border-radius:999px;line-height:1;">{{ pending_plan_requests_count }}</span>
+                    {% endif %}
                 </a>
                 <a href="{% url 'admin_subscriptions' %}" class="btn-accent">
                     <i data-lucide="layers" style="width:16px;height:16px;"></i> Subscriptions & Plans (₹)
                 </a>
+                <a href="{% url 'admin_capacity_dashboard' %}" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;">
+                    <i data-lucide="gauge" style="width:16px;height:16px;color:#10b981;"></i> System Capacity
+                </a>
                 <a href="{% url 'shop_dashboard' %}" class="btn-secondary">
                     <i data-lucide="store" style="width:16px;height:16px;"></i> Shop View
                 </a>
-                <a href="{% url 'onboarding' %}" class="btn-primary">
+                <a href="{% url 'onboarding' %}" class="btn-secondary">
                     <i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Create Shop Wizard
                 </a>
             </div>

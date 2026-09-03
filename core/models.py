@@ -1018,6 +1018,32 @@ class ThemeAuditLog(models.Model):
         return f"Shop #{self.shop_id}: {self.previous_theme} -> {self.new_theme} ({self.reason})"
 
 
+class PlanRequest(models.Model):
+    """Tenant shop owners submit plan upgrade requests for admin approval."""
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='plan_requests')
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='plan_requests')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    contact_phone = models.CharField(max_length=20, blank=True, default='')
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_plan_requests')
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.shop.name} → {self.plan.name} ({self.status})"
+
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

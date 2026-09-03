@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 from django.contrib.auth import login, logout, authenticate
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Count, Q, Sum
@@ -17,7 +18,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from core.models import (
     User, Shop, ShopBranding, Campaign, Prize, QRCode,
     SpinResult, Coupon, CouponRedemption, ActivityLog, QRScanLog,
-    Plan, Subscription, Notification
+    Plan, Subscription, Notification, PlanRequest
 )
 from core.qr import generate_shop_qr, generate_coupon_qr
 from core.utils.security import (
@@ -1452,6 +1453,124 @@ def admin_subscription_status_view(request, sub_id):
     return redirect('admin_subscriptions')
 
 
+# ---------------------------------------------------------
+# ADMIN PLAN REQUESTS MANAGEMENT CENTER
+# ---------------------------------------------------------
+
+@superadmin_required
+def admin_plan_requests_view(request):
+    """
+    Dedicated Plan Upgrade & Subscription Requests review center for Super Admin.
+    Allows viewing all incoming tenant plan requests with full details and 1-click Approval/Rejection.
+    """
+    status_filter = request.GET.get('status', 'all')
+    search_q = request.GET.get('q', '').strip()
+
+    reqs_query = PlanRequest.objects.select_related('shop', 'shop__owner', 'plan', 'reviewed_by').order_by('-created_at')
+
+    if status_filter in ['pending', 'approved', 'rejected']:
+        reqs_query = reqs_query.filter(status=status_filter)
+
+    if search_q:
+        reqs_query = reqs_query.filter(
+            Q(shop__name__icontains=search_q) |
+            Q(shop__owner__username__icontains=search_q) |
+            Q(shop__owner__email__icontains=search_q) |
+            Q(plan__name__icontains=search_q) |
+            Q(contact_phone__icontains=search_q)
+        )
+
+    pending_count = PlanRequest.objects.filter(status='pending').count()
+    approved_count = PlanRequest.objects.filter(status='approved').count()
+    rejected_count = PlanRequest.objects.filter(status='rejected').count()
+    total_count = PlanRequest.objects.count()
+
+    paginator = Paginator(reqs_query, 15)
+    page_number = request.GET.get('page', 1)
+    try:
+        reqs_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        reqs_page = paginator.page(1)
+    except EmptyPage:
+        reqs_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'requests': reqs_page,
+        'status_filter': status_filter,
+        'search_q': search_q,
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+        'total_count': total_count,
+    }
+    return render(request, 'dashboard/admin_plan_requests.html', context)
+
+
+@require_POST
+@superadmin_required
+def admin_plan_request_action_view(request, request_id):
+    """
+    1-Click Approve & Activate or Reject incoming shop plan request.
+    """
+    plan_req = get_object_or_404(PlanRequest, id=request_id)
+    action = request.POST.get('action')
+
+    if action == 'approve':
+        plan_req.status = 'approved'
+        plan_req.reviewed_at = timezone.now()
+        plan_req.reviewed_by = request.user
+        plan_req.save()
+
+        # Update shop subscription atomically
+        sub = plan_req.shop.get_subscription()
+        sub.plan = plan_req.plan
+        sub.status = 'active'
+        sub.is_active = True
+        sub.starts_at = timezone.now()
+        days = plan_req.plan.billing_period_days if plan_req.plan.billing_period_days else 30
+        sub.expires_at = timezone.now() + timezone.timedelta(days=days)
+        sub.save()
+
+        # Notification & Audit Log
+        Notification.objects.create(
+            shop=plan_req.shop,
+            user=plan_req.shop.owner,
+            title="Plan Request Approved 🎉",
+            message=f"Your request for {plan_req.plan.name} ({plan_req.plan.formatted_price()}) has been approved! Your subscription is active until {sub.expires_at.strftime('%d %b %Y')}.",
+            level='success'
+        )
+        ActivityLog.objects.create(
+            shop=plan_req.shop,
+            actor=request.user,
+            action="Plan Request Approved",
+            details=f"Approved and activated {plan_req.plan.name} for {plan_req.shop.name}."
+        )
+        messages.success(request, f"Approved request for {plan_req.shop.name}! {plan_req.plan.name} is now active.")
+
+    elif action == 'reject':
+        plan_req.status = 'rejected'
+        plan_req.reviewed_at = timezone.now()
+        plan_req.reviewed_by = request.user
+        plan_req.save()
+
+        Notification.objects.create(
+            shop=plan_req.shop,
+            user=plan_req.shop.owner,
+            title="Plan Request Update",
+            message=f"Your request for {plan_req.plan.name} was not approved at this time. Please contact support.",
+            level='warning'
+        )
+        ActivityLog.objects.create(
+            shop=plan_req.shop,
+            actor=request.user,
+            action="Plan Request Rejected",
+            details=f"Rejected request for {plan_req.plan.name} from {plan_req.shop.name}."
+        )
+        messages.info(request, f"Request for {plan_req.shop.name} has been rejected.")
+
+    return redirect('admin_plan_requests')
+
+
 @require_POST
 @shop_access_required
 def subscription_renew_view(request):
@@ -1466,6 +1585,11 @@ def subscription_renew_view(request):
     plan_id = request.POST.get('plan_id')
     plan = get_object_or_404(Plan, id=plan_id)
 
+    # In Demo plan, there must NOT be renew current plan option
+    if plan.code == 'demo':
+        messages.error(request, "The Demo plan is for initial trial only and cannot be renewed. Please request an upgrade plan.")
+        return redirect('billing')
+
     sub = get_or_create_shop_subscription(shop)
     sub.renew(plan=plan)
 
@@ -1475,6 +1599,55 @@ def subscription_renew_view(request):
         action="Subscription Renewed",
         details=f"Renewed on {plan.name} ({plan.price_display}) for {plan.billing_period_days} days."
     )
+    messages.success(request, f"Successfully renewed on {plan.name}!")
+    return redirect('billing')
+
+
+@require_POST
+@shop_access_required
+def request_plan_view(request):
+    """Shop owner submits a request to activate or upgrade to a subscription plan"""
+    shop = request.user.shop
+    if request.user.is_superadmin() and not shop:
+        shop = Shop.objects.first()
+
+    if not shop:
+        return redirect('admin_dashboard')
+
+    plan_id = request.POST.get('plan_id')
+    target_plan = get_object_or_404(Plan, id=plan_id)
+    notes = request.POST.get('notes', '').strip()
+    phone = request.POST.get('contact_phone', shop.phone or getattr(request.user, 'phone', '') or '').strip()
+
+    if target_plan.code == 'demo':
+        messages.error(request, "The Demo plan is for initial trial only and cannot be requested.")
+        return redirect('billing')
+
+    existing_req = PlanRequest.objects.filter(shop=shop, plan=target_plan, status='pending').first()
+    if not existing_req:
+        PlanRequest.objects.create(
+            shop=shop,
+            plan=target_plan,
+            contact_phone=phone,
+            notes=notes,
+            status='pending'
+        )
+        for admin_user in User.objects.filter(role='super_admin'):
+            Notification.objects.create(
+                user=admin_user,
+                title=f"Plan Upgrade Request: {shop.name}",
+                message=f"{shop.name} has requested {target_plan.name} ({target_plan.formatted_price()}). Please review in Platform Admin.",
+                level='info'
+            )
+        ActivityLog.objects.create(
+            shop=shop,
+            actor=request.user,
+            action="Plan Requested",
+            details=f"Requested {target_plan.name} ({target_plan.formatted_price()})"
+        )
+        messages.success(request, f"Your request for {target_plan.name} has been submitted! Platform admin has been notified and will review your request.")
+    else:
+        messages.info(request, f"You already have a pending request for {target_plan.name}. We will review and activate it shortly.")
 
     return redirect('billing')
 
@@ -1534,23 +1707,36 @@ def billing_view(request):
 
     sub = get_or_create_shop_subscription(shop)
     plan = sub.plan
+    is_demo = (plan.code == 'demo') if plan else False
 
     # Compute actual SaaS usage metrics
     campaign_count = shop.campaigns.count()
     active_campaign_count = shop.campaigns.filter(is_active=True, status__in=['live', 'active']).count()
     spin_count = SpinResult.objects.filter(shop=shop).count()
-    all_plans = Plan.objects.filter(is_active=True).order_by('price_rupees')
+
+    # User rule: "only show demo plan if activated else show other plans"
+    all_plans_query = Plan.objects.filter(is_active=True).order_by('price_rupees')
+    if is_demo:
+        all_plans = all_plans_query
+    else:
+        all_plans = all_plans_query.exclude(code='demo')
+
+    pending_plan_ids = set(shop.plan_requests.filter(status='pending').values_list('plan_id', flat=True))
+    my_requests = shop.plan_requests.select_related('plan').order_by('-created_at')[:5]
 
     return render(request, 'dashboard/billing.html', {
         'shop': shop,
         'subscription': sub,
         'plan': plan,
+        'is_demo': is_demo,
         'is_valid': sub.is_valid(),
         'days_left': sub.days_left(),
         'campaign_count': campaign_count,
         'active_campaign_count': active_campaign_count,
         'spin_count': spin_count,
-        'all_plans': all_plans
+        'all_plans': all_plans,
+        'pending_plan_ids': pending_plan_ids,
+        'my_requests': my_requests,
     })
 
 

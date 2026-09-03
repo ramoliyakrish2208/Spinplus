@@ -20,6 +20,17 @@
         </a>
     </div>
 
+    {% if messages %}
+    <div style="margin-bottom:20px;">
+        {% for message in messages %}
+        <div style="padding:12px 18px;border-radius:var(--radius-md);margin-bottom:10px;font-size:0.88rem;display:flex;align-items:center;gap:10px;{% if message.tags == 'success' %}background:rgba(16, 185, 129, 0.15);border:1px solid rgba(16, 185, 129, 0.4);color:#6ee7b7;{% elif message.tags == 'error' %}background:rgba(239, 68, 68, 0.15);border:1px solid rgba(239, 68, 68, 0.4);color:#fca5a5;{% else %}background:rgba(99, 102, 241, 0.15);border:1px solid rgba(99, 102, 241, 0.4);color:#a5b4fc;{% endif %}">
+            <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if not is_valid %}
     <!-- Expired Warning Banner -->
     <div class="bento-card" style="background:var(--color-danger-bg);border:2px solid rgba(239,68,68,0.5);margin-bottom:24px;padding:24px 20px;">
@@ -29,19 +40,31 @@
                     <i data-lucide="alert-triangle" style="width:24px;height:24px;"></i>
                 </div>
                 <div>
-                    <h3 style="font-size:1.15rem;font-weight:800;color:var(--color-danger);margin:0 0 2px 0;">Subscription Plan Expired</h3>
+                    <h3 style="font-size:1.15rem;font-weight:800;color:var(--color-danger);margin:0 0 2px 0;">
+                        {% if is_demo %}Demo Plan Trial Concluded{% else %}Subscription Plan Expired{% endif %}
+                    </h3>
                     <p style="font-size:0.85rem;color:var(--text-primary);margin:0;">
-                        Customer spins on your wheel are temporarily paused. <strong>Renew your subscription below to instantly reactivate customer spins with your existing QR code and wheel settings.</strong>
+                        {% if is_demo %}
+                        Your 15-day Demo Plan has ended. Customer spins on your wheel are temporarily paused. <strong>Submit a request below to activate an upgrade plan.</strong>
+                        {% else %}
+                        Customer spins on your wheel are temporarily paused. <strong>Submit a request below to reactivate customer spins with your permanent QR code.</strong>
+                        {% endif %}
                     </p>
                 </div>
             </div>
-            <form method="POST" action="{% url 'subscription_renew' %}">
+            {% if not is_demo %}
+            <form method="POST" action="{% url 'request_plan' %}">
                 {% csrf_token %}
                 <input type="hidden" name="plan_id" value="{{ plan.id }}">
                 <button type="submit" class="btn-primary" style="background:var(--color-danger);border-color:var(--color-danger);font-size:0.9rem;padding:12px 24px;">
-                    <i data-lucide="refresh-cw" style="width:16px;height:16px;"></i> Renew Plan ({{ plan.formatted_price }})
+                    <i data-lucide="refresh-cw" style="width:16px;height:16px;"></i> Request Renewal ({{ plan.formatted_price }})
                 </button>
             </form>
+            {% else %}
+            <a href="#availablePlansSection" class="btn-primary" style="font-size:0.9rem;padding:12px 24px;">
+                <i data-lucide="arrow-down" style="width:16px;height:16px;"></i> View Upgrade Plans
+            </a>
+            {% endif %}
         </div>
     </div>
     {% endif %}
@@ -78,7 +101,9 @@
             </div>
         </div>
 
-        <h3 style="font-size:1.05rem;font-weight:800;margin:0 0 16px 0;"><i data-lucide="bar-chart-3" style="width:16px;height:16px;"></i> Subscription Usage & Limits</h3>
+        <h3 style="font-size:1.05rem;font-weight:800;margin:0 0 16px 0;">
+            <i data-lucide="bar-chart-3" style="width:16px;height:16px;"></i> Subscription Usage & Limits
+        </h3>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:20px;">
             <!-- Metric 1: Total Campaigns -->
@@ -117,17 +142,22 @@
     </div>
 
     <!-- Available Plans Bento Grid in ₹ -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div id="availablePlansSection" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <h3 style="font-size:1.2rem;font-weight:800;margin:0;"><i data-lucide="layers" style="width:18px;height:18px;"></i> Available Subscription Plans (in ₹)</h3>
-        <span style="font-size:0.8rem;color:var(--text-muted);">All renewals instantly preserve your existing QR Code & Settings</span>
+        <span style="font-size:0.8rem;color:var(--text-muted);">Select any plan to submit an upgrade request to platform admin</span>
     </div>
 
-    <div class="bento-grid">
+    <div class="bento-grid" style="margin-bottom:28px;">
         {% for p in all_plans %}
-        <div class="bento-card col-span-4 {% if p == plan %}bento-feature{% endif %}" style="text-align:center;display:flex;flex-direction:column;">
+        <div class="bento-card col-span-4 {% if p == plan %}bento-feature{% endif %}" style="text-align:center;display:flex;flex-direction:column;position:relative;">
             {% if p == plan %}
                 <span class="badge badge-gold" style="margin-bottom:12px;">CURRENT ACTIVE PLAN</span>
+            {% elif p.id in pending_plan_ids %}
+                <span class="badge" style="background:rgba(245, 158, 11, 0.15);color:var(--color-accent);border:1px solid rgba(245, 158, 11, 0.4);margin-bottom:12px;">
+                    <i data-lucide="clock" style="width:10px;height:10px;"></i> UPGRADE REQUESTED
+                </span>
             {% endif %}
+            
             <h4 style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin:0 0 4px 0;">{{ p.name }}</h4>
             <div style="font-size:1.6rem;font-weight:800;color:var(--color-accent);margin-bottom:4px;font-family:'Space Grotesk', monospace;">
                 {{ p.formatted_price }}
@@ -142,19 +172,37 @@
                 <li><i data-lucide="check" style="width:14px;height:14px;color:var(--color-success);"></i> Permanent Scannable QR Code</li>
             </ul>
 
-            <form method="POST" action="{% url 'subscription_renew' %}" style="margin-top:auto;">
-                {% csrf_token %}
-                <input type="hidden" name="plan_id" value="{{ p.id }}">
+            <div style="margin-top:auto;">
                 {% if p == plan %}
-                    <button type="submit" class="btn-primary" style="width:100%;">
-                        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Renew Current Plan
+                    {% if is_demo %}
+                        <!-- Demo Plan cannot be renewed per user specification -->
+                        <div style="padding:10px 14px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border-subtle);font-size:0.8rem;color:var(--text-muted);">
+                            <i data-lucide="info" style="width:13px;height:13px;display:inline-block;color:var(--color-accent);"></i>
+                            Trial Demo (Non-Renewable)
+                        </div>
+                    {% else %}
+                        <form method="POST" action="{% url 'request_plan' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="plan_id" value="{{ p.id }}">
+                            <button type="submit" class="btn-primary" style="width:100%;" onclick="return confirm('Request renewal for {{ p.name }}?');">
+                                <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Request Renewal for {{ p.name }}
+                            </button>
+                        </form>
+                    {% endif %}
+                {% elif p.id in pending_plan_ids %}
+                    <button type="button" class="btn-secondary" style="width:100%;pointer-events:none;background:rgba(245, 158, 11, 0.15);color:var(--color-accent);border-color:rgba(245, 158, 11, 0.4);font-size:0.85rem;">
+                        <i data-lucide="clock" style="width:14px;height:14px;"></i> Request Pending Approval
                     </button>
                 {% else %}
-                    <button type="submit" class="btn-accent" style="width:100%;">
-                        <i data-lucide="arrow-up-right" style="width:14px;height:14px;"></i> Switch to {{ p.name }}
-                    </button>
+                    <form method="POST" action="{% url 'request_plan' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan_id" value="{{ p.id }}">
+                        <button type="submit" class="btn-accent" style="width:100%;" onclick="return confirm('Submit request for {{ p.name }} ({{ p.formatted_price }})? Platform admin will review and activate your plan.');">
+                            <i data-lucide="send" style="width:14px;height:14px;"></i> Request for {{ p.name }}
+                        </button>
+                    </form>
                 {% endif %}
-            </form>
+            </div>
         </div>
         {% empty %}
         <div class="bento-card col-span-12 bento-feature" style="text-align:center;">
@@ -163,6 +211,53 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- My Recent Plan Requests Status -->
+    {% if my_requests %}
+    <div class="bento-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h4 style="font-size:1.1rem;font-weight:800;margin:0;">
+                <i data-lucide="history" style="width:16px;height:16px;"></i> My Plan Requests
+            </h4>
+            <span style="font-size:0.78rem;color:var(--text-muted);">Track administrator approval status</span>
+        </div>
+        <div class="responsive-bento-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Requested Plan</th>
+                        <th>Price</th>
+                        <th>Submitted On</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in my_requests %}
+                    <tr>
+                        <td data-label="Plan"><strong>{{ req.plan.name }}</strong></td>
+                        <td data-label="Price" style="font-family:'Space Grotesk', monospace;font-weight:700;">{{ req.plan.formatted_price }}</td>
+                        <td data-label="Submitted">{{ req.created_at|date:"d M Y, H:i" }}</td>
+                        <td data-label="Status">
+                            {% if req.status == 'pending' %}
+                                <span class="badge" style="background:rgba(245, 158, 11, 0.15);color:var(--color-accent);border:1px solid rgba(245, 158, 11, 0.4);">
+                                    <i data-lucide="clock" style="width:10px;height:10px;"></i> Under Review
+                                </span>
+                            {% elif req.status == 'approved' %}
+                                <span class="badge badge-active">
+                                    <i data-lucide="check" style="width:10px;height:10px;"></i> Approved & Activated
+                                </span>
+                            {% elif req.status == 'rejected' %}
+                                <span class="badge badge-ended">
+                                    <i data-lucide="x" style="width:10px;height:10px;"></i> Declined
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
-

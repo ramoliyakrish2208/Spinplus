@@ -186,38 +186,87 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Campaign Theme Override (Optional)</label>
-                <select name="theme" class="form-select">
-                    <option value="">✨ Inherit Global Shop Theme</option>
-                    <optgroup label="🎉 Festivals">
-                        <option value="diwali">🪔 Royal Diwali Lights</option>
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>Campaign Theme Design Override</span>
+                    <span id="themeBadgePreview" class="badge badge-gold" style="font-size:0.68rem;">Default: Inherit Shop</span>
+                </label>
+                <select name="theme" id="campaignThemeSelect" class="form-select" onchange="updateThemePreview(this.value)">
+                    <option value="">✨ Inherit Shop Theme (Default)</option>
+                    
+                    <optgroup label="🪔 Festivals & Celebrations">
+                        <option value="diwali">🪔 Royal Diwali Lights & Dhanteras</option>
                         <option value="navratri">💃 Navratri Garba Celebration</option>
                         <option value="holi">🎨 Holi Color Splash</option>
+                        <option value="janmashtami">🦚 Krishna Janmashtami</option>
+                        <option value="janmashtami_jewellery">👑 Janmashtami Royal Jewellery</option>
+                        <option value="janmashtami_sweets">🍯 Janmashtami Sweets & Butter Pot</option>
+                        <option value="janmashtami_clothing">🥻 Janmashtami Festive Apparel</option>
+                        <option value="janmashtami_kids">👶 Janmashtami Bal Gopal Kids</option>
+                        <option value="uttarayan">🪁 Uttarayan Kite Festival</option>
+                        <option value="eid">🌙 Eid Mubarak Celebration</option>
                         <option value="christmas">🎄 Christmas Holiday Snow</option>
                         <option value="new_year">🎆 New Year Sparkle</option>
-                        <option value="eid">🌙 Eid Celebration</option>
                         <option value="valentines">💖 Valentine Romance</option>
+                        <option value="halloween">🎃 Spooky Halloween</option>
+                        <option value="festival">🎪 General Festival Celebration</option>
                     </optgroup>
-                    <optgroup label="🛍️ Sales & Promotions">
+
+                    <optgroup label="💎 Luxury & Premium Elegance">
+                        <option value="royal">👑 Royal Gold</option>
+                        <option value="royal_jewellery">💍 Royal Jewellery (Gold & Ruby)</option>
+                        <option value="luxury_black">🖤 Luxury Black Velvet</option>
+                        <option value="minimal_luxury">🏛️ Minimal Luxury</option>
+                        <option value="pearl">💎 Pearl Luxury (Beauty & Salon)</option>
+                        <option value="aurora">🌌 Aurora Luminous Atmosphere</option>
+                        <option value="glass">🧊 Glassmorphism Frosted</option>
+                        <option value="premium_white">🕊️ Premium White Elegance</option>
+                    </optgroup>
+
+                    <optgroup label="⚡ Tech, Cyber & Modern">
+                        <option value="neon">🔮 Cyber Neon (Gaming & Esports)</option>
+                        <option value="modern_blue">🔷 Modern Blue Tech</option>
+                        <option value="electronics">⚡ Electronics & Gadgets</option>
+                        <option value="automotive">🏎️ Automotive Speed & Carbon</option>
+                    </optgroup>
+
+                    <optgroup label="🛍️ Sales, Retail & Flash Events">
+                        <option value="flash_sale">⚡ Flash Sale Lightning</option>
                         <option value="summer_sale">☀️ Summer Tropical Sale</option>
                         <option value="winter_sale">❄️ Winter Frost Sale</option>
                         <option value="monsoon_sale">🌧️ Monsoon Splash Sale</option>
-                        <option value="flash_sale">⚡ Flash Sale Lightning</option>
-                        <option value="clearance">🏷️ Clearance Sale</option>
+                        <option value="clearance">🏷️ Clearance Mega Sale</option>
                     </optgroup>
-                    <optgroup label="✨ Modern & Luxury">
-                        <option value="luxury_black">🖤 Luxury Black</option>
-                        <option value="pearl">💎 Pearl Luxury</option>
-                        <option value="aurora">🌌 Aurora Atmosphere</option>
-                        <option value="glass">🧊 Glassmorphism</option>
-                        <option value="neon">🔮 Cyber Neon</option>
-                        <option value="restaurant">🍽️ Restaurant Dining</option>
-                        <option value="coffee">☕ Coffee & Café Warmth</option>
+
+                    <optgroup label="🍽️ Food, Dining & Café">
+                        <option value="restaurant">🍽️ Restaurant & Gourmet Dining</option>
+                        <option value="coffee">☕ Coffee Café & Bakery</option>
+                    </optgroup>
+
+                    <optgroup label="💄 Fashion, Beauty & Lifestyle">
                         <option value="fashion">👗 Haute Couture Fashion</option>
-                        <option value="electronics">⚡ Electronics & Tech</option>
+                        <option value="burgundy">🍷 Burgundy Fashion</option>
+                        <option value="beauty">💄 Cosmetics & Beauty Glow</option>
+                        <option value="emerald">💚 Emerald Green Fashion</option>
+                        <option value="sports">🏋️ Sports & Gym Energy</option>
+                    </optgroup>
+
+                    <optgroup label="🎈 Playful, Kids & Sweets">
+                        <option value="kids">🧸 Kids & Toys Playful</option>
+                        <option value="playful">🎈 Playful Joy</option>
+                        <option value="candy">🍭 Candy Sweet Delight</option>
+                    </optgroup>
+
+                    <optgroup label="🌿 Nature, Seasons & Moods">
+                        <option value="sunset">🌅 Sunset Warmth</option>
+                        <option value="ocean">🌊 Ocean Wave Breeze</option>
+                        <option value="floral">🌸 Floral Blossom</option>
+                        <option value="minimal">◽ Minimal Clean</option>
+                        <option value="custom">🎨 Custom Shop Palette</option>
                     </optgroup>
                 </select>
-                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Overrides shop theme while this campaign is live. When campaign ends, shop returns to normal theme.</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">
+                    ✨ Live Campaign Override: Customer wheel & landing page will adopt this exact visual atmosphere while campaign is live. Reverts to shop theme when campaign concludes.
+                </div>
             </div>
 
             <div class="form-group">
@@ -266,6 +315,19 @@
             `Are you sure you want to duplicate "${name}"? This will copy all reward configurations into a draft campaign.`,
             () => { window.location.href = url; }
         );
+    }
+
+    function updateThemePreview(val) {
+        const badge = document.getElementById('themeBadgePreview');
+        if (!badge) return;
+        if (!val) {
+            badge.innerText = 'Default: Inherit Shop';
+            badge.className = 'badge badge-gold';
+        } else {
+            const formatted = val.replace(/_/g, ' ').toUpperCase();
+            badge.innerText = `Override: ${formatted}`;
+            badge.className = 'badge badge-active';
+        }
     }
 </script>
 {% endblock %}
