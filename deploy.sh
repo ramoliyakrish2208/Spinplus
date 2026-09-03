@@ -83,6 +83,7 @@ if not User.objects.filter(username='admin').exists():
 else:
     print('      ℹ  Superadmin already exists')
 "
+else
     # ── Normal update: 100% safe, preserves all existing data ──
     echo ""
     echo "[3/6] Safe update mode: Protecting database and applying migrations..."
@@ -111,6 +112,11 @@ else:
         exit 1
     fi
 fi
+
+# ── 3.5. Ensure all SaaS Plans & Demo Merchant exist ─────────
+echo ""
+echo "[3.5/6] Seeding / updating SaaS plans & demoshop..."
+python scripts/seed_demo_and_plans.py
 
 # ── 4. Collect static files ───────────────────────────────────
 echo ""
