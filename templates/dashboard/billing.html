@@ -141,6 +141,40 @@
         </div>
     </div>
 
+    {% if subscription.future_plan %}
+    <!-- Scheduled Upcoming Plan Bento Feature Card -->
+    <div class="bento-card" style="margin-bottom: 24px; border: 2px solid rgba(99, 102, 241, 0.4); background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.04));">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:14px;">
+            <div>
+                <span class="badge" style="background:rgba(99, 102, 241, 0.2);color:#a5b4fc;border:1px solid rgba(99, 102, 241, 0.5);margin-bottom:8px;">
+                    <i data-lucide="clock" style="width:12px;height:12px;"></i> SCHEDULED UPCOMING PLAN
+                </span>
+                <h2 style="font-size:1.35rem;font-weight:800;margin:0 0 4px 0;color:var(--text-primary);">
+                    {{ subscription.future_plan.name }}
+                </h2>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">
+                    Your current <strong>{{ plan.name }}</strong> remains active until <strong>{{ subscription.expires_at|date:"d M Y" }}</strong>. On that day, your new <strong>{{ subscription.future_plan.name }}</strong> will automatically activate until <strong>{{ subscription.future_expires_at|date:"d M Y" }}</strong> with all its limits.
+                </p>
+            </div>
+            <div style="text-align:right;">
+                <span style="font-size:1.4rem;font-weight:800;color:var(--color-accent);font-family:'Space Grotesk', monospace;">
+                    {{ subscription.future_plan.formatted_price }}
+                </span>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+                    Starts: <strong>{{ subscription.future_starts_at|date:"d M Y" }}</strong> · Ends: <strong>{{ subscription.future_expires_at|date:"d M Y" }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.8rem;color:var(--text-secondary);padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+            <span><i data-lucide="check" style="width:13px;height:13px;color:var(--color-success);"></i> Max {{ subscription.future_plan.max_campaigns }} Campaigns</span>
+            <span><i data-lucide="check" style="width:13px;height:13px;color:var(--color-success);"></i> Max {{ subscription.future_plan.max_active_campaigns }} Active Campaign</span>
+            <span><i data-lucide="check" style="width:13px;height:13px;color:var(--color-success);"></i> {{ subscription.future_plan.max_prizes_per_campaign }} Prizes/Wheel</span>
+            <span><i data-lucide="check" style="width:13px;height:13px;color:var(--color-success);"></i> Up to {{ subscription.future_plan.max_spins_per_month }} Spins/Mo</span>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Available Plans Bento Grid in ₹ -->
     <div id="availablePlansSection" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
         <h3 style="font-size:1.2rem;font-weight:800;margin:0;"><i data-lucide="layers" style="width:18px;height:18px;"></i> Available Subscription Plans (in ₹)</h3>
@@ -152,6 +186,10 @@
         <div class="bento-card col-span-4 {% if p == plan %}bento-feature{% endif %}" style="text-align:center;display:flex;flex-direction:column;position:relative;">
             {% if p == plan %}
                 <span class="badge badge-gold" style="margin-bottom:12px;">CURRENT ACTIVE PLAN</span>
+            {% elif p == subscription.future_plan %}
+                <span class="badge" style="background:rgba(99, 102, 241, 0.2);color:#a5b4fc;border:1px solid rgba(99, 102, 241, 0.4);margin-bottom:12px;">
+                    <i data-lucide="calendar-check" style="width:10px;height:10px;"></i> SCHEDULED AS FUTURE PLAN
+                </span>
             {% elif p.id in pending_plan_ids %}
                 <span class="badge" style="background:rgba(245, 158, 11, 0.15);color:var(--color-accent);border:1px solid rgba(245, 158, 11, 0.4);margin-bottom:12px;">
                     <i data-lucide="clock" style="width:10px;height:10px;"></i> UPGRADE REQUESTED
@@ -190,6 +228,10 @@
                             </button>
                         </form>
                     {% endif %}
+                {% elif p == subscription.future_plan %}
+                    <button type="button" class="btn-secondary" style="width:100%;pointer-events:none;background:rgba(99, 102, 241, 0.15);color:#a5b4fc;border-color:rgba(99, 102, 241, 0.4);font-size:0.85rem;">
+                        <i data-lucide="calendar-check" style="width:14px;height:14px;"></i> Starts {{ subscription.future_starts_at|date:"d M Y" }}
+                    </button>
                 {% elif p.id in pending_plan_ids %}
                     <button type="button" class="btn-secondary" style="width:100%;pointer-events:none;background:rgba(245, 158, 11, 0.15);color:var(--color-accent);border-color:rgba(245, 158, 11, 0.4);font-size:0.85rem;">
                         <i data-lucide="clock" style="width:14px;height:14px;"></i> Request Pending Approval

@@ -314,6 +314,15 @@
                             <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px;">
                                 {{ s.subscription.plan.max_spins_per_month }} spins · {{ s.subscription.plan.max_campaigns }} camps
                             </div>
+                            {% if s.subscription.future_plan %}
+                            <div style="margin-top:6px;padding:4px 8px;background:rgba(99,102,241,0.1);border-radius:var(--radius-sm);border:1px solid rgba(99,102,241,0.3);text-align:left;">
+                                <span style="font-size:0.68rem;color:#818cf8;font-weight:800;display:flex;align-items:center;gap:3px;">
+                                    <i data-lucide="clock" style="width:10px;height:10px;"></i> QUEUED FUTURE PLAN
+                                </span>
+                                <strong style="display:block;font-size:0.75rem;color:var(--text-primary);margin-top:1px;">{{ s.subscription.future_plan.name }}</strong>
+                                <span style="font-size:0.68rem;color:var(--text-muted);">Starts: {{ s.subscription.future_starts_at|date:"d M" }} → {{ s.subscription.future_expires_at|date:"d M Y" }}</span>
+                            </div>
+                            {% endif %}
                         </td>
                         <td data-label="Period & Expiry">
                             <div style="font-size:0.78rem;color:var(--text-secondary);">
@@ -408,6 +417,24 @@
                                 </form>
                                 {% endif %}
                             </div>
+                            {% if s.subscription.future_plan %}
+                            <div style="margin-top:6px;display:flex;gap:4px;justify-content:flex-end;">
+                                <form method="POST" action="{% url 'admin_subscription_status' s.subscription.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="activate_future_now">
+                                    <button type="submit" class="btn-primary" style="font-size:0.68rem;padding:2px 7px;min-height:24px;background:var(--color-primary);" title="Promote scheduled future plan to active immediately">
+                                        <i data-lucide="zap" style="width:10px;height:10px;"></i> Activate Future Now
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'admin_subscription_status' s.subscription.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="cancel_future">
+                                    <button type="submit" class="btn-ghost" style="font-size:0.68rem;padding:2px 7px;min-height:24px;color:var(--color-danger);" title="Cancel scheduled future plan">
+                                        <i data-lucide="trash-2" style="width:10px;height:10px;"></i> Cancel Queue
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
@@ -602,6 +629,14 @@
                     <option value="{{ p.id }}">{{ p.name }} — {{ p.formatted_price }} ({{ p.billing_period_days }} days)
                     </option>
                     {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label class="form-label">Activation Timing *</label>
+                <select name="schedule_mode" class="form-input">
+                    <option value="immediate" selected>⚡ Activate Immediately</option>
+                    <option value="queue_future">📅 Queue as Future Plan (Activates when Current Plan Expires)</option>
                 </select>
             </div>
 

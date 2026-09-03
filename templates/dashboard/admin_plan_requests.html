@@ -297,9 +297,12 @@
                                 <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="approve">
-                                    <button type="button" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" onclick="confirmAdminAction(this, 'approve', '{{ req.shop.name|escapejs }}', '{{ req.plan.name|escapejs }}', '{{ req.plan.formatted_price|escapejs }}', '{{ req.calculate_extended_expiry|date:"d M Y" }}', '{{ req.plan.billing_period_days }}');" title="Approve and activate this plan for {{ req.shop.name }}">
+                                    <input type="hidden" name="activation_mode" value="scheduled">
+                                    {% with current_sub=req.shop.get_subscription %}
+                                    <button type="button" class="btn-primary" style="background:var(--color-success);border-color:var(--color-success);font-size:0.78rem;padding:6px 12px;min-height:32px;" onclick="confirmAdminAction(this, 'approve', '{{ req.shop.name|escapejs }}', '{{ req.plan.name|escapejs }}', '{{ req.plan.formatted_price|escapejs }}', '{{ current_sub.expires_at|date:"d M Y"|default:"Now" }}', '{{ req.calculate_extended_expiry|date:"d M Y" }}', '{{ req.plan.billing_period_days }}', {{ current_sub.is_valid|yesno:'true,false' }});" title="Approve and activate this plan for {{ req.shop.name }}">
                                         <i data-lucide="check" style="width:12px;height:12px;"></i> Approve & Activate
                                     </button>
+                                    {% endwith %}
                                 </form>
                                 <form method="POST" action="{% url 'admin_plan_request_action' req.id %}" style="display:inline;">
                                     {% csrf_token %}
@@ -373,17 +376,110 @@
 </div>
 
 <script>
-    function confirmAdminAction(btn, action, shopName, planName, priceStr, extendedDate, days) {
+    function showApprovalModeModal(shopName, planName, priceStr, currentExpiry, extendedDate, days, onSelect) {
+        let backdrop = document.getElementById('approvalModeBackdrop');
+        if (backdrop) backdrop.remove();
+
+        backdrop = document.createElement('div');
+        backdrop.id = 'approvalModeBackdrop';
+        backdrop.style.cssText = `
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        `;
+
+        backdrop.innerHTML = `
+            <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 32px; width: 100%; max-width: 520px; text-align: center; box-shadow: var(--shadow-lg); animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: var(--color-success);">
+                    <i data-lucide="calendar-check-2" style="width: 28px; height: 28px;"></i>
+                </div>
+                <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">Approve Plan Request</h3>
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+                    Select how you want to apply <strong>${planName}</strong> (${priceStr}) for <strong>${shopName}</strong>:
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; text-align: left;">
+                    <!-- Option 1: Scheduled (User Specification) -->
+                    <button type="button" id="btnModeScheduled" style="background: var(--bg-elevated); border: 2px solid var(--color-primary); border-radius: var(--radius-md); padding: 16px; cursor: pointer; text-align: left; transition: all 0.2s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <strong style="color: var(--color-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="clock" style="width: 16px; height: 16px;"></i> Schedule for Plan Expiry (Recommended)
+                            </strong>
+                            <span class="badge badge-active" style="font-size: 0.68rem;">RECOMMENDED</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+                            Shop owner keeps current plan limits until <strong>${currentExpiry}</strong>. ${planName} automatically takes effect on <strong>${currentExpiry}</strong> until <strong>${extendedDate}</strong> (+${days} days).
+                        </div>
+                    </button>
+
+                    <!-- Option 2: Immediate -->
+                    <button type="button" id="btnModeImmediate" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; cursor: pointer; text-align: left; transition: all 0.2s ease;">
+                        <strong style="color: var(--text-primary); font-size: 0.92rem; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                            <i data-lucide="zap" style="width: 16px; height: 16px; color: var(--color-accent);"></i> Activate Immediately
+                        </strong>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                            Switch to ${planName} right now for ${days} days (replaces current plan limits immediately).
+                        </div>
+                    </button>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button id="approvalModeCancel" class="btn-secondary" style="width: 100%;">Cancel</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(backdrop);
+        if (window.lucide) lucide.createIcons();
+
+        document.getElementById('btnModeScheduled').onclick = () => {
+            backdrop.remove();
+            onSelect('scheduled');
+        };
+        document.getElementById('btnModeImmediate').onclick = () => {
+            backdrop.remove();
+            onSelect('immediate');
+        };
+        document.getElementById('approvalModeCancel').onclick = () => {
+            backdrop.remove();
+        };
+    }
+
+    function confirmAdminAction(btn, action, shopName, planName, priceStr, currentExpiry, extendedDate, days, isCurrentlyActive) {
         const form = btn.closest('form');
         if (action === 'approve') {
-            showConfirmModal(
-                'Approve & Activate Plan',
-                `Approve and activate "${planName}" (${priceStr}) for ${shopName}?\n\n• Expiration will exceed by +${days} days to ${extendedDate}.\n• All limitations of ${planName} will be applied.\n• The shop owner will receive instant notification.`,
-                () => { form.submit(); },
-                null,
-                'Approve & Activate',
-                'btn-primary'
-            );
+            if (isCurrentlyActive) {
+                // Present clean choices: Schedule on expiry (Default) or Activate immediately
+                showApprovalModeModal(
+                    shopName, planName, priceStr, currentExpiry, extendedDate, days,
+                    (mode) => {
+                        const modeInput = form.querySelector('input[name="activation_mode"]');
+                        if (modeInput) modeInput.value = mode;
+                        form.submit();
+                    }
+                );
+            } else {
+                // Subscription is expired: activate immediately
+                showConfirmModal(
+                    'Approve & Activate Plan',
+                    `Activate "${planName}" (${priceStr}) for ${shopName} immediately?\n\n• Shop currently has an expired plan.\n• Subscription will run for ${days} days until ${extendedDate}.\n• All limits of ${planName} will be applied immediately.`,
+                    () => {
+                        const modeInput = form.querySelector('input[name="activation_mode"]');
+                        if (modeInput) modeInput.value = 'immediate';
+                        form.submit();
+                    },
+                    null,
+                    'Activate Now',
+                    'btn-primary'
+                );
+            }
         } else if (action === 'reject') {
             showConfirmModal(
                 'Decline Plan Request',

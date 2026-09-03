@@ -1138,7 +1138,9 @@ def get_or_create_shop_subscription(shop):
             expires_at=timezone.now() + timezone.timedelta(days=30)
         )
         return sub
-    return shop.subscription
+    sub = shop.subscription
+    sub.check_and_rollover_future_plan()
+    return sub
 
 
 @superadmin_required
@@ -1338,21 +1340,37 @@ def admin_plan_delete_view(request, plan_id):
 @require_POST
 @superadmin_required
 def admin_subscription_assign_view(request):
-    """Assign or renew a subscription for a shop with Monthly/Yearly/Trial support"""
     shop_id = request.POST.get('shop_id')
     plan_id = request.POST.get('plan_id')
-    duration_days = request.POST.get('duration_days')
     status = request.POST.get('status', 'active')
+    duration_days = request.POST.get('duration_days')
     notes = request.POST.get('notes', '').strip()
+    schedule_mode = request.POST.get('schedule_mode', 'immediate')
 
     shop = get_object_or_404(Shop, id=shop_id)
     plan = get_object_or_404(Plan, id=plan_id) if plan_id else None
 
     sub, _ = Subscription.objects.get_or_create(shop=shop)
+    now = timezone.now()
+
+    if schedule_mode == 'queue_future' and plan:
+        # Schedule as future plan starting when current active plan ends
+        try:
+            days = int(duration_days) if duration_days else (plan.billing_period_days if plan else 30)
+        except ValueError:
+            days = 30
+        sub.schedule_future_plan(plan, duration_days=days, notes=notes)
+        ActivityLog.objects.create(
+            shop=shop,
+            actor=request.user,
+            action="Future Plan Scheduled",
+            details=f"Scheduled {plan.name} to activate on {sub.future_starts_at.strftime('%d %b %Y')} until {sub.future_expires_at.strftime('%d %b %Y')}."
+        )
+        messages.success(request, f"Scheduled {plan.name} for {shop.name}! It will automatically activate on {sub.future_starts_at.strftime('%d %b %Y')} when current plan ends.")
+        return redirect('admin_subscriptions')
+
     if plan:
         sub.plan = plan
-
-    now = timezone.now()
 
     if status == 'trial':
         try:
@@ -1391,13 +1409,14 @@ def admin_subscription_assign_view(request):
         details=f"Plan: {sub.plan.name if sub.plan else 'Custom'}, Status: {sub.status}, Expires: {sub.expires_at.strftime('%d %b %Y %H:%M') if sub.expires_at else 'Instant Expire'}"
     )
 
+    messages.success(request, f"Subscription for {shop.name} successfully updated to {sub.plan.name if sub.plan else 'Custom'}.")
     return redirect('admin_subscriptions')
 
 
 @require_POST
 @superadmin_required
 def admin_subscription_status_view(request, sub_id):
-    """Update subscription status, trigger instant expire, trial, or extend (+30d, +365d)"""
+    """Update subscription status, trigger instant expire, trial, extend, activate queued future plan, or cancel future queue"""
     sub = get_object_or_404(Subscription, id=sub_id)
     action = request.POST.get('action')
     now = timezone.now()
@@ -1407,6 +1426,7 @@ def admin_subscription_status_view(request, sub_id):
         sub.is_active = False
         sub.expires_at = now - timezone.timedelta(minutes=1)
         sub.save()
+        messages.info(request, f"Subscription for {sub.shop.name} has been expired.")
 
     elif action == 'trial':
         try:
@@ -1418,6 +1438,7 @@ def admin_subscription_status_view(request, sub_id):
         sub.starts_at = now
         sub.expires_at = now + timezone.timedelta(days=t_days)
         sub.save()
+        messages.success(request, f"Trial activated for {sub.shop.name} ({t_days} days).")
 
     elif action == 'activate':
         days = sub.plan.billing_period_days if sub.plan else 30
@@ -1426,11 +1447,13 @@ def admin_subscription_status_view(request, sub_id):
         sub.starts_at = now
         sub.expires_at = now + timezone.timedelta(days=days)
         sub.save()
+        messages.success(request, f"Plan activated for {sub.shop.name}.")
 
     elif action == 'cancel':
         sub.status = 'cancelled'
         sub.is_active = False
         sub.save()
+        messages.info(request, f"Subscription for {sub.shop.name} cancelled.")
 
     elif action == 'extend':
         try:
@@ -1442,6 +1465,38 @@ def admin_subscription_status_view(request, sub_id):
         sub.status = 'active'
         sub.is_active = True
         sub.save()
+        messages.success(request, f"Extended {sub.shop.name} subscription by +{extra_days} days until {sub.expires_at.strftime('%d %b %Y')}.")
+
+    elif action == 'activate_future_now':
+        if sub.future_plan:
+            queued_plan = sub.future_plan
+            days = queued_plan.billing_period_days or 30
+            sub.plan = queued_plan
+            sub.starts_at = now
+            sub.expires_at = now + timezone.timedelta(days=days)
+            sub.status = 'active'
+            sub.is_active = True
+            sub.cancel_future_plan()
+            sub.save()
+            ActivityLog.objects.create(
+                shop=sub.shop,
+                actor=request.user,
+                action="Queued Plan Activated Immediately",
+                details=f"Promoted {queued_plan.name} to active immediately until {sub.expires_at.strftime('%d %b %Y')}."
+            )
+            messages.success(request, f"Promoted scheduled plan {queued_plan.name} to active immediately for {sub.shop.name}!")
+
+    elif action == 'cancel_future':
+        if sub.future_plan:
+            queued_name = sub.future_plan.name
+            sub.cancel_future_plan()
+            ActivityLog.objects.create(
+                shop=sub.shop,
+                actor=request.user,
+                action="Scheduled Future Plan Cancelled",
+                details=f"Cancelled queued future plan {queued_name}."
+            )
+            messages.info(request, f"Cancelled scheduled future plan ({queued_name}) for {sub.shop.name}.")
 
     ActivityLog.objects.create(
         shop=sub.shop,
@@ -1526,43 +1581,68 @@ def admin_plan_request_action_view(request, request_id):
         sub = plan_req.shop.get_subscription()
         now = timezone.now()
         days = plan_req.plan.billing_period_days if plan_req.plan.billing_period_days else 30
+        activation_mode = request.POST.get('activation_mode', 'scheduled')
 
-        # Exceed by more days based on plan:
-        # If current plan is active and unexpired, extend from the existing expiration date!
-        if sub.expires_at and sub.expires_at > now:
-            base_date = sub.expires_at
-            exceeded = True
+        is_currently_active = sub.is_valid() and sub.expires_at and sub.expires_at > now
+
+        if is_currently_active and activation_mode != 'immediate':
+            # Current plan is still active (e.g. ₹499 plan expires 5th Sep).
+            # The shop owner keeps accessing ONLY the current plan's quotas until 5th Sep.
+            # The approved plan is scheduled as a future plan starting on 5th Sep!
+            sub.schedule_future_plan(
+                new_plan=plan_req.plan,
+                starts_at=sub.expires_at,
+                duration_days=days,
+                notes=f"Approved {plan_req.get_request_type_display()} Request #{plan_req.id}"
+            )
+
+            type_str = "Renewal" if plan_req.request_type == 'renewal' else "Upgrade"
+            Notification.objects.create(
+                shop=plan_req.shop,
+                user=plan_req.shop.owner,
+                title=f"Plan {type_str} Approved & Scheduled 📅",
+                message=f"Your request for {plan_req.plan.name} ({plan_req.plan.formatted_price()}) has been approved! Your current plan remains active with its current limits until {sub.expires_at.strftime('%d %b %Y')}. On that day, your new {plan_req.plan.name} will automatically activate with all its limits until {sub.future_expires_at.strftime('%d %b %Y')}.",
+                level='success'
+            )
+            ActivityLog.objects.create(
+                shop=plan_req.shop,
+                actor=request.user,
+                action=f"Plan {type_str} Approved & Scheduled",
+                details=f"Scheduled {plan_req.plan.name} for {plan_req.shop.name} to activate automatically on {sub.future_starts_at.strftime('%d %b %Y')} until {sub.future_expires_at.strftime('%d %b %Y')}."
+            )
+            messages.success(
+                request,
+                f"Approved and scheduled {plan_req.plan.name} for {plan_req.shop.name}! Current plan stays active until {sub.expires_at.strftime('%d %b %Y')}, new plan activates automatically on that day until {sub.future_expires_at.strftime('%d %b %Y')}."
+            )
+
         else:
-            base_date = now
-            exceeded = False
-
-        new_expires_at = base_date + timezone.timedelta(days=days)
-
-        # Update shop subscription atomically with new plan and extended expiration
-        sub.plan = plan_req.plan
-        sub.status = 'active'
-        sub.is_active = True
-        if not sub.starts_at or not exceeded:
+            # Current plan was already expired OR admin explicitly selected immediate activation
+            sub.plan = plan_req.plan
+            sub.status = 'active'
+            sub.is_active = True
             sub.starts_at = now
-        sub.expires_at = new_expires_at
-        sub.save()
+            sub.expires_at = now + timezone.timedelta(days=days)
+            sub.cancel_future_plan()
+            sub.save()
 
-        # Notification & Audit Log
-        type_str = "Renewal" if plan_req.request_type == 'renewal' else "Upgrade"
-        Notification.objects.create(
-            shop=plan_req.shop,
-            user=plan_req.shop.owner,
-            title=f"Plan {type_str} Approved 🎉",
-            message=f"Your request for {plan_req.plan.name} ({plan_req.plan.formatted_price()}) has been approved! Your subscription has been extended by +{days} days until {sub.expires_at.strftime('%d %b %Y')}. All plan features and limitations ({plan_req.plan.max_campaigns} campaigns, {plan_req.plan.max_active_campaigns} active, {plan_req.plan.max_prizes_per_campaign} prizes/wheel, {plan_req.plan.max_spins_per_month} spins/mo) are active.",
-            level='success'
-        )
-        ActivityLog.objects.create(
-            shop=plan_req.shop,
-            actor=request.user,
-            action=f"Plan {type_str} Approved",
-            details=f"Approved {type_str.lower()} to {plan_req.plan.name} for {plan_req.shop.name}. Expiration extended to {sub.expires_at.strftime('%d %b %Y')} (+{days} days)."
-        )
-        messages.success(request, f"Approved {type_str.lower()} for {plan_req.shop.name}! Plan extended to {sub.expires_at.strftime('%d %b %Y')} (+{days} days) with full {plan_req.plan.name} limits.")
+            type_str = "Renewal" if plan_req.request_type == 'renewal' else "Upgrade"
+            Notification.objects.create(
+                shop=plan_req.shop,
+                user=plan_req.shop.owner,
+                title=f"Plan {type_str} Activated Immediately 🎉",
+                message=f"Your request for {plan_req.plan.name} ({plan_req.plan.formatted_price()}) has been approved and activated immediately! Active until {sub.expires_at.strftime('%d %b %Y')}. All plan features and limitations ({plan_req.plan.max_campaigns} campaigns, {plan_req.plan.max_spins_per_month} spins/mo) are now active.",
+                level='success'
+            )
+            ActivityLog.objects.create(
+                shop=plan_req.shop,
+                actor=request.user,
+                action=f"Plan {type_str} Activated Immediately",
+                details=f"Activated {plan_req.plan.name} immediately for {plan_req.shop.name} until {sub.expires_at.strftime('%d %b %Y')}."
+            )
+            messages.success(
+                request,
+                f"Approved and activated {plan_req.plan.name} immediately for {plan_req.shop.name} (active until {sub.expires_at.strftime('%d %b %Y')})."
+            )
 
     elif action == 'reject':
         plan_req.status = 'rejected'

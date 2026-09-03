@@ -62,6 +62,7 @@ class Shop(models.Model):
         from django.utils import timezone as tz
         from datetime import timedelta
         sub, _ = Subscription.objects.get_or_create(shop=self)
+        sub.check_and_rollover_future_plan()
         if not sub.plan:
             default_plan, _ = Plan.objects.get_or_create(
                 code='starter',
@@ -911,6 +912,12 @@ class Subscription(models.Model):
     notes = models.TextField(blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Queued / Future Scheduled Plan (Takes effect when current plan expires)
+    future_plan = models.ForeignKey(Plan, on_delete=models.SET_NULL, null=True, blank=True, related_name='queued_subscriptions')
+    future_starts_at = models.DateTimeField(null=True, blank=True)
+    future_expires_at = models.DateTimeField(null=True, blank=True)
+    future_notes = models.TextField(blank=True, default='')
+
     def is_valid(self):
         if self.status not in ['active', 'trial']:
             return False
@@ -927,6 +934,54 @@ class Subscription(models.Model):
         diff = self.expires_at - now
         return diff.days + (1 if diff.seconds > 0 else 0)
 
+    def check_and_rollover_future_plan(self):
+        """
+        If a future plan is scheduled and current time >= future_starts_at,
+        transition the subscription to the future plan atomically.
+        """
+        now = timezone.now()
+        if self.future_plan and self.future_starts_at and now >= self.future_starts_at:
+            self.plan = self.future_plan
+            self.starts_at = self.future_starts_at
+            self.expires_at = self.future_expires_at
+            self.status = 'active'
+            self.is_active = True
+
+            # Clear future plan queue
+            self.future_plan = None
+            self.future_starts_at = None
+            self.future_expires_at = None
+            self.future_notes = ''
+            self.save()
+            return True
+        return False
+
+    def schedule_future_plan(self, new_plan, starts_at=None, duration_days=None, notes=''):
+        """
+        Queues a future plan to take effect when current active plan expires.
+        Current plan and its limitations stay untouched until the scheduled start date.
+        """
+        now = timezone.now()
+        start = starts_at or (self.expires_at if (self.expires_at and self.expires_at > now) else now)
+        days = duration_days or (new_plan.billing_period_days if new_plan else 30)
+        end = start + timezone.timedelta(days=days)
+
+        self.future_plan = new_plan
+        self.future_starts_at = start
+        self.future_expires_at = end
+        self.future_notes = notes
+        self.save()
+        return self
+
+    def cancel_future_plan(self):
+        """Cancels any scheduled future plan queue."""
+        self.future_plan = None
+        self.future_starts_at = None
+        self.future_expires_at = None
+        self.future_notes = ''
+        self.save()
+        return self
+
     def renew(self, plan=None, duration_days=None):
         if plan:
             self.plan = plan
@@ -941,7 +996,8 @@ class Subscription(models.Model):
 
     def __str__(self):
         plan_name = self.plan.name if self.plan else "No Plan"
-        return f"{self.shop.name} — {plan_name} ({self.status})"
+        future_str = f" [Queued: {self.future_plan.name}]" if self.future_plan else ""
+        return f"{self.shop.name} — {plan_name} ({self.status}){future_str}"
 
 
 class Notification(models.Model):
