@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ shop.name }} — Promotion Intermission{% endblock %}
+{% block title %}{{ shop.name }} — Spin Wheel Unavailable{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/themes.css' %}">
@@ -44,32 +44,32 @@
     <div class="expired-card">
         {% if shop.logo %}
         <img src="{{ shop.logo.url }}" alt="{{ shop.name }}"
-            style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 16px;border:3px solid var(--color-primary, #6d28d9);display:block;">
+            style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 16px;border:3px solid rgba(239,68,68,0.6);display:block;">
         {% else %}
         <div
-            style="width:72px;height:72px;border-radius:50%;border:3px solid var(--color-primary, #6d28d9);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--color-primary, #6d28d9);margin:0 auto 16px;background:rgba(255,255,255,0.05);">
+            style="width:72px;height:72px;border-radius:50%;border:3px solid rgba(239,68,68,0.6);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:rgba(239,68,68,0.8);margin:0 auto 16px;background:rgba(239,68,68,0.05);">
             {{ shop.name|slice:":1" }}
         </div>
         {% endif %}
 
-        <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:999px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:var(--color-accent, #ffd700);font-size:0.75rem;font-weight:800;letter-spacing:1px;margin-bottom:14px;">
-            <i data-lucide="sparkles" style="width:12px;height:12px;"></i> PROMOTION INTERMISSION
+        <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:999px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:rgba(239,68,68,0.9);font-size:0.75rem;font-weight:800;letter-spacing:1px;margin-bottom:14px;">
+            <i data-lucide="ban" style="width:12px;height:12px;"></i> NO ACTIVE PLAN
         </div>
 
-        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 8px 0;letter-spacing:-0.3px;color:var(--text-primary, #ffffff);">
+        <h1 style="font-size:1.5rem;font-weight:800;margin:0 0 8px 0;letter-spacing:-0.3px;color:var(--text-primary, #ffffff);">
             {{ shop.name }}
         </h1>
 
         <p style="font-size:0.92rem;color:var(--text-secondary, #94a3b8);margin:0 0 24px 0;line-height:1.6;">
-            Our promotional spin wheel is taking a brief intermission while we prepare new rewards and exciting offers for you.
+            The spin wheel for this shop is currently unavailable as there is no active subscription plan enabled.
         </p>
 
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-md, 14px);padding:16px;margin-bottom:24px;">
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md, 14px);padding:16px;margin-bottom:24px;">
             <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary, #ffffff);margin-bottom:4px;">
-                🎉 New Offers Coming Soon!
+                🚫 Spin Wheel Unavailable
             </div>
             <div style="font-size:0.78rem;color:var(--text-muted, #64748b);">
-                Ask our in-store staff about current store deals and discount opportunities at checkout.
+                Please contact the shop for current deals and discounts available at checkout.
             </div>
         </div>
 
@@ -79,3 +79,4 @@
     </div>
 </div>
 {% endblock %}
+
