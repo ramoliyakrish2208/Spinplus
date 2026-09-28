@@ -1752,47 +1752,453 @@ def request_plan_view(request):
     return redirect('billing')
 
 
-@shop_access_required
 def onboarding_view(request):
-    shop = request.user.shop
-    if request.user.is_superadmin() and not shop:
-        shop = Shop.objects.first()
+    """
+    Setup Wizard for Business Creation and Shop Onboarding.
+    Supports:
+    1. Complete Business Creation: Creates new User (Shop Owner credentials with password & confirm password),
+       Shop profile, ShopBranding, Subscription plan, initial Campaign & Prizes, and permanent QR code.
+    2. Password Management: Password and confirm password fields with strength & matching validation.
+    3. Existing Shop Configuration: Allows existing shop owners or admins to customize details, branding,
+       offers, and launch permanent QR codes.
+    """
+    mode = request.GET.get('mode', '').strip()
+    shop_id = request.GET.get('shop_id', '').strip()
 
-    if not shop:
-        return redirect('admin_dashboard')
+    is_create_mode = False
+    shop = None
+
+    if not request.user.is_authenticated:
+        # Public merchant signup / business creation
+        is_create_mode = True
+    elif request.user.is_superadmin():
+        if shop_id:
+            shop = get_object_or_404(Shop, id=shop_id)
+            is_create_mode = (mode == 'create')
+        elif mode == 'create' or not request.user.shop:
+            is_create_mode = True
+        else:
+            is_create_mode = (mode == 'create')
+            shop = request.user.shop or Shop.objects.first()
+    else:
+        # Logged-in shop owner
+        shop = request.user.shop
+        is_create_mode = (mode == 'create' and not shop)
 
     if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'save_shop':
-            shop.name = request.POST.get('name', shop.name)
+        action = request.POST.get('action', '')
+
+        # -------------------------------------------------------------
+        # 1. ACTION: CREATE BUSINESS (Complete Multi-Step Wizard Submission)
+        # -------------------------------------------------------------
+        if action == 'create_business':
+            # Extract Credentials
+            owner_username = request.POST.get('owner_username', '').strip()
+            owner_password = request.POST.get('owner_password', '').strip()
+            owner_confirm_password = request.POST.get('owner_confirm_password', '').strip()
+            owner_email = request.POST.get('owner_email', '').strip()
+            owner_first_name = request.POST.get('owner_first_name', '').strip()
+            owner_last_name = request.POST.get('owner_last_name', '').strip()
+            owner_phone = request.POST.get('owner_phone', '').strip()
+
+            # Extract Shop Profile
+            shop_name = request.POST.get('shop_name', '').strip()
+            category = request.POST.get('category', '').strip() or 'Retail & Store'
+            currency_symbol = request.POST.get('currency_symbol', '₹').strip() or '₹'
+            shop_phone = request.POST.get('shop_phone', '').strip() or owner_phone
+            shop_email = request.POST.get('shop_email', '').strip() or owner_email
+            address = request.POST.get('address', '').strip()
+            timezone_val = request.POST.get('timezone', 'Asia/Kolkata').strip() or 'Asia/Kolkata'
+            country = request.POST.get('country', 'IN').strip() or 'IN'
+            region = request.POST.get('region', 'Gujarat').strip() or 'Gujarat'
+            description = request.POST.get('description', '').strip()
+            auto_theme_enabled = request.POST.get('auto_theme_enabled') in ('true', 'on', '1', True, 1)
+            auto_category_adaptation = request.POST.get('auto_category_theme_adaptation') in ('true', 'on', '1', True, 1)
+            try:
+                pre_festival_days = int(request.POST.get('pre_festival_days', 3) or 3)
+            except (ValueError, TypeError):
+                pre_festival_days = 3
+
+            # Extract Branding & Theme
+            theme = request.POST.get('theme', 'royal').strip() or 'royal'
+            font_family = request.POST.get('font_family', 'inter').strip() or 'inter'
+            intensity = request.POST.get('intensity', 'balanced').strip() or 'balanced'
+            primary_color = request.POST.get('primary_color', '').strip()
+            secondary_color = request.POST.get('secondary_color', '').strip()
+            accent_color = request.POST.get('accent_color', '').strip()
+            background_color = request.POST.get('background_color', '').strip()
+            spin_button_text = request.POST.get('spin_button_text', '').strip()
+            pointer_style = request.POST.get('pointer_style', 'classic').strip() or 'classic'
+
+            # Extract Subscription Plan
+            plan_id = request.POST.get('plan_id')
+            plan_code = request.POST.get('plan_code', 'starter').strip()
+            billing_cycle = request.POST.get('billing_cycle', 'monthly').strip()
+
+            # Extract Initial Campaign & Prizes
+            campaign_name = request.POST.get('campaign_name', '').strip()
+            welcome_title = request.POST.get('welcome_title', '').strip()
+            welcome_subtitle = request.POST.get('welcome_subtitle', '').strip()
+            try:
+                spin_cooldown_hours = int(request.POST.get('spin_cooldown_hours', 24) or 24)
+            except (ValueError, TypeError):
+                spin_cooldown_hours = 24
+            prizes_json = request.POST.get('prizes_json', '').strip()
+
+            # Validation
+            errors = []
+            if not owner_username:
+                errors.append("Username is required.")
+            elif len(owner_username) < 3:
+                errors.append("Username must be at least 3 characters long.")
+            elif User.objects.filter(username__iexact=owner_username).exists():
+                errors.append(f"Username '{owner_username}' is already taken. Please choose another username.")
+
+            if not owner_password:
+                errors.append("Password is required.")
+            elif len(owner_password) < 8:
+                errors.append("Password must be at least 8 characters long.")
+            elif owner_password != owner_confirm_password:
+                errors.append("Passwords do not match. Please re-enter matching passwords.")
+
+            if not shop_name:
+                errors.append("Business / Shop Name is required.")
+
+            if errors:
+                return JsonResponse({'status': 'error', 'message': errors[0], 'errors': errors}, status=400)
+
+            # Atomic creation of user, shop, branding, plan, campaign, prizes, and QR
+            try:
+                with transaction.atomic():
+                    # 1. Create User
+                    new_user = User.objects.create_user(
+                        username=owner_username,
+                        email=owner_email,
+                        password=owner_password,
+                        first_name=owner_first_name,
+                        last_name=owner_last_name,
+                        role='shop_owner',
+                        phone=owner_phone
+                    )
+
+                    # 2. Create Shop
+                    new_shop = Shop.objects.create(
+                        name=shop_name,
+                        owner=new_user,
+                        category=category,
+                        currency_symbol=currency_symbol,
+                        phone=shop_phone,
+                        email=shop_email,
+                        address=address,
+                        timezone=timezone_val,
+                        country=country,
+                        region=region,
+                        description=description,
+                        auto_theme_enabled=auto_theme_enabled,
+                        auto_category_theme_adaptation=auto_category_adaptation,
+                        pre_festival_days=pre_festival_days,
+                        normal_theme=theme,
+                        onboarding_completed=True
+                    )
+
+                    new_user.shop = new_shop
+                    new_user.save(update_fields=['shop'])
+
+                    # 3. Create ShopBranding
+                    theme_defs = ShopBranding.get_theme_defaults(theme)
+                    branding, _ = ShopBranding.objects.get_or_create(shop=new_shop)
+                    branding.theme = theme
+                    branding.font_family = font_family or theme_defs.get('font_family', 'inter')
+                    branding.intensity = intensity
+                    branding.primary_color = primary_color or theme_defs.get('primary_color', '#6366f1')
+                    branding.secondary_color = secondary_color or theme_defs.get('secondary_color', '#4f46e5')
+                    branding.accent_color = accent_color or theme_defs.get('accent_color', '#f59e0b')
+                    branding.background_color = background_color or theme_defs.get('background_color', '#0f172a')
+                    branding.spin_button_text = spin_button_text or theme_defs.get('spin_button_text', 'SPIN NOW')
+                    branding.pointer_style = pointer_style
+                    branding.save()
+
+                    # 4. Setup Subscription Plan
+                    selected_plan = None
+                    if plan_id:
+                        selected_plan = Plan.objects.filter(id=plan_id, is_active=True).first()
+                    elif plan_code:
+                        selected_plan = Plan.objects.filter(code=plan_code, is_active=True).first()
+                    if not selected_plan:
+                        selected_plan = Plan.objects.filter(is_default=True, is_active=True).first() or Plan.objects.filter(is_active=True).first()
+
+                    duration_days = 365 if billing_cycle == 'yearly' else (selected_plan.billing_period_days if selected_plan else 30)
+                    sub = new_shop.get_subscription()
+                    if selected_plan:
+                        sub.plan = selected_plan
+                    sub.status = 'active'
+                    sub.starts_at = timezone.now()
+                    sub.expires_at = timezone.now() + timedelta(days=duration_days)
+                    sub.is_active = True
+                    sub.save()
+
+                    # 5. Create Initial Promotional Campaign
+                    camp = Campaign.objects.create(
+                        shop=new_shop,
+                        name=campaign_name or f"{new_shop.name} Welcome Offer",
+                        description=welcome_subtitle or "Spin the wheel for an instant discount voucher",
+                        welcome_title=welcome_title or f"Welcome to {new_shop.name}!",
+                        welcome_subtitle=welcome_subtitle or "Spin the wheel to unlock your exclusive instant reward",
+                        spin_button_text=branding.spin_button_text or "SPIN NOW",
+                        start_date=timezone.now() - timedelta(hours=1),
+                        end_date=timezone.now() + timedelta(days=365),
+                        status='live',
+                        is_active=True,
+                        spin_cooldown_hours=spin_cooldown_hours,
+                        theme=theme
+                    )
+
+                    # 6. Create Prizes (parse from prizes_json or default set)
+                    prizes_data = []
+                    if prizes_json:
+                        try:
+                            prizes_data = json.loads(prizes_json)
+                        except Exception:
+                            prizes_data = []
+
+                    if not prizes_data:
+                        prizes_data = [
+                            {'name': '10% OFF Bill', 'prize_type': 'percentage', 'discount_percentage': 10.0, 'fixed_discount_amount': 0.0, 'coupon_text': '10% off your purchase', 'probability': 40.0, 'remaining_quantity': 200, 'display_color': branding.primary_color},
+                            {'name': f'Flat {currency_symbol}100 OFF', 'prize_type': 'fixed', 'discount_percentage': 0.0, 'fixed_discount_amount': 100.0, 'coupon_text': f'{currency_symbol}100 discount on your bill', 'probability': 25.0, 'remaining_quantity': 100, 'display_color': branding.accent_color},
+                            {'name': 'Complimentary Gift', 'prize_type': 'freebie', 'discount_percentage': 0.0, 'fixed_discount_amount': 0.0, 'coupon_text': 'Free surprise gift with order', 'probability': 15.0, 'remaining_quantity': 50, 'display_color': branding.secondary_color},
+                            {'name': 'Better Luck Next Time', 'prize_type': 'no_win', 'discount_percentage': 0.0, 'fixed_discount_amount': 0.0, 'coupon_text': 'Thank you for playing', 'probability': 20.0, 'remaining_quantity': 500, 'display_color': '#64748b'},
+                        ]
+
+                    for p in prizes_data:
+                        Prize.objects.create(
+                            campaign=camp,
+                            name=p.get('name', 'Special Reward'),
+                            prize_type=p.get('prize_type', 'percentage'),
+                            discount_percentage=float(p.get('discount_percentage', 0.0) or 0.0),
+                            fixed_discount_amount=float(p.get('fixed_discount_amount', 0.0) or 0.0),
+                            coupon_text=p.get('coupon_text', '') or f"Reward: {p.get('name')}",
+                            probability=float(p.get('probability', 25.0) or 25.0),
+                            remaining_quantity=int(p.get('remaining_quantity', 200) or 200),
+                            max_wins=int(p.get('max_wins', p.get('remaining_quantity', 200)) or 200),
+                            display_color=p.get('display_color', branding.primary_color)
+                        )
+
+                    # 7. Generate Permanent High-DPI QR Code
+                    qr_obj = generate_shop_qr(new_shop)
+
+                    # 8. Log Activity
+                    actor_user = request.user if request.user.is_authenticated else new_user
+                    ActivityLog.objects.create(
+                        shop=new_shop,
+                        actor=actor_user,
+                        action="Business Created via Setup Wizard",
+                        details=f"Created store '{new_shop.name}' with owner '{new_user.username}', plan '{selected_plan.name if selected_plan else 'Starter'}'"
+                    )
+
+                # Auto login if unauthenticated merchant
+                if not request.user.is_authenticated:
+                    login(request, new_user)
+
+                qr_url = qr_obj.qr_image.url if (qr_obj and qr_obj.qr_image) else ''
+                store_url = qr_obj.target_url if qr_obj else f"/s/{new_shop.public_token}/"
+                dashboard_url = f"/dashboard/shop/?shop_id={new_shop.id}" if (request.user.is_authenticated and request.user.is_superadmin()) else "/dashboard/shop/"
+
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f"Business '{new_shop.name}' created successfully!",
+                    'shop_id': new_shop.id,
+                    'shop_name': new_shop.name,
+                    'public_token': new_shop.public_token,
+                    'qr_url': qr_url,
+                    'store_url': store_url,
+                    'username': new_user.username,
+                    'password': owner_password,
+                    'dashboard_url': dashboard_url
+                })
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': f"Failed to create business: {str(e)}"}, status=500)
+
+        # -------------------------------------------------------------
+        # 2. ACTION: SAVE CREDENTIALS / UPDATE PASSWORD (Existing Owner)
+        # -------------------------------------------------------------
+        elif action == 'save_credentials':
+            new_password = request.POST.get('new_password', '').strip()
+            confirm_password = request.POST.get('confirm_password', '').strip()
+            new_email = request.POST.get('email', '').strip()
+            new_phone = request.POST.get('phone', '').strip()
+
+            target_user = request.user
+            if shop and shop.owner and request.user.is_superadmin():
+                target_user = shop.owner
+
+            if new_password:
+                if len(new_password) < 8:
+                    return JsonResponse({'status': 'error', 'message': 'Password must be at least 8 characters long.'}, status=400)
+                if new_password != confirm_password:
+                    return JsonResponse({'status': 'error', 'message': 'Passwords do not match.'}, status=400)
+                target_user.set_password(new_password)
+
+            if new_email:
+                target_user.email = new_email
+            if new_phone:
+                target_user.phone = new_phone
+            target_user.save()
+
+            if target_user == request.user and new_password:
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, target_user)
+
+            if shop:
+                ActivityLog.objects.create(
+                    shop=shop,
+                    actor=request.user,
+                    action="Onboarding: Security Credentials Updated",
+                    details=f"Updated credentials for user '{target_user.username}'"
+                )
+
+            return JsonResponse({'status': 'success', 'message': 'Security credentials updated successfully!'})
+
+        # -------------------------------------------------------------
+        # 3. ACTION: SAVE SHOP DETAILS (Backward Compatible)
+        # -------------------------------------------------------------
+        elif action == 'save_shop':
+            if not shop:
+                shop = request.user.shop or (Shop.objects.first() if request.user.is_superadmin() else None)
+            if not shop:
+                return JsonResponse({'status': 'error', 'message': 'No shop selected.'}, status=400)
+
+            shop.name = request.POST.get('name', request.POST.get('shop_name', shop.name))
             shop.category = request.POST.get('category', shop.category)
             shop.currency_symbol = request.POST.get('currency_symbol', shop.currency_symbol)
+            if 'phone' in request.POST or 'shop_phone' in request.POST:
+                shop.phone = request.POST.get('phone', request.POST.get('shop_phone', shop.phone))
+            if 'email' in request.POST or 'shop_email' in request.POST:
+                shop.email = request.POST.get('email', request.POST.get('shop_email', shop.email))
+            if 'address' in request.POST:
+                shop.address = request.POST.get('address', shop.address)
+            if 'timezone' in request.POST:
+                shop.timezone = request.POST.get('timezone', shop.timezone)
+            if 'country' in request.POST:
+                shop.country = request.POST.get('country', shop.country)
+            if 'region' in request.POST:
+                shop.region = request.POST.get('region', shop.region)
             shop.save()
+
             ActivityLog.objects.create(shop=shop, actor=request.user, action="Onboarding: Shop Details Saved", details=f"Updated details for {shop.name}")
             return JsonResponse({'status': 'success', 'message': 'Shop details saved!'})
 
+        # -------------------------------------------------------------
+        # 4. ACTION: SAVE BRANDING (Backward Compatible)
+        # -------------------------------------------------------------
         elif action == 'save_branding':
+            if not shop:
+                shop = request.user.shop or (Shop.objects.first() if request.user.is_superadmin() else None)
+            if not shop:
+                return JsonResponse({'status': 'error', 'message': 'No shop selected.'}, status=400)
+
             branding, _ = ShopBranding.objects.get_or_create(shop=shop)
-            branding.theme = request.POST.get('theme', branding.theme)
+            theme_choice = request.POST.get('theme', branding.theme)
+            branding.theme = theme_choice
             branding.font_family = request.POST.get('font_family', branding.font_family)
             branding.primary_color = request.POST.get('primary_color', branding.primary_color)
+            if 'intensity' in request.POST:
+                branding.intensity = request.POST.get('intensity', branding.intensity)
+            if 'secondary_color' in request.POST:
+                branding.secondary_color = request.POST.get('secondary_color', branding.secondary_color)
+            if 'accent_color' in request.POST:
+                branding.accent_color = request.POST.get('accent_color', branding.accent_color)
+            if 'background_color' in request.POST:
+                branding.background_color = request.POST.get('background_color', branding.background_color)
+            if 'spin_button_text' in request.POST:
+                branding.spin_button_text = request.POST.get('spin_button_text', branding.spin_button_text)
             branding.save()
+
+            shop.normal_theme = theme_choice
+            shop.save(update_fields=['normal_theme'])
+
             ActivityLog.objects.create(shop=shop, actor=request.user, action="Onboarding: Branding Saved", details=f"Theme set to {branding.theme}")
             return JsonResponse({'status': 'success', 'message': 'Branding theme saved!'})
 
+        # -------------------------------------------------------------
+        # 5. ACTION: SAVE CAMPAIGN & PRIZES
+        # -------------------------------------------------------------
+        elif action == 'save_campaign':
+            if not shop:
+                shop = request.user.shop or (Shop.objects.first() if request.user.is_superadmin() else None)
+            if not shop:
+                return JsonResponse({'status': 'error', 'message': 'No shop selected.'}, status=400)
+
+            campaign = shop.get_active_campaign()
+            if not campaign:
+                campaign = Campaign.objects.create(
+                    shop=shop,
+                    name=request.POST.get('campaign_name', f"{shop.name} Promotion"),
+                    welcome_title=request.POST.get('welcome_title', f"Welcome to {shop.name}!"),
+                    welcome_subtitle=request.POST.get('welcome_subtitle', "Spin to win"),
+                    start_date=timezone.now() - timedelta(hours=1),
+                    end_date=timezone.now() + timedelta(days=365),
+                    status='live',
+                    is_active=True
+                )
+            else:
+                if 'campaign_name' in request.POST:
+                    campaign.name = request.POST.get('campaign_name', campaign.name)
+                if 'welcome_title' in request.POST:
+                    campaign.welcome_title = request.POST.get('welcome_title', campaign.welcome_title)
+                if 'welcome_subtitle' in request.POST:
+                    campaign.welcome_subtitle = request.POST.get('welcome_subtitle', campaign.welcome_subtitle)
+                if 'spin_cooldown_hours' in request.POST:
+                    try:
+                        campaign.spin_cooldown_hours = int(request.POST.get('spin_cooldown_hours', campaign.spin_cooldown_hours))
+                    except (ValueError, TypeError):
+                        pass
+                campaign.save()
+
+            ActivityLog.objects.create(shop=shop, actor=request.user, action="Onboarding: Campaign Saved", details=f"Updated offer: {campaign.name}")
+            return JsonResponse({'status': 'success', 'message': 'Campaign offer saved!'})
+
+        # -------------------------------------------------------------
+        # 6. ACTION: COMPLETE ONBOARDING (Backward Compatible)
+        # -------------------------------------------------------------
         elif action == 'complete':
-            shop.onboarding_completed = True
-            shop.save()
-            ActivityLog.objects.create(shop=shop, actor=request.user, action="Onboarding Completed", details="Shop onboarding wizard launched successfully.")
+            if not shop:
+                shop = request.user.shop or (Shop.objects.first() if request.user.is_superadmin() else None)
+            if shop:
+                shop.onboarding_completed = True
+                shop.save()
+                generate_shop_qr(shop)
+                ActivityLog.objects.create(shop=shop, actor=request.user, action="Onboarding Completed", details="Shop onboarding wizard launched successfully.")
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Onboarding complete!', 'redirect_url': '/dashboard/shop/'})
             return redirect('shop_dashboard')
 
-    branding, _ = ShopBranding.objects.get_or_create(shop=shop)
-    campaign = shop.get_active_campaign()
+    # GET Request: Prepare Context
+    if not shop and not is_create_mode:
+        if request.user.is_authenticated:
+            shop = request.user.shop or (Shop.objects.first() if request.user.is_superadmin() else None)
+            if not shop:
+                is_create_mode = True
+        else:
+            is_create_mode = True
+
+    branding = None
+    campaign = None
+    if shop:
+        branding, _ = ShopBranding.objects.get_or_create(shop=shop)
+        campaign = shop.get_active_campaign()
+
+    plans = Plan.objects.filter(is_active=True).order_by('price_rupees')
 
     return render(request, 'dashboard/onboarding.html', {
         'shop': shop,
         'branding': branding,
-        'campaign': campaign
+        'campaign': campaign,
+        'is_create_mode': is_create_mode,
+        'plans': plans,
+        'theme_choices': ShopBranding.THEME_CHOICES,
+        'font_choices': ShopBranding.FONT_CHOICES,
+        'intensity_choices': ShopBranding.INTENSITY_CHOICES,
     })
 
 

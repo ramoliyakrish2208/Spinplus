@@ -1,0 +1,1 @@
+for d in ~/Spinplus ~/SpinPlus; do if [ -d "$d" ]; then cd "$d" && git pull origin main && bash deploy.sh; fi; done && touch /var/www/spinplus_pythonanywhere_com_wsgi.py

@@ -35,6 +35,9 @@ urlpatterns = [
 
     # Subscriptions & Operations
     path('dashboard/onboarding/', views.onboarding_view, name='onboarding'),
+    path('dashboard/admin/shops/create/', views.onboarding_view, name='admin_create_shop'),
+    path('register/', views.onboarding_view, name='register'),
+    path('signup/', views.onboarding_view, name='signup'),
     path('dashboard/subscription/', views.billing_view, name='subscription'),
     path('dashboard/subscription/renew/', views.subscription_renew_view, name='subscription_renew'),
     path('dashboard/subscription/request/', views.request_plan_view, name='request_plan'),

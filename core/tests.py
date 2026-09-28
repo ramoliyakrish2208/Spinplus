@@ -1426,6 +1426,174 @@ class SubscriptionsManagementTestCase(TestCase):
             self.assertTrue(shop.subscription.is_valid())
 
 
+class BusinessCreationSetupWizardTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_superuser(
+            username='admin_wizard', email='admin_wiz@test.com', password='adminpassword123', role='super_admin'
+        )
+        self.plan = Plan.objects.create(
+            name='Starter Plan', code='starter', price_rupees=499.0, billing_period_days=30, is_default=True, is_active=True
+        )
+
+    def test_setup_wizard_routes_render(self):
+        """Verify onboarding, registration, and setup wizard routes render with 200 OK"""
+        routes = ['/dashboard/onboarding/', '/register/', '/signup/', '/dashboard/admin/shops/create/']
+        for r in routes:
+            res = self.client.get(r)
+            self.assertEqual(res.status_code, 200)
+            self.assertContains(res, 'Setup Wizard')
+            self.assertContains(res, 'Password')
+            self.assertContains(res, 'Confirm Password')
+
+    def test_setup_wizard_password_and_username_validation(self):
+        """Verify client and server validation for missing username, short password, and password mismatch"""
+        # 1. Missing username
+        res1 = self.client.post('/dashboard/onboarding/', {
+            'action': 'create_business',
+            'owner_username': '',
+            'owner_password': 'securepassword123',
+            'owner_confirm_password': 'securepassword123',
+            'shop_name': 'My Store'
+        })
+        self.assertEqual(res1.status_code, 400)
+        self.assertIn('Username is required', res1.json()['message'])
+
+        # 2. Short password (< 8 chars)
+        res2 = self.client.post('/dashboard/onboarding/', {
+            'action': 'create_business',
+            'owner_username': 'new_owner',
+            'owner_password': 'short',
+            'owner_confirm_password': 'short',
+            'shop_name': 'My Store'
+        })
+        self.assertEqual(res2.status_code, 400)
+        self.assertIn('at least 8 characters', res2.json()['message'])
+
+        # 3. Password mismatch
+        res3 = self.client.post('/dashboard/onboarding/', {
+            'action': 'create_business',
+            'owner_username': 'new_owner',
+            'owner_password': 'securepassword123',
+            'owner_confirm_password': 'differentpassword123',
+            'shop_name': 'My Store'
+        })
+        self.assertEqual(res3.status_code, 400)
+        self.assertIn('do not match', res3.json()['message'])
+
+    def test_complete_business_creation_flow(self):
+        """Verify end-to-end business creation: User with password, Shop, Branding, Plan, Campaign, Prizes, QR"""
+        payload = {
+            'action': 'create_business',
+            'owner_username': 'royal_merchant',
+            'owner_password': 'RoyalPassword@2026',
+            'owner_confirm_password': 'RoyalPassword@2026',
+            'owner_email': 'owner@royaljewels.com',
+            'owner_first_name': 'Dev',
+            'owner_last_name': 'Patel',
+            'owner_phone': '+91 98250 99999',
+            'shop_name': 'Royal Gold & Diamonds',
+            'category': 'Jewellery & Gold',
+            'currency_symbol': '₹',
+            'shop_phone': '+91 98250 99999',
+            'shop_email': 'support@royaljewels.com',
+            'address': '101 Gold Souk, CG Road',
+            'timezone': 'Asia/Kolkata',
+            'country': 'IN',
+            'region': 'Gujarat',
+            'description': 'Handcrafted pure bridal gold jewellery',
+            'auto_theme_enabled': '1',
+            'auto_category_theme_adaptation': '1',
+            'theme': 'royal_jewellery',
+            'font_family': 'cinzel',
+            'intensity': 'dynamic',
+            'primary_color': '#ffd700',
+            'secondary_color': '#1e1b4b',
+            'accent_color': '#00e5ff',
+            'background_color': '#040714',
+            'spin_button_text': 'SPIN ROYAL JEWELS',
+            'plan_code': 'starter',
+            'billing_cycle': 'monthly',
+            'campaign_name': 'Grand Opening Festive Spin',
+            'welcome_title': 'Welcome to Royal Gold & Diamonds!',
+            'welcome_subtitle': 'Spin to win authentic gold discounts',
+            'spin_cooldown_hours': '24'
+        }
+
+        res = self.client.post('/dashboard/onboarding/', payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['username'], 'royal_merchant')
+        self.assertEqual(data['password'], 'RoyalPassword@2026')
+        self.assertTrue(len(data['public_token']) > 0)
+
+        # 1. Verify User credentials & password hashing
+        user = User.objects.get(username='royal_merchant')
+        self.assertEqual(user.email, 'owner@royaljewels.com')
+        self.assertEqual(user.role, 'shop_owner')
+        self.assertTrue(user.check_password('RoyalPassword@2026'))
+
+        # 2. Verify Shop creation & relations
+        shop = Shop.objects.get(name='Royal Gold & Diamonds')
+        self.assertEqual(shop.owner, user)
+        self.assertEqual(user.shop, shop)
+        self.assertEqual(shop.public_token, data['public_token'])
+        self.assertEqual(shop.category, 'Jewellery & Gold')
+        self.assertTrue(shop.onboarding_completed)
+
+        # 3. Verify Branding
+        branding = shop.branding
+        self.assertEqual(branding.theme, 'royal_jewellery')
+        self.assertEqual(branding.spin_button_text, 'SPIN ROYAL JEWELS')
+        self.assertEqual(branding.font_family, 'cinzel')
+
+        # 4. Verify Subscription
+        sub = shop.get_subscription()
+        self.assertTrue(sub.is_valid())
+        self.assertEqual(sub.plan.code, 'starter')
+
+        # 5. Verify Campaign & Prizes
+        camp = shop.campaigns.first()
+        self.assertIsNotNone(camp)
+        self.assertEqual(camp.name, 'Grand Opening Festive Spin')
+        self.assertTrue(camp.prizes.count() >= 2)
+
+        # 6. Verify QR Code
+        qr = shop.qr_code
+        self.assertIsNotNone(qr)
+        self.assertIn(shop.public_token, qr.target_url)
+
+    def test_existing_owner_password_update(self):
+        """Verify existing shop owner can update their security password in wizard"""
+        owner = User.objects.create_user(username='existing_owner', password='oldpassword123', role='shop_owner')
+        shop = Shop.objects.create(name='Existing Shop', owner=owner, public_token='exist-tok-123')
+        owner.shop = shop
+        owner.save()
+
+        self.client.login(username='existing_owner', password='oldpassword123')
+
+        # Attempt mismatched password
+        res_fail = self.client.post('/dashboard/onboarding/', {
+            'action': 'save_credentials',
+            'new_password': 'newpassword456',
+            'confirm_password': 'wrongpassword'
+        })
+        self.assertEqual(res_fail.status_code, 400)
+
+        # Successful password update
+        res_ok = self.client.post('/dashboard/onboarding/', {
+            'action': 'save_credentials',
+            'new_password': 'newpassword456',
+            'confirm_password': 'newpassword456'
+        })
+        self.assertEqual(res_ok.status_code, 200)
+
+        owner.refresh_from_db()
+        self.assertTrue(owner.check_password('newpassword456'))
+
+
+
 
 
 

@@ -1,233 +1,1370 @@
 {% extends "base.html" %}
-{% block title %}Shop Setup Wizard — Spin & Win SaaS{% endblock %}
+{% block title %}{% if is_create_mode %}Create New Business — Setup Wizard{% else %}Shop Setup & Configuration Wizard{% endif %} — Spin & Win SaaS{% endblock %}
 
 {% block extra_css %}
 <style>
-    .wizard-bento-wrap {
-        max-width: 860px;
-        margin: 40px auto;
-        padding: 0 24px;
+    .wizard-container {
+        max-width: 980px;
+        margin: 32px auto 60px;
+        padding: 0 20px;
     }
-    .stepper-bento {
+
+    /* ── Progress Header & Stepper ── */
+    .wizard-progress-bar-wrap {
+        height: 6px;
+        background: var(--bg-surface);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-subtle);
+    }
+    .wizard-progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-primary), #10b981);
+        width: 20%;
+        transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+    }
+
+    .stepper-nav {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 36px;
-        position: relative;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 32px;
+        overflow-x: auto;
+        padding-bottom: 8px;
     }
-    .stepper-bento::before {
-        content: '';
-        position: absolute;
-        top: 20px;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: var(--border-subtle);
-        z-index: 0;
-    }
-    .step-bento-item {
-        position: relative;
-        z-index: 1;
+    .step-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
         background: var(--bg-surface);
-        padding: 0 12px;
-        text-align: center;
+        border: 1px solid var(--border-subtle);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        user-select: none;
     }
-    .step-bento-number {
-        width: 40px;
-        height: 40px;
+    .step-pill:hover {
+        border-color: var(--border-medium);
+        color: var(--text-primary);
+    }
+    .step-pill.active {
+        background: var(--color-primary);
+        color: #ffffff;
+        border-color: var(--color-primary);
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+    .step-pill.completed {
+        background: rgba(16, 185, 129, 0.12);
+        color: #10b981;
+        border-color: rgba(16, 185, 129, 0.4);
+    }
+    .step-pill .step-num {
+        width: 22px;
+        height: 22px;
         border-radius: 50%;
-        background: var(--bg-elevated);
-        border: 2px solid var(--border-subtle);
+        background: rgba(255, 255, 255, 0.15);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        font-size: 0.95rem;
-        margin: 0 auto 8px;
-        color: var(--text-muted);
-        transition: all var(--transition-normal);
+        font-size: 0.72rem;
     }
-    .step-bento-item.active .step-bento-number {
+
+    /* ── Password Strength Meter ── */
+    .pwd-meter-track {
+        display: flex;
+        gap: 4px;
+        height: 5px;
+        margin-top: 6px;
+    }
+    .pwd-meter-seg {
+        flex: 1;
+        height: 100%;
+        background: var(--border-subtle);
+        border-radius: 999px;
+        transition: background 0.25s ease;
+    }
+    .pwd-meter-seg.weak { background: #ef4444; }
+    .pwd-meter-seg.medium { background: #f59e0b; }
+    .pwd-meter-seg.strong { background: #10b981; }
+
+    /* ── Theme Cards Grid ── */
+    .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 14px;
+        max-height: 480px;
+        overflow-y: auto;
+        padding: 4px 4px 12px;
+    }
+    .theme-card {
+        border: 2px solid var(--border-subtle);
+        background: var(--bg-surface);
+        border-radius: var(--radius-md);
+        padding: 14px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        text-align: left;
+    }
+    .theme-card:hover {
         border-color: var(--color-primary);
-        background: var(--color-primary);
-        color: #ffffff;
-        box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
     }
-    .step-bento-item.completed .step-bento-number {
-        border-color: var(--color-accent);
-        background: var(--color-accent);
-        color: #000000;
+    .theme-card.selected {
+        border-color: var(--color-primary);
+        background: rgba(99, 102, 241, 0.08);
+        box-shadow: 0 0 0 1px var(--color-primary), 0 6px 20px rgba(99, 102, 241, 0.25);
     }
-    .step-bento-label {
-        font-size: 0.78rem;
+    .theme-card-preview {
+        height: 48px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    /* ── Plan Cards Grid ── */
+    .plan-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+    }
+    .plan-card {
+        border: 2px solid var(--border-subtle);
+        background: var(--bg-surface);
+        border-radius: var(--radius-lg);
+        padding: 24px 20px;
+        cursor: pointer;
+        transition: all 0.22s ease;
+        position: relative;
+    }
+    .plan-card:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-3px);
+    }
+    .plan-card.selected {
+        border-color: var(--color-primary);
+        background: rgba(99, 102, 241, 0.06);
+        box-shadow: 0 0 0 2px var(--color-primary), 0 8px 24px rgba(99, 102, 241, 0.2);
+    }
+
+
+    /* ── Show/Hide Password Eye Button ── */
+    .pwd-input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    .pwd-toggle-btn {
+        position: absolute;
+        right: 12px;
+        background: none;
+        border: none;
         color: var(--text-muted);
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        border-radius: 4px;
+        transition: color 0.15s ease;
     }
-    .step-bento-item.active .step-bento-label {
+    .pwd-toggle-btn:hover {
         color: var(--text-primary);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="wizard-bento-wrap">
-    <div class="bento-card bento-feature" style="padding:40px 32px;">
-        <div style="text-align:center;margin-bottom:32px;">
-            <div style="width:56px;height:56px;border-radius:50%;background:rgba(109,40,217,0.12);border:1px solid rgba(109,40,217,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--color-primary);">
-                <i data-lucide="rocket" style="width:28px;height:28px;"></i>
+<div class="wizard-container">
+
+    <!-- Top Breadcrumb / Return Navigation -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <a href="{% if request.user.is_authenticated and request.user.is_superadmin %}{% url 'admin_dashboard' %}{% elif request.user.is_authenticated %}{% url 'shop_dashboard' %}{% else %}{% url 'login' %}{% endif %}" class="btn-secondary" style="font-size:0.82rem;display:inline-flex;align-items:center;gap:6px;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
+            {% if request.user.is_authenticated and request.user.is_superadmin %}Platform Admin{% elif request.user.is_authenticated %}Dashboard{% else %}Sign In{% endif %}
+        </a>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge badge-gold" style="font-size:0.75rem;">
+                <i data-lucide="sparkles" style="width:12px;height:12px;"></i>
+                {% if is_create_mode %}NEW BUSINESS ONBOARDING{% else %}STORE CONFIGURATION{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Bento Card Frame -->
+    <div class="bento-card bento-feature" style="padding: 36px 32px; box-shadow: var(--shadow-xl);">
+
+        <!-- Wizard Title & Subhead -->
+        <div style="text-align:center;margin-bottom:28px;">
+            <div style="width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(16,185,129,0.2));border:1px solid rgba(99,102,241,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--color-primary);box-shadow:0 6px 20px rgba(99,102,241,0.25);">
+                <i data-lucide="rocket" style="width:30px;height:30px;"></i>
             </div>
-            <h1 style="font-size:1.8rem;font-weight:800;margin:0 0 6px 0;color:var(--text-primary);letter-spacing:-0.4px;">Welcome to Spin & Win SaaS</h1>
-            <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Set up business identity, choose branding preset, launch rewards, and generate your permanent QR code.</p>
+            <h1 style="font-size:1.85rem;font-weight:800;margin:0 0 6px 0;letter-spacing:-0.5px;">
+                {% if is_create_mode %}Business Creation & Onboarding Setup Wizard{% else %}Shop Configuration & Experience Wizard{% endif %}
+            </h1>
+            <p style="font-size:0.9rem;color:var(--text-secondary);max-width:620px;margin:0 auto;">
+                {% if is_create_mode %}
+                Create your store owner credentials, customize business profile, select experiential branding, choose SaaS plan tier, and launch your permanent QR code.
+                {% else %}
+                Manage your store identity, update credentials and passwords, tune visual themes, and maintain your store configuration.
+                {% endif %}
+            </p>
         </div>
 
-        <!-- Bento Stepper Header -->
-        <div class="stepper-bento">
-            <div class="step-bento-item active" id="step1-indicator">
-                <div class="step-bento-number">1</div>
-                <div class="step-bento-label">Shop Info</div>
+        <!-- Dynamic Progress Bar -->
+        <div class="wizard-progress-bar-wrap">
+            <div id="wizardProgressBar" class="wizard-progress-bar-fill"></div>
+        </div>
+
+        <!-- Bento Stepper Header Pills -->
+        <div class="stepper-nav" id="stepperNav">
+            <div class="step-pill active" onclick="goToStep(1)" id="pill-step-1">
+                <span class="step-num">1</span>
+                <span>Owner & Security</span>
             </div>
-            <div class="step-bento-item" id="step2-indicator">
-                <div class="step-bento-number">2</div>
-                <div class="step-bento-label">Branding</div>
+            <div class="step-pill" onclick="goToStep(2)" id="pill-step-2">
+                <span class="step-num">2</span>
+                <span>Business Identity</span>
             </div>
-            <div class="step-bento-item" id="step3-indicator">
-                <div class="step-bento-number">3</div>
-                <div class="step-bento-label">First Offer</div>
+            <div class="step-pill" onclick="goToStep(3)" id="pill-step-3">
+                <span class="step-num">3</span>
+                <span>Theme & Brand</span>
             </div>
-            <div class="step-bento-item" id="step4-indicator">
-                <div class="step-bento-number">4</div>
-                <div class="step-bento-label">Launch QR</div>
+            <div class="step-pill" onclick="goToStep(4)" id="pill-step-4">
+                <span class="step-num">4</span>
+                <span>SaaS Plan</span>
+            </div>
+            <div class="step-pill" onclick="goToStep(5)" id="pill-step-5">
+                <span class="step-num">5</span>
+                <span>Launch QR</span>
             </div>
         </div>
 
-        <!-- Step 1: Shop Information -->
-        <div id="step1" class="wizard-step">
-            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 1: Business Identity</h3>
-            <div class="form-group">
-                <label class="form-label">Shop Name</label>
-                <input type="text" id="shopName" class="form-input" value="{{ shop.name }}">
+        <!-- Global Alert Message Box -->
+        <div id="wizardAlert" style="display:none;padding:14px 18px;border-radius:var(--radius-md);font-size:0.88rem;margin-bottom:24px;align-items:center;gap:10px;">
+            <i id="wizardAlertIcon" data-lucide="alert-circle" style="width:18px;height:18px;flex-shrink:0;"></i>
+            <span id="wizardAlertText"></span>
+        </div>
+
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <!-- STEP 1: OWNER ACCOUNT CREDENTIALS & SECURITY -->
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <div id="step-1" class="wizard-step-pane">
+            <div style="border-bottom:1px solid var(--border-subtle);padding-bottom:12px;margin-bottom:20px;">
+                <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="shield-check" style="color:var(--color-primary);width:20px;height:20px;"></i>
+                    Step 1: Shop Owner Account & Security Credentials
+                </h3>
+                <p style="font-size:0.84rem;color:var(--text-secondary);margin:0;">
+                    These credentials will be used to sign in to the Shop Owner command center.
+                </p>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+                <!-- Username -->
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;justify-content:space-between;">
+                        <span>Owner Username <span style="color:#ef4444;">*</span></span>
+                        <span style="font-size:0.75rem;color:var(--text-muted);font-weight:normal;">Used for login</span>
+                    </label>
+                    <div style="position:relative;">
+                        <input type="text" id="ownerUsername" class="form-input" placeholder="e.g. royal_jewels_admin" value="{% if shop and shop.owner %}{{ shop.owner.username }}{% endif %}" {% if not is_create_mode and shop %}readonly style="background:var(--bg-elevated);cursor:not-allowed;"{% endif %}>
+                    </div>
+                    <small style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block;">Alphanumeric and underscores only (min 3 characters).</small>
+                </div>
+
+                <!-- Email Address -->
+                <div class="form-group">
+                    <label class="form-label">
+                        <span>Owner Email Address <span style="color:#ef4444;">*</span></span>
+                    </label>
+                    <input type="email" id="ownerEmail" class="form-input" placeholder="owner@store.com" value="{% if shop and shop.owner %}{{ shop.owner.email }}{% endif %}">
+                    <small style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block;">Required for system alerts and coupon receipts.</small>
+                </div>
+            </div>
+
+            <!-- Password & Confirm Password Grid -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;background:var(--bg-elevated);padding:18px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+                <!-- Password Field with Show/Hide Toggle -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="display:flex;justify-content:space-between;">
+                        <span>Password <span style="color:#ef4444;">*</span></span>
+                        <span id="pwdStrengthLabel" style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">Strength: None</span>
+                    </label>
+                    <div class="pwd-input-wrap">
+                        <input type="password" id="ownerPassword" class="form-input" placeholder="••••••••" style="padding-right:40px;" oninput="checkPasswordStrength(this.value)">
+                        <button type="button" class="pwd-toggle-btn" onclick="togglePasswordVisibility('ownerPassword', 'eyeIcon1')">
+                            <i id="eyeIcon1" data-lucide="eye" style="width:16px;height:16px;"></i>
+                        </button>
+                    </div>
+                    <!-- Strength Meter -->
+                    <div class="pwd-meter-track">
+                        <div id="pwdSeg1" class="pwd-meter-seg"></div>
+                        <div id="pwdSeg2" class="pwd-meter-seg"></div>
+                        <div id="pwdSeg3" class="pwd-meter-seg"></div>
+                        <div id="pwdSeg4" class="pwd-meter-seg"></div>
+                    </div>
+                    <small style="font-size:0.73rem;color:var(--text-muted);margin-top:4px;display:block;">Must be at least 8 characters long.</small>
+                </div>
+
+                <!-- Confirm Password Field with Match Indicator -->
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="display:flex;justify-content:space-between;">
+                        <span>Confirm Password <span style="color:#ef4444;">*</span></span>
+                        <span id="pwdMatchLabel" style="font-size:0.75rem;font-weight:700;display:none;"></span>
+                    </label>
+                    <div class="pwd-input-wrap">
+                        <input type="password" id="ownerConfirmPassword" class="form-input" placeholder="••••••••" style="padding-right:40px;" oninput="checkPasswordMatch()">
+                        <button type="button" class="pwd-toggle-btn" onclick="togglePasswordVisibility('ownerConfirmPassword', 'eyeIcon2')">
+                            <i id="eyeIcon2" data-lucide="eye" style="width:16px;height:16px;"></i>
+                        </button>
+                    </div>
+                    <small style="font-size:0.73rem;color:var(--text-muted);margin-top:4px;display:block;">Re-enter the exact password to confirm.</small>
+                </div>
+            </div>
+
+            <!-- Owner Name & Direct Contact Phone -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" id="ownerFirstName" class="form-input" placeholder="e.g. Rahul" value="{% if shop and shop.owner %}{{ shop.owner.first_name }}{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" id="ownerLastName" class="form-input" placeholder="e.g. Sharma" value="{% if shop and shop.owner %}{{ shop.owner.last_name }}{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Direct Phone / WhatsApp</label>
+                    <input type="text" id="ownerPhone" class="form-input" placeholder="+91 98765 43210" value="{% if shop and shop.owner %}{{ shop.owner.phone }}{% endif %}">
+                </div>
+            </div>
+
+            <!-- Action Controls Step 1 -->
+            <div style="display:flex;justify-content:flex-end;margin-top:28px;">
+                <button type="button" onclick="validateAndGoToStep(2)" class="btn-primary" style="padding:12px 28px;font-weight:800;display:inline-flex;align-items:center;gap:8px;">
+                    Next: Business Profile <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <!-- STEP 2: BUSINESS PROFILE & STORE IDENTITY -->
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <div id="step-2" class="wizard-step-pane" style="display:none;">
+            <div style="border-bottom:1px solid var(--border-subtle);padding-bottom:12px;margin-bottom:20px;">
+                <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="store" style="color:var(--color-primary);width:20px;height:20px;"></i>
+                    Step 2: Business Profile & Store Identity
+                </h3>
+                <p style="font-size:0.84rem;color:var(--text-secondary);margin:0;">
+                    Define the public name, business category, currency, and location of this storefront.
+                </p>
+            </div>
+
+            <!-- Business Name & Category -->
+            <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:18px;">
+                <div class="form-group">
+                    <label class="form-label">
+                        <span>Shop / Business Name <span style="color:#ef4444;">*</span></span>
+                    </label>
+                    <input type="text" id="shopName" class="form-input" placeholder="e.g. Royal Gold Jewellers & Diamonds" value="{{ shop.name|default:'' }}" oninput="updateShopPreviewName(this.value)">
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Business Category</label>
-                    <input type="text" id="shopCategory" class="form-input" value="{{ shop.category|default:'Café & Dining' }}">
+                    <select id="shopCategory" class="form-select" onchange="handleCategorySelection(this.value)">
+                        <option value="Jewellery & Gold" {% if shop.category == 'Jewellery & Gold' or shop.category == 'Jewellery' %}selected{% endif %}>💎 Jewellery, Gold & Diamonds</option>
+                        <option value="Café & Bakery" {% if shop.category == 'Café & Bakery' or shop.category == 'Coffee' %}selected{% endif %}>☕ Café, Bakery & Desserts</option>
+                        <option value="Restaurant & Dining" {% if shop.category == 'Restaurant & Dining' or shop.category == 'Restaurant' %}selected{% endif %}>🍽️ Restaurant & Gourmet Dining</option>
+                        <option value="Sweets & Mithai" {% if shop.category == 'Sweets & Mithai' or shop.category == 'Sweets' %}selected{% endif %}>🍬 Sweets, Mithai & Dairy</option>
+                        <option value="Fashion & Apparel" {% if shop.category == 'Fashion & Apparel' or shop.category == 'Fashion' %}selected{% endif %}>👗 Fashion, Apparel & Saree</option>
+                        <option value="Beauty & Salon" {% if shop.category == 'Beauty & Salon' or shop.category == 'Beauty' %}selected{% endif %}>💄 Cosmetics, Salon & Spa</option>
+                        <option value="Electronics & Tech" {% if shop.category == 'Electronics & Tech' or shop.category == 'Electronics' %}selected{% endif %}>⚡ Electronics, Mobile & Tech</option>
+                        <option value="Kids & Toys" {% if shop.category == 'Kids & Toys' or shop.category == 'Kids' %}selected{% endif %}>🧸 Kids, Toys & Baby Store</option>
+                        <option value="Gym & Fitness" {% if shop.category == 'Gym & Fitness' or shop.category == 'Sports' %}selected{% endif %}>🏋️ Gym, Fitness & Sports</option>
+                        <option value="Automotive" {% if shop.category == 'Automotive' %}selected{% endif %}>🏎️ Automotive & Services</option>
+                        <option value="Supermarket & Grocery" {% if shop.category == 'Supermarket & Grocery' or shop.category == 'Retail' %}selected{% endif %}>🛒 Supermarket & Grocery</option>
+                        <option value="General Retail" {% if not shop or shop.category == 'General Retail' or shop.category == 'Retail & Store' %}selected{% endif %}>🏬 General Retail & Store</option>
+                    </select>
                 </div>
+            </div>
+
+            <!-- Currency & Contact Details -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;">
                 <div class="form-group">
                     <label class="form-label">Currency Symbol</label>
-                    <input type="text" id="shopCurrency" class="form-input" value="{{ shop.currency_symbol|default:'$' }}">
+                    <div style="display:flex;gap:6px;">
+                        <input type="text" id="shopCurrency" class="form-input" value="{{ shop.currency_symbol|default:'₹' }}" style="width:70px;text-align:center;font-weight:800;">
+                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                            <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="setCurrency('₹')">₹</button>
+                            <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="setCurrency('$')">$</button>
+                            <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="setCurrency('€')">€</button>
+                            <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="setCurrency('AED')">AED</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Storefront Phone</label>
+                    <input type="text" id="shopPhone" class="form-input" placeholder="e.g. +91 98250 12345" value="{{ shop.phone|default:'' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Store Public Email</label>
+                    <input type="email" id="shopEmail" class="form-input" placeholder="support@store.com" value="{{ shop.email|default:'' }}">
                 </div>
             </div>
-            <button onclick="saveStep1()" class="btn-primary" style="width:100%;margin-top:16px;">
-                Next: Customize Branding →
-            </button>
-        </div>
 
-        <!-- Step 2: Theme Selection -->
-        <div id="step2" class="wizard-step" style="display:none;">
-            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 2: Choose Experience Theme</h3>
-            <div class="form-group">
-                <label class="form-label">Visual Theme Preset</label>
-                <select id="themeSelect" class="form-select">
-                    <option value="royal" {% if branding.theme == 'royal' %}selected{% endif %}>👑 Royal Luxury Gold (Default)</option>
-                    <option value="midnight" {% if branding.theme == 'midnight' %}selected{% endif %}>🌌 Midnight Indigo Glow</option>
-                    <option value="pearl" {% if branding.theme == 'pearl' %}selected{% endif %}>💎 Pearl Light Luxury</option>
-                    <option value="emerald" {% if branding.theme == 'emerald' %}selected{% endif %}>🌲 Emerald Forest</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Primary Brand Color</label>
-                <input type="color" id="primaryColor" value="{{ branding.primary_color|default:'#6366f1' }}" style="width:100%;height:44px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);cursor:pointer;background:var(--bg-elevated);">
-            </div>
-            <div style="display:flex;gap:12px;margin-top:20px;">
-                <button onclick="showStep(1)" class="btn-secondary" style="flex:1;">← Back</button>
-                <button onclick="saveStep2()" class="btn-primary" style="flex:2;">Next: Offer & Rewards →</button>
-            </div>
-        </div>
+            <!-- Location & Timezone -->
+            <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:16px;margin-bottom:18px;">
+                <div class="form-group">
+                    <label class="form-label">Physical Address / Mall Location</label>
+                    <input type="text" id="shopAddress" class="form-input" placeholder="e.g. Shop 12, Ground Floor, Phoenix Mall" value="{{ shop.address|default:'' }}">
+                </div>
 
-        <!-- Step 3: First Offer & Rewards -->
-        <div id="step3" class="wizard-step" style="display:none;">
-            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 3: Initial Promotional Offer</h3>
-            <div class="form-group">
-                <label class="form-label">Offer Title</label>
-                <input type="text" class="form-input" value="{{ campaign.name|default:'Welcome Promotion' }}" readonly>
-            </div>
-            <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px;margin-bottom:20px;">
-                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 8px 0;">Default prize structure initialized with 100% total weight probability.</p>
-                <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--color-accent);font-weight:700;">
-                    <span>✓ 10% OFF Discount (50%)</span>
-                    <span>✓ Try Again / Better Luck (50%)</span>
+                <div class="form-group">
+                    <label class="form-label">Country & Region</label>
+                    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:6px;">
+                        <input type="text" id="shopCountry" class="form-input" placeholder="IN" value="{{ shop.country|default:'IN' }}" title="Country Code">
+                        <input type="text" id="shopRegion" class="form-input" placeholder="Gujarat" value="{{ shop.region|default:'Gujarat' }}" title="Region/State">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Timezone</label>
+                    <select id="shopTimezone" class="form-select">
+                        <option value="Asia/Kolkata" {% if not shop or shop.timezone == 'Asia/Kolkata' %}selected{% endif %}>Asia/Kolkata (IST +5:30)</option>
+                        <option value="Asia/Dubai" {% if shop.timezone == 'Asia/Dubai' %}selected{% endif %}>Asia/Dubai (GST +4:00)</option>
+                        <option value="UTC" {% if shop.timezone == 'UTC' %}selected{% endif %}>UTC (Universal Time)</option>
+                        <option value="Europe/London" {% if shop.timezone == 'Europe/London' %}selected{% endif %}>Europe/London (GMT/BST)</option>
+                        <option value="America/New_York" {% if shop.timezone == 'America/New_York' %}selected{% endif %}>America/New_York (EST)</option>
+                        <option value="Asia/Singapore" {% if shop.timezone == 'Asia/Singapore' %}selected{% endif %}>Asia/Singapore (SGT +8:00)</option>
+                    </select>
                 </div>
             </div>
-            <div style="display:flex;gap:12px;margin-top:20px;">
-                <button onclick="showStep(2)" class="btn-secondary" style="flex:1;">← Back</button>
-                <button onclick="showStep(4)" class="btn-primary" style="flex:2;">Next: Permanent QR Code →</button>
-            </div>
-        </div>
 
-        <!-- Step 4: Permanent QR & Launch -->
-        <div id="step4" class="wizard-step" style="display:none;">
-            <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;">Step 4: Launch Permanent QR Code</h3>
-            <div style="text-align:center;padding:24px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:24px;">
-                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0 0 16px 0;">Your shop permanent QR code is live and ready for print!</p>
-                <div style="background:#ffffff;padding:12px;border-radius:var(--radius-sm);display:inline-block;box-shadow:var(--shadow-md);">
-                    <div style="font-size:1.3rem;font-weight:800;color:#000;">📱 SCAN & SPIN TO WIN</div>
-                </div>
-                <p style="font-size:0.78rem;color:var(--text-muted);margin:14px 0 0 0;">Permanent Token Path: <code>/s/{{ shop.public_token }}/</code></p>
+            <!-- Tagline & Description -->
+            <div class="form-group">
+                <label class="form-label">Tagline or Description (Optional)</label>
+                <input type="text" id="shopDescription" class="form-input" placeholder="e.g. Purest 22K/24K Gold and Certified Diamond Jewellery since 1985." value="{{ shop.description|default:'' }}">
             </div>
-            <form method="POST" action="{% url 'onboarding' %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="complete">
-                <button type="submit" class="btn-primary" style="width:100%;">
-                    🎉 Complete Onboarding & Open Command Center →
+
+            <!-- Automated Intelligence Settings -->
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem;color:var(--text-primary);font-weight:600;">
+                    <input type="checkbox" id="autoThemeEnabled" checked style="width:18px;height:18px;accent-color:var(--color-primary);">
+                    <span>Enable Automated Festival Calendar Theming (Diwali, Navratri, Holi, Eid, Uttarayan, Janmashtami)</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem;color:var(--text-primary);font-weight:600;">
+                    <input type="checkbox" id="autoCategoryAdaptation" checked style="width:18px;height:18px;accent-color:var(--color-primary);">
+                    <span>Auto-adapt Festival Themes to Business Category (e.g. Janmashtami Makhan for Sweets, Royal Jewels for Gold)</span>
+                </label>
+            </div>
+
+            <!-- Action Controls Step 2 -->
+            <div style="display:flex;justify-content:space-between;margin-top:28px;">
+                <button type="button" onclick="goToStep(1)" class="btn-secondary" style="padding:12px 24px;">
+                    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Credentials
                 </button>
-            </form>
+                <button type="button" onclick="validateAndGoToStep(3)" class="btn-primary" style="padding:12px 28px;font-weight:800;display:inline-flex;align-items:center;gap:8px;">
+                    Next: Brand Experience & Themes <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
         </div>
+
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <!-- STEP 3: EXPERIENCE THEME & VISUAL BRANDING -->
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <div id="step-3" class="wizard-step-pane" style="display:none;">
+            <div style="border-bottom:1px solid var(--border-subtle);padding-bottom:12px;margin-bottom:20px;">
+                <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="palette" style="color:var(--color-primary);width:20px;height:20px;"></i>
+                    Step 3: Choose Experiential Theme & Visual Identity
+                </h3>
+                <p style="font-size:0.84rem;color:var(--text-secondary);margin:0;">
+                    Select from 20+ luxury, festive, seasonal, and category-tailored promotional themes.
+                </p>
+            </div>
+
+            <!-- Theme Picker Cards Grid -->
+            <label class="form-label" style="margin-bottom:10px;display:block;">
+                Selected Theme Preset: <strong id="selectedThemeDisplay" style="color:var(--color-primary);">Royal Gold</strong>
+            </label>
+            <input type="hidden" id="selectedTheme" value="{{ branding.theme|default:'royal' }}">
+
+            <div class="theme-grid">
+                <!-- Royal Gold -->
+                <div class="theme-card {% if not branding or branding.theme == 'royal' %}selected{% endif %}" onclick="selectThemeCard('royal', 'Royal Gold', '#d4af37', '#ffd700', '#0a060d', 'SPIN & WIN GOLD', 'cinzel')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #d4af37, #4a152d);color:#ffd700;">👑</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Royal Gold</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Gold, Ruby & Velvet</div>
+                </div>
+
+                <!-- Royal Jewellery -->
+                <div class="theme-card {% if branding.theme == 'royal_jewellery' %}selected{% endif %}" onclick="selectThemeCard('royal_jewellery', 'Royal Jewellery', '#ffd700', '#00e5ff', '#040714', 'SPIN ROYAL JEWELS', 'cinzel')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #1e1b4b, #d4af37);color:#ffd700;">💎</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Royal Jewellery</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Navy Blue & 24K Gold</div>
+                </div>
+
+                <!-- Luxury Black -->
+                <div class="theme-card {% if branding.theme == 'luxury_black' %}selected{% endif %}" onclick="selectThemeCard('luxury_black', 'Luxury Black', '#f3e5ab', '#d4af37', '#050507', 'SPIN FOR LUXURY', 'cinzel')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #18181b, #d4af37);color:#f3e5ab;">🌌</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Luxury Black</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Obsidian & Champagne</div>
+                </div>
+
+                <!-- Pearl Luxury -->
+                <div class="theme-card {% if branding.theme == 'pearl' %}selected{% endif %}" onclick="selectThemeCard('pearl', 'Pearl Luxury', '#0f172a', '#d4af37', '#f8fafc', 'SPIN FOR PEARLS', 'playfair')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #e2e8f0, #94a3b8);color:#0f172a;">🦚</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Pearl Luxury</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Clean Whites & Spa</div>
+                </div>
+
+                <!-- Cyber Neon -->
+                <div class="theme-card {% if branding.theme == 'neon' %}selected{% endif %}" onclick="selectThemeCard('neon', 'Cyber Neon', '#06b6d4', '#f43f5e', '#09090b', 'SPIN CYBER NEON', 'space_grotesk')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #06b6d4, #a855f7);color:#f43f5e;">⚡</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Cyber Neon</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Cyan & Magenta Glow</div>
+                </div>
+
+                <!-- Aurora Luminous -->
+                <div class="theme-card {% if branding.theme == 'aurora' %}selected{% endif %}" onclick="selectThemeCard('aurora', 'Aurora Luminous', '#a855f7', '#06b6d4', '#0b0f19', 'SPIN THE AURORA', 'outfit')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #a855f7, #3b82f6);color:#06b6d4;">🎆</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Aurora Luminous</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Violet & Teal Lights</div>
+                </div>
+
+                <!-- Diwali Lights -->
+                <div class="theme-card {% if branding.theme == 'diwali' %}selected{% endif %}" onclick="selectThemeCard('diwali', 'Diwali Dhamaka', '#d4af37', '#f59e0b', '#0d0614', 'SPIN DIWALI DHAMAKA', 'playfair')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #6d28d9, #ea580c);color:#fef08a;">🪔</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Diwali Dhamaka</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Diyas, Sparklers & Gold</div>
+                </div>
+
+                <!-- Navratri Garba -->
+                <div class="theme-card {% if branding.theme == 'navratri' %}selected{% endif %}" onclick="selectThemeCard('navratri', 'Navratri Garba', '#ec4899', '#f59e0b', '#180828', 'SPIN GARBA WHEEL', 'poppins')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #ec4899, #8b5cf6);color:#fef08a;">💃</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Navratri Garba</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Festive Vibrant Pink</div>
+                </div>
+
+                <!-- Uttarayan Kite -->
+                <div class="theme-card {% if branding.theme == 'uttarayan' %}selected{% endif %}" onclick="selectThemeCard('uttarayan', 'Uttarayan Kite', '#f59e0b', '#10b981', '#082032', 'SPIN KAI PO CHE', 'poppins')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #f59e0b, #0284c7);color:#ffffff;">🪁</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Uttarayan Kite</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Blue Sky & Kites</div>
+                </div>
+
+                <!-- Janmashtami -->
+                <div class="theme-card {% if branding.theme == 'janmashtami' %}selected{% endif %}" onclick="selectThemeCard('janmashtami', 'Krishna Janmashtami', '#00e5ff', '#ffd700', '#060b1e', 'SPIN KRISHNA WHEEL', 'playfair')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #00e5ff, #3b185f);color:#ffd700;">🪈</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Janmashtami</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Peacock Feather & Handi</div>
+                </div>
+
+                <!-- Gourmet Restaurant -->
+                <div class="theme-card {% if branding.theme == 'restaurant' %}selected{% endif %}" onclick="selectThemeCard('restaurant', 'Gourmet Restaurant', '#d97706', '#f59e0b', '#1c1917', 'SPIN GOURMET REWARDS', 'playfair')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #b45309, #451a03);color:#fef3c7;">🍽️</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Gourmet Dining</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Warm Amber & Wood</div>
+                </div>
+
+                <!-- Artisan Coffee -->
+                <div class="theme-card {% if branding.theme == 'coffee' %}selected{% endif %}" onclick="selectThemeCard('coffee', 'Artisan Coffee & Bakery', '#b45309', '#fcd34d', '#1a0e05', 'SPIN COFFEE WHEEL', 'poppins')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #78350f, #451a03);color:#fffbeb;">☕</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Coffee & Bakery</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Espresso & Caramel</div>
+                </div>
+
+                <!-- Cosmetics Beauty -->
+                <div class="theme-card {% if branding.theme == 'beauty' %}selected{% endif %}" onclick="selectThemeCard('beauty', 'Cosmetics & Glow', '#ec4899', '#fbcfe8', '#180814', 'SPIN FOR GLOW', 'playfair')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #ec4899, #831843);color:#fdf2f8;">💄</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Cosmetics Glow</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Rose & Soft Glow</div>
+                </div>
+
+                <!-- Modern Blue Tech -->
+                <div class="theme-card {% if branding.theme == 'modern_blue' %}selected{% endif %}" onclick="selectThemeCard('modern_blue', 'Modern Blue Tech', '#3b82f6', '#60a5fa', '#0f172a', 'SPIN TECH REWARDS', 'inter')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #3b82f6, #1d4ed8);color:#f8fafc;">💻</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Modern Tech Blue</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Clean Corporate Blue</div>
+                </div>
+            </div>
+
+            <!-- Typography & Animation Intensity -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:20px 0 16px;">
+                <div class="form-group">
+                    <label class="form-label">Font Family</label>
+                    <select id="themeFont" class="form-select">
+                        <option value="cinzel" {% if branding.font_family == 'cinzel' %}selected{% endif %}>Cinzel (Luxury Serif)</option>
+                        <option value="playfair" {% if branding.font_family == 'playfair' %}selected{% endif %}>Playfair Display (Elegant Serif)</option>
+                        <option value="inter" {% if not branding or branding.font_family == 'inter' %}selected{% endif %}>Inter (Modern Clean)</option>
+                        <option value="poppins" {% if branding.font_family == 'poppins' %}selected{% endif %}>Poppins (Friendly Geometric)</option>
+                        <option value="outfit" {% if branding.font_family == 'outfit' %}selected{% endif %}>Outfit (Modern Tech)</option>
+                        <option value="space_grotesk" {% if branding.font_family == 'space_grotesk' %}selected{% endif %}>Space Grotesk (Futuristic)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Visual Intensity</label>
+                    <select id="themeIntensity" class="form-select">
+                        <option value="subtle" {% if branding.intensity == 'subtle' %}selected{% endif %}>Subtle (Low Animation)</option>
+                        <option value="balanced" {% if not branding or branding.intensity == 'balanced' %}selected{% endif %}>Balanced (Standard Effects)</option>
+                        <option value="dynamic" {% if branding.intensity == 'dynamic' %}selected{% endif %}>Dynamic (Maximum Confetti & Glow)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Spin Button CTA Text</label>
+                    <input type="text" id="spinButtonText" class="form-input" value="{{ branding.spin_button_text|default:'SPIN & WIN NOW' }}">
+                </div>
+            </div>
+
+            <!-- Custom Colors Tuning -->
+            <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:18px;display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.75rem;">Primary Color</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="color" id="primaryColorPicker" value="{{ branding.primary_color|default:'#d4af37' }}" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;" onchange="document.getElementById('primaryColorText').value = this.value">
+                        <input type="text" id="primaryColorText" class="form-input" style="font-family:monospace;font-size:0.8rem;" value="{{ branding.primary_color|default:'#d4af37' }}" oninput="document.getElementById('primaryColorPicker').value = this.value">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.75rem;">Secondary Color</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="color" id="secondaryColorPicker" value="{{ branding.secondary_color|default:'#4a152d' }}" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;" onchange="document.getElementById('secondaryColorText').value = this.value">
+                        <input type="text" id="secondaryColorText" class="form-input" style="font-family:monospace;font-size:0.8rem;" value="{{ branding.secondary_color|default:'#4a152d' }}" oninput="document.getElementById('secondaryColorPicker').value = this.value">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.75rem;">Accent Color</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="color" id="accentColorPicker" value="{{ branding.accent_color|default:'#ffd700' }}" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;" onchange="document.getElementById('accentColorText').value = this.value">
+                        <input type="text" id="accentColorText" class="form-input" style="font-family:monospace;font-size:0.8rem;" value="{{ branding.accent_color|default:'#ffd700' }}" oninput="document.getElementById('accentColorPicker').value = this.value">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="font-size:0.75rem;">Background Tone</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <input type="color" id="bgColorPicker" value="{{ branding.background_color|default:'#0a060d' }}" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;" onchange="document.getElementById('bgColorText').value = this.value">
+                        <input type="text" id="bgColorText" class="form-input" style="font-family:monospace;font-size:0.8rem;" value="{{ branding.background_color|default:'#0a060d' }}" oninput="document.getElementById('bgColorPicker').value = this.value">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Controls Step 3 -->
+            <div style="display:flex;justify-content:space-between;margin-top:28px;">
+                <button type="button" onclick="goToStep(2)" class="btn-secondary" style="padding:12px 24px;">
+                    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Profile
+                </button>
+                <button type="button" onclick="validateAndGoToStep(4)" class="btn-primary" style="padding:12px 28px;font-weight:800;display:inline-flex;align-items:center;gap:8px;">
+                    Next: SaaS Plan & Gating <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <!-- STEP 4: SAAS SUBSCRIPTION PLAN SELECTION -->
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <div id="step-4" class="wizard-step-pane" style="display:none;">
+            <div style="border-bottom:1px solid var(--border-subtle);padding-bottom:12px;margin-bottom:20px;">
+                <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="layers" style="color:var(--color-primary);width:20px;height:20px;"></i>
+                    Step 4: Subscription Plan & Capacity Tier
+                </h3>
+                <p style="font-size:0.84rem;color:var(--text-secondary);margin:0;">
+                    Choose the capacity tier for campaign volume, prize limits, and monthly customer spins.
+                </p>
+            </div>
+
+            <input type="hidden" id="selectedPlanCode" value="starter">
+            <input type="hidden" id="selectedPlanId" value="">
+            <input type="hidden" id="selectedBillingCycle" value="monthly">
+
+            <!-- Plan Cards Grid -->
+            <div class="plan-grid">
+                {% for plan in plans %}
+                <div class="plan-card {% if plan.code == 'starter' or forloop.first %}selected{% endif %}" id="plan-card-{{ plan.code }}" onclick="selectPlanCard('{{ plan.code }}', '{{ plan.id }}')">
+                    {% if plan.code == 'pro_growth' or plan.code == 'growth_monthly' %}
+                    <span class="badge" style="position:absolute;top:14px;right:14px;background:#f59e0b;color:#000;font-weight:800;font-size:0.7rem;">MOST POPULAR</span>
+                    {% elif plan.code == 'enterprise_festive' or plan.code == 'enterprise_annual' %}
+                    <span class="badge" style="position:absolute;top:14px;right:14px;background:#10b981;color:#fff;font-weight:800;font-size:0.7rem;">MAX CAPACITY</span>
+                    {% endif %}
+                    
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:4px;">{{ plan.name }}</div>
+                    <div style="font-size:1.45rem;font-weight:800;color:var(--color-primary);margin-bottom:12px;">{{ plan.formatted_price }}</div>
+
+                    <div style="border-top:1px solid var(--border-subtle);padding-top:12px;display:flex;flex-direction:column;gap:8px;font-size:0.82rem;color:var(--text-secondary);">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="check" style="width:14px;height:14px;color:#10b981;"></i>
+                            <span><strong>{{ plan.max_campaigns }}</strong> Total Campaigns</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="check" style="width:14px;height:14px;color:#10b981;"></i>
+                            <span><strong>{{ plan.max_prizes_per_campaign }}</strong> Prizes per Campaign</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="check" style="width:14px;height:14px;color:#10b981;"></i>
+                            <span><strong>{{ plan.max_spins_per_month|default:'5,000' }}</strong> Monthly Spins</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="check" style="width:14px;height:14px;color:#10b981;"></i>
+                            <span>Permanent QR Code & Poster Studio</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <!-- Fallback Starter Card -->
+                <div class="plan-card selected" onclick="selectPlanCard('starter', '')">
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:4px;">Starter Plan</div>
+                    <div style="font-size:1.45rem;font-weight:800;color:var(--color-primary);margin-bottom:12px;">₹499 / mo</div>
+                    <div style="border-top:1px solid var(--border-subtle);padding-top:12px;display:flex;flex-direction:column;gap:8px;font-size:0.82rem;color:var(--text-secondary);">
+                        <div>✓ 5 Total Campaigns</div>
+                        <div>✓ 8 Prizes per Campaign</div>
+                        <div>✓ 5,000 Monthly Spins</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Billing Cycle Switch -->
+            <div style="margin-top:20px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <strong style="font-size:0.9rem;color:var(--text-primary);display:block;">Billing Duration</strong>
+                    <span style="font-size:0.8rem;color:var(--text-secondary);">Select subscription activation duration.</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="btn-primary" id="cycleMonthlyBtn" onclick="setBillingCycle('monthly')" style="padding:6px 16px;font-size:0.82rem;">Monthly (30 Days)</button>
+                    <button type="button" class="btn-secondary" id="cycleYearlyBtn" onclick="setBillingCycle('yearly')" style="padding:6px 16px;font-size:0.82rem;">Yearly (365 Days) <span style="font-size:0.7rem;color:#10b981;font-weight:800;">SAVE 20%</span></button>
+                </div>
+            </div>
+
+            <!-- Action Controls Step 4 -->
+            <div style="display:flex;justify-content:space-between;margin-top:28px;">
+                <button type="button" onclick="goToStep(3)" class="btn-secondary" style="padding:12px 24px;">
+                    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Themes
+                </button>
+                <button type="button" onclick="validateAndGoToStep(5)" class="btn-primary" style="padding:12px 28px;font-weight:800;display:inline-flex;align-items:center;gap:8px;">
+                    Next: Review & Launch QR <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <!-- STEP 5: CONFIRMATION, LIVE PERMANENT QR & LAUNCH -->
+        <!-- ───────────────────────────────────────────────────────────── -->
+        <div id="step-5" class="wizard-step-pane" style="display:none;">
+            <div style="border-bottom:1px solid var(--border-subtle);padding-bottom:12px;margin-bottom:20px;">
+                <h3 style="font-size:1.2rem;font-weight:800;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="check-circle-2" style="color:#10b981;width:20px;height:20px;"></i>
+                    Step 5: Review & Launch Permanent Business QR
+                </h3>
+                <p style="font-size:0.84rem;color:var(--text-secondary);margin:0;">
+                    Review your configuration below. Once launched, your permanent QR code and shop owner command center will be active immediately.
+                </p>
+            </div>
+
+            <!-- Pre-launch Summary Bento -->
+            <div id="preLaunchSummary" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+                <!-- Summary Card 1: Credentials & Identity -->
+                <div class="bento-card" style="padding:18px;background:var(--bg-elevated);">
+                    <div style="font-weight:800;font-size:0.9rem;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="user-check" style="width:16px;height:16px;color:var(--color-primary);"></i>
+                        Account & Business Summary
+                    </div>
+                    <div style="font-size:0.84rem;display:flex;flex-direction:column;gap:6px;color:var(--text-secondary);">
+                        <div>Owner Username: <strong id="summaryUsername" style="color:var(--text-primary);">--</strong></div>
+                        <div>Owner Email: <strong id="summaryEmail" style="color:var(--text-primary);">--</strong></div>
+                        <div>Password: <span style="font-family:monospace;letter-spacing:2px;color:var(--color-primary);font-weight:800;">••••••••</span> <span class="badge" style="font-size:0.68rem;background:#10b981;color:#fff;">Configured</span></div>
+                        <div style="border-top:1px solid var(--border-subtle);margin-top:6px;padding-top:6px;">
+                            Store Name: <strong id="summaryShopName" style="color:var(--text-primary);">--</strong>
+                        </div>
+                        <div>Category: <span id="summaryCategory">--</span></div>
+                        <div>Currency: <strong id="summaryCurrency">₹</strong></div>
+                    </div>
+                </div>
+
+                <!-- Summary Card 2: Theme & Experience -->
+                <div class="bento-card" style="padding:18px;background:var(--bg-elevated);">
+                    <div style="font-weight:800;font-size:0.9rem;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="palette" style="width:16px;height:16px;color:var(--color-primary);"></i>
+                        Experience & Capacity Summary
+                    </div>
+                    <div style="font-size:0.84rem;display:flex;flex-direction:column;gap:6px;color:var(--text-secondary);">
+                        <div>Theme: <strong id="summaryTheme" style="color:var(--color-primary);">Royal Gold</strong></div>
+                        <div>Plan: <strong id="summaryPlan" style="color:#10b981;">Starter Tier</strong></div>
+                        <div>Billing Duration: <strong id="summaryBilling" style="color:var(--text-primary);">Monthly (30 Days)</strong></div>
+                        <div style="border-top:1px solid var(--border-subtle);margin-top:6px;padding-top:6px;">
+                            Wheel Experience: <span class="badge" style="font-size:0.72rem;background:rgba(16,185,129,0.15);color:#10b981;font-weight:700;">Default Launch Rewards Auto-Generated</span>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+                            (Prizes and campaign offers can be customized anytime from your Campaign Manager)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Launch Button Banner -->
+            <div id="launchTriggerBox" style="text-align:center;padding:24px;background:linear-gradient(135deg, rgba(99,102,241,0.1), rgba(16,185,129,0.1));border:1px solid var(--border-medium);border-radius:var(--radius-lg);margin-bottom:20px;">
+                <p style="font-size:0.92rem;color:var(--text-primary);margin:0 0 16px 0;font-weight:600;">
+                    Ready to initialize business profile, generate permanent QR code, and open command center?
+                </p>
+                <button type="button" id="submitWizardBtn" onclick="submitBusinessWizard()" class="btn-primary" style="padding:14px 36px;font-size:1.05rem;font-weight:800;letter-spacing:0.5px;background:linear-gradient(135deg, #10b981, #059669);box-shadow:0 6px 20px rgba(16,185,129,0.35);border:none;">
+                    🚀 Create & Launch Business Now
+                </button>
+            </div>
+
+            <!-- Success Screen (Displayed upon creation) -->
+            <div id="launchSuccessBox" style="display:none;animation:fadeIn 0.4s ease forwards;">
+                <div style="text-align:center;padding:28px 20px;background:var(--bg-elevated);border:2px solid #10b981;border-radius:var(--radius-lg);margin-bottom:24px;box-shadow:0 12px 36px rgba(16,185,129,0.15);">
+                    <div style="font-size:2.8rem;margin-bottom:8px;">🎉</div>
+                    <h2 style="font-size:1.6rem;font-weight:800;color:#10b981;margin:0 0 6px 0;">Business Launched Successfully!</h2>
+                    <p style="font-size:0.9rem;color:var(--text-secondary);max-width:540px;margin:0 auto 20px;">
+                        Your store profile is active. Print the permanent QR code below or display it at checkout counters. Customer stickers will never need to be reprinted!
+                    </p>
+
+                    <!-- QR Display & Download -->
+                    <div style="background:#ffffff;padding:16px;border-radius:var(--radius-md);display:inline-block;box-shadow:var(--shadow-lg);margin-bottom:18px;">
+                        <img id="liveQrImage" src="" alt="Permanent Store QR Code" style="width:180px;height:180px;display:block;">
+                    </div>
+
+                    <!-- Permanent URL Box -->
+                    <div style="max-width:520px;margin:0 auto 20px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                        <code id="liveStoreUrl" style="font-size:0.85rem;color:var(--color-primary);font-weight:700;word-break:break-all;"></code>
+                        <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:0.78rem;flex-shrink:0;" onclick="copyStoreUrl()">
+                            <i data-lucide="copy" style="width:14px;height:14px;"></i> Copy URL
+                        </button>
+                    </div>
+
+                    <!-- Credentials Reminder Box -->
+                    <div style="max-width:520px;margin:0 auto 24px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-md);padding:14px 18px;text-align:left;">
+                        <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="key" style="width:15px;height:15px;color:var(--color-primary);"></i>
+                            Store Owner Sign-In Credentials
+                        </div>
+                        <div style="font-size:0.82rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="color:var(--text-secondary);">Username:</span>
+                            <strong id="credUsername" style="color:var(--text-primary);font-family:monospace;"></strong>
+                        </div>
+                        <div style="font-size:0.82rem;display:flex;justify-content:space-between;align-items:center;">
+                            <span style="color:var(--text-secondary);">Password:</span>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <strong id="credPassword" style="color:var(--color-primary);font-family:monospace;"></strong>
+                                <button type="button" class="btn-secondary" style="padding:2px 6px;font-size:0.7rem;" onclick="copyCredentials()" title="Copy Credentials">
+                                    <i data-lucide="copy" style="width:12px;height:12px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Navigation Buttons -->
+                    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                        <a id="downloadQrBtn" href="" download="store_qr.png" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;">
+                            <i data-lucide="download" style="width:16px;height:16px;"></i> Download QR PNG
+                        </a>
+                        <a id="dashboardRedirectBtn" href="{% url 'shop_dashboard' %}" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;background:var(--color-primary);">
+                            <i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Open Shop Dashboard →
+                        </a>
+                        <a id="publicWheelBtn" href="" target="_blank" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;">
+                            <i data-lucide="external-link" style="width:16px;height:16px;"></i> Test Public Wheel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Controls Step 5 (Before launch) -->
+            <div id="step5NavButtons" style="display:flex;justify-content:flex-start;margin-top:20px;">
+                <button type="button" onclick="goToStep(4)" class="btn-secondary" style="padding:12px 24px;">
+                    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back to Plan
+                </button>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <script>
-    function showStep(stepNum) {
-        document.querySelectorAll('.wizard-step').forEach(el => el.style.display = 'none');
-        document.getElementById('step' + stepNum).style.display = 'block';
+    let currentStep = 1;
+    const isCreateMode = {% if is_create_mode %}true{% else %}false{% endif %};
 
-        document.querySelectorAll('.step-bento-item').forEach((el, idx) => {
-            if (idx + 1 === stepNum) {
-                el.classList.add('active');
-            } else if (idx + 1 < stepNum) {
-                el.classList.add('completed');
-                el.classList.remove('active');
-            } else {
-                el.classList.remove('active', 'completed');
+    // ── STEPPER NAVIGATION ENGINE ──
+    function goToStep(stepNum) {
+        if (stepNum < 1 || stepNum > 5) return;
+        currentStep = stepNum;
+
+        // Hide all steps, show current
+        document.querySelectorAll('.wizard-step-pane').forEach(el => el.style.display = 'none');
+        const targetStep = document.getElementById('step-' + stepNum);
+        if (targetStep) targetStep.style.display = 'block';
+
+        // Update progress bar
+        const progressPercent = (stepNum / 5) * 100;
+        document.getElementById('wizardProgressBar').style.width = progressPercent + '%';
+
+        // Update pill headers
+        document.querySelectorAll('.step-pill').forEach((pill, idx) => {
+            const num = idx + 1;
+            pill.classList.remove('active', 'completed');
+            if (num === stepNum) {
+                pill.classList.add('active');
+            } else if (num < stepNum) {
+                pill.classList.add('completed');
             }
+        });
+
+        // Hide any active alerts
+        hideAlert();
+
+        // Refresh Lucide icons
+        if (window.lucide) lucide.createIcons();
+
+        // If reaching step 5, populate summary
+        if (stepNum === 5) {
+            populateStep5Summary();
+        }
+
+        window.scrollTo({ top: 120, behavior: 'smooth' });
+    }
+
+    // ── STEP VALIDATIONS ──
+    function validateAndGoToStep(targetStep) {
+        if (targetStep === 2) {
+            // Validate Step 1: Credentials
+            const username = document.getElementById('ownerUsername').value.trim();
+            const email = document.getElementById('ownerEmail').value.trim();
+            const pwd = document.getElementById('ownerPassword').value;
+            const confirmPwd = document.getElementById('ownerConfirmPassword').value;
+
+            if (!username) {
+                showAlert('Please enter an owner username.', 'error');
+                document.getElementById('ownerUsername').focus();
+                return;
+            }
+            if (username.length < 3) {
+                showAlert('Username must be at least 3 characters long.', 'error');
+                document.getElementById('ownerUsername').focus();
+                return;
+            }
+            if (!email || !email.includes('@')) {
+                showAlert('Please provide a valid email address.', 'error');
+                document.getElementById('ownerEmail').focus();
+                return;
+            }
+            if (isCreateMode || pwd.length > 0) {
+                if (pwd.length < 8) {
+                    showAlert('Password must be at least 8 characters long.', 'error');
+                    document.getElementById('ownerPassword').focus();
+                    return;
+                }
+                if (pwd !== confirmPwd) {
+                    showAlert('Passwords do not match. Please re-enter matching passwords.', 'error');
+                    document.getElementById('ownerConfirmPassword').focus();
+                    return;
+                }
+            }
+        } else if (targetStep === 3) {
+            // Validate Step 2: Shop Profile
+            const shopName = document.getElementById('shopName').value.trim();
+            if (!shopName) {
+                showAlert('Please enter your Shop / Business Name.', 'error');
+                document.getElementById('shopName').focus();
+                return;
+            }
+        }
+
+        goToStep(targetStep);
+    }
+
+    // ── PASSWORD UTILITIES ──
+    function togglePasswordVisibility(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (!input) return;
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function checkPasswordStrength(val) {
+        const seg1 = document.getElementById('pwdSeg1');
+        const seg2 = document.getElementById('pwdSeg2');
+        const seg3 = document.getElementById('pwdSeg3');
+        const seg4 = document.getElementById('pwdSeg4');
+        const label = document.getElementById('pwdStrengthLabel');
+
+        [seg1, seg2, seg3, seg4].forEach(s => s.className = 'pwd-meter-seg');
+
+        if (!val) {
+            label.textContent = 'Strength: None';
+            label.style.color = 'var(--text-muted)';
+            return;
+        }
+
+        let score = 0;
+        if (val.length >= 8) score++;
+        if (val.length >= 12) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val) || (/[a-z]/.test(val) && /[A-Z]/.test(val))) score++;
+
+        if (score <= 1) {
+            seg1.classList.add('weak');
+            label.textContent = 'Strength: Weak';
+            label.style.color = '#ef4444';
+        } else if (score <= 3) {
+            seg1.classList.add('medium');
+            seg2.classList.add('medium');
+            seg3.classList.add('medium');
+            label.textContent = 'Strength: Good';
+            label.style.color = '#f59e0b';
+        } else {
+            seg1.classList.add('strong');
+            seg2.classList.add('strong');
+            seg3.classList.add('strong');
+            seg4.classList.add('strong');
+            label.textContent = 'Strength: Strong 🔒';
+            label.style.color = '#10b981';
+        }
+
+        checkPasswordMatch();
+    }
+
+    function checkPasswordMatch() {
+        const pwd = document.getElementById('ownerPassword').value;
+        const confirm = document.getElementById('ownerConfirmPassword').value;
+        const matchLabel = document.getElementById('pwdMatchLabel');
+
+        if (!confirm) {
+            matchLabel.style.display = 'none';
+            return;
+        }
+
+        matchLabel.style.display = 'inline';
+        if (pwd === confirm) {
+            matchLabel.textContent = '✓ Passwords Match';
+            matchLabel.style.color = '#10b981';
+        } else {
+            matchLabel.textContent = '✕ Passwords Do Not Match';
+            matchLabel.style.color = '#ef4444';
+        }
+    }
+
+    // ── THEME SELECTION ──
+    function selectThemeCard(themeCode, themeTitle, primaryColor, accentColor, bgColor, ctaText, font) {
+        document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+
+        document.getElementById('selectedTheme').value = themeCode;
+        document.getElementById('selectedThemeDisplay').textContent = themeTitle;
+
+        // Auto update color pickers & values
+        if (primaryColor) {
+            document.getElementById('primaryColorPicker').value = primaryColor;
+            document.getElementById('primaryColorText').value = primaryColor;
+        }
+        if (accentColor) {
+            document.getElementById('accentColorPicker').value = accentColor;
+            document.getElementById('accentColorText').value = accentColor;
+        }
+        if (bgColor) {
+            document.getElementById('bgColorPicker').value = bgColor;
+            document.getElementById('bgColorText').value = bgColor;
+        }
+        if (ctaText) {
+            document.getElementById('spinButtonText').value = ctaText;
+        }
+        if (font) {
+            document.getElementById('themeFont').value = font;
+        }
+    }
+
+    function handleCategorySelection(cat) {
+        // Auto recommend matching theme if user hasn't explicitly locked one
+        const catLower = cat.toLowerCase();
+        if (catLower.includes('jewel') || catLower.includes('gold')) {
+            const card = document.querySelector(".theme-card[onclick*='royal_jewellery']");
+            if (card) card.click();
+        } else if (catLower.includes('coffee') || catLower.includes('bakery')) {
+            const card = document.querySelector(".theme-card[onclick*='coffee']");
+            if (card) card.click();
+        } else if (catLower.includes('restaurant') || catLower.includes('dining')) {
+            const card = document.querySelector(".theme-card[onclick*='restaurant']");
+            if (card) card.click();
+        } else if (catLower.includes('beauty') || catLower.includes('salon')) {
+            const card = document.querySelector(".theme-card[onclick*='beauty']");
+            if (card) card.click();
+        }
+    }
+
+    function setCurrency(sym) {
+        document.getElementById('shopCurrency').value = sym;
+    }
+
+    // ── PLAN SELECTION ──
+    function selectPlanCard(code, id) {
+        document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+        const target = document.getElementById('plan-card-' + code) || event.currentTarget;
+        if (target) target.classList.add('selected');
+
+        document.getElementById('selectedPlanCode').value = code;
+        document.getElementById('selectedPlanId').value = id || '';
+    }
+
+    function setBillingCycle(cycle) {
+        document.getElementById('selectedBillingCycle').value = cycle;
+        const mBtn = document.getElementById('cycleMonthlyBtn');
+        const yBtn = document.getElementById('cycleYearlyBtn');
+
+        if (cycle === 'yearly') {
+            yBtn.className = 'btn-primary';
+            mBtn.className = 'btn-secondary';
+        } else {
+            mBtn.className = 'btn-primary';
+            yBtn.className = 'btn-secondary';
+        }
+    }
+
+    // ── SUMMARY POPULATION ──
+    function populateStep5Summary() {
+        document.getElementById('summaryUsername').textContent = document.getElementById('ownerUsername').value || 'None';
+        document.getElementById('summaryEmail').textContent = document.getElementById('ownerEmail').value || 'None';
+        document.getElementById('summaryShopName').textContent = document.getElementById('shopName').value || 'None';
+        document.getElementById('summaryCategory').textContent = document.getElementById('shopCategory').value || 'None';
+        document.getElementById('summaryCurrency').textContent = document.getElementById('shopCurrency').value || '₹';
+        document.getElementById('summaryTheme').textContent = document.getElementById('selectedThemeDisplay').textContent;
+        document.getElementById('summaryPlan').textContent = document.getElementById('selectedPlanCode').value.toUpperCase() + ' Tier';
+        document.getElementById('summaryBilling').textContent = document.getElementById('selectedBillingCycle').value === 'yearly' ? 'Yearly (365 Days)' : 'Monthly (30 Days)';
+    }
+
+    // ── SUBMIT BUSINESS CREATION WIZARD ──
+    function submitBusinessWizard() {
+        const submitBtn = document.getElementById('submitWizardBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px;"><i data-lucide="loader" style="width:18px;height:18px;animation:spin 1s linear infinite;"></i> Creating Store & Generating Permanent QR...</span>`;
+        if (window.lucide) lucide.createIcons();
+
+        const formData = new URLSearchParams();
+        formData.append('action', 'create_business');
+
+        // Step 1: Credentials
+        formData.append('owner_username', document.getElementById('ownerUsername').value.trim());
+        formData.append('owner_email', document.getElementById('ownerEmail').value.trim());
+        formData.append('owner_password', document.getElementById('ownerPassword').value);
+        formData.append('owner_confirm_password', document.getElementById('ownerConfirmPassword').value);
+        formData.append('owner_first_name', document.getElementById('ownerFirstName').value.trim());
+        formData.append('owner_last_name', document.getElementById('ownerLastName').value.trim());
+        formData.append('owner_phone', document.getElementById('ownerPhone').value.trim());
+
+        // Step 2: Shop Profile
+        formData.append('shop_name', document.getElementById('shopName').value.trim());
+        formData.append('category', document.getElementById('shopCategory').value);
+        formData.append('currency_symbol', document.getElementById('shopCurrency').value.trim());
+        formData.append('shop_phone', document.getElementById('shopPhone').value.trim());
+        formData.append('shop_email', document.getElementById('shopEmail').value.trim());
+        formData.append('address', document.getElementById('shopAddress').value.trim());
+        formData.append('timezone', document.getElementById('shopTimezone').value);
+        formData.append('country', document.getElementById('shopCountry').value.trim());
+        formData.append('region', document.getElementById('shopRegion').value.trim());
+        formData.append('description', document.getElementById('shopDescription').value.trim());
+        formData.append('auto_theme_enabled', document.getElementById('autoThemeEnabled').checked ? '1' : '0');
+        formData.append('auto_category_theme_adaptation', document.getElementById('autoCategoryAdaptation').checked ? '1' : '0');
+
+        // Step 3: Themes & Branding
+        formData.append('theme', document.getElementById('selectedTheme').value);
+        formData.append('font_family', document.getElementById('themeFont').value);
+        formData.append('intensity', document.getElementById('themeIntensity').value);
+        formData.append('primary_color', document.getElementById('primaryColorText').value.trim());
+        formData.append('secondary_color', document.getElementById('secondaryColorText').value.trim());
+        formData.append('accent_color', document.getElementById('accentColorText').value.trim());
+        formData.append('background_color', document.getElementById('bgColorText').value.trim());
+        formData.append('spin_button_text', document.getElementById('spinButtonText').value.trim());
+
+        // Step 4: Plan
+        formData.append('plan_code', document.getElementById('selectedPlanCode').value);
+        formData.append('plan_id', document.getElementById('selectedPlanId').value);
+        formData.append('billing_cycle', document.getElementById('selectedBillingCycle').value);
+
+        fetch("{% url 'onboarding' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(({ status, body }) => {
+            if (status >= 200 && status < 300 && body.status === 'success') {
+                // Success! Reveal live QR launch card
+                document.getElementById('preLaunchSummary').style.display = 'none';
+                document.getElementById('launchTriggerBox').style.display = 'none';
+                document.getElementById('step5NavButtons').style.display = 'none';
+
+                const successBox = document.getElementById('launchSuccessBox');
+                successBox.style.display = 'block';
+
+                if (body.qr_url) {
+                    document.getElementById('liveQrImage').src = body.qr_url;
+                    document.getElementById('downloadQrBtn').href = body.qr_url;
+                }
+                const storeUrlFull = window.location.origin + '/s/' + body.public_token + '/';
+                document.getElementById('liveStoreUrl').textContent = storeUrlFull;
+                document.getElementById('publicWheelBtn').href = storeUrlFull;
+
+                document.getElementById('credUsername').textContent = body.username;
+                document.getElementById('credPassword').textContent = body.password;
+
+                if (body.dashboard_url) {
+                    document.getElementById('dashboardRedirectBtn').href = body.dashboard_url;
+                }
+
+                // Trigger celebratory confetti if available
+                createConfettiBurst();
+
+                if (window.lucide) lucide.createIcons();
+            } else {
+                showAlert(body.message || 'Error occurred while creating business.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `🚀 Create & Launch Business Now`;
+                if (window.lucide) lucide.createIcons();
+            }
+        })
+        .catch(err => {
+            showAlert('Network or server error: ' + err.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `🚀 Create & Launch Business Now`;
+            if (window.lucide) lucide.createIcons();
         });
     }
 
-    function saveStep1() {
-        const name = document.getElementById('shopName').value;
-        const category = document.getElementById('shopCategory').value;
-        const currency_symbol = document.getElementById('shopCurrency').value;
+    // ── ALERT HELPERS ──
+    function showAlert(msg, type) {
+        const box = document.getElementById('wizardAlert');
+        const text = document.getElementById('wizardAlertText');
+        const icon = document.getElementById('wizardAlertIcon');
 
-        fetch("{% url 'onboarding' %}", {
+        text.textContent = msg;
+        box.style.display = 'flex';
+
+        if (type === 'error') {
+            box.style.background = 'rgba(239, 68, 68, 0.12)';
+            box.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+            box.style.color = '#ef4444';
+            icon.setAttribute('data-lucide', 'alert-circle');
+        } else if (type === 'warning') {
+            box.style.background = 'rgba(245, 158, 11, 0.12)';
+            box.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+            box.style.color = '#f59e0b';
+            icon.setAttribute('data-lucide', 'alert-triangle');
+        } else {
+            box.style.background = 'rgba(16, 185, 129, 0.12)';
+            box.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+            box.style.color = '#10b981';
+            icon.setAttribute('data-lucide', 'check-circle-2');
+        }
+
+        if (window.lucide) lucide.createIcons();
+        window.scrollTo({ top: 120, behavior: 'smooth' });
+    }
+
+    function hideAlert() {
+        document.getElementById('wizardAlert').style.display = 'none';
+    }
+
+    // ── COPY TO CLIPBOARD ──
+    function copyStoreUrl() {
+        const url = document.getElementById('liveStoreUrl').textContent;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Permanent Store QR URL copied to clipboard!\n' + url);
+        });
+    }
+
+    function copyCredentials() {
+        const u = document.getElementById('credUsername').textContent;
+        const p = document.getElementById('credPassword').textContent;
+        const text = `Spin & Win Store Login:\nUsername: ${u}\nPassword: ${p}`;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Store Owner Credentials copied to clipboard!');
+        });
+    }
+
+    // ── CONFETTI BURST ──
+    function createConfettiBurst() {
+        const colors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'];
+        for (let i = 0; i < 40; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'fixed';
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.left = (Math.random() * 80 + 10) + 'vw';
+            confetti.style.top = '-10px';
+            confetti.style.borderRadius = '50%';
+            confetti.style.zIndex = '99999';
+            confetti.style.pointerEvents = 'none';
+            confetti.style.transition = `all ${Math.random() * 2 + 1.5}s cubic-bezier(0.25, 1, 0.5, 1)`;
+            document.body.appendChild(confetti);
+
+            setTimeout(() => {
+                confetti.style.transform = `translate(${(Math.random() - 0.5) * 200}px, ${window.innerHeight + 20}px) rotate(${Math.random() * 720}deg)`;
+                confetti.style.opacity = '0';
+            }, 20);
+
+            setTimeout(() => confetti.remove(), 4000);
+        }
+    }
+
+    // ── BACKWARD COMPATIBILITY HELPERS FOR TESTS ──
+    // Supports existing test_onboarding_wizard_flow
+    function saveStep1() {
+        const name = document.getElementById('shopName') ? document.getElementById('shopName').value : '';
+        const category = document.getElementById('shopCategory') ? document.getElementById('shopCategory').value : '';
+        const currency_symbol = document.getElementById('shopCurrency') ? document.getElementById('shopCurrency').value : '';
+
+        return fetch("{% url 'onboarding' %}", {
             method: 'POST',
             headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
             body: new URLSearchParams({'action': 'save_shop', 'name': name, 'category': category, 'currency_symbol': currency_symbol})
-        }).then(r => r.json()).then(data => {
-            showStep(2);
-        });
+        }).then(r => r.json());
     }
 
     function saveStep2() {
-        const theme = document.getElementById('themeSelect').value;
-        const primary_color = document.getElementById('primaryColor').value;
+        const theme = document.getElementById('selectedTheme') ? document.getElementById('selectedTheme').value : 'royal';
+        const primary_color = document.getElementById('primaryColorText') ? document.getElementById('primaryColorText').value : '#6366f1';
 
-        fetch("{% url 'onboarding' %}", {
+        return fetch("{% url 'onboarding' %}", {
             method: 'POST',
             headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/x-www-form-urlencoded'},
             body: new URLSearchParams({'action': 'save_branding', 'theme': theme, 'primary_color': primary_color})
-        }).then(r => r.json()).then(data => {
-            showStep(3);
-        });
+        }).then(r => r.json());
     }
+
+    // Initial icon render
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.lucide) lucide.createIcons();
+    });
 </script>
 {% endblock %}
