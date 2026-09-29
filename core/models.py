@@ -1,9 +1,10 @@
 import uuid
 import secrets
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -730,8 +731,18 @@ class Prize(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='prizes')
     name = models.CharField(max_length=100)
     prize_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default='percentage')
-    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
-    fixed_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))]
+    )
+    fixed_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('99999999.99'))]
+    )
     coupon_text = models.CharField(max_length=255, blank=True)
     probability = models.FloatField(default=15.0, help_text='Weight percentage (e.g. 25.0)')
     display_color = models.CharField(max_length=20, default='#6366f1')
@@ -746,22 +757,37 @@ class Prize(models.Model):
             if self.discount_percentage is None or str(self.discount_percentage).strip() == '':
                 self.discount_percentage = Decimal('0.00')
             else:
-                self.discount_percentage = Decimal(str(self.discount_percentage)).quantize(Decimal('0.01'))
+                raw_d = Decimal(str(self.discount_percentage).strip())
+                if raw_d.is_nan() or raw_d.is_infinite():
+                    self.discount_percentage = Decimal('0.00')
+                else:
+                    self.discount_percentage = raw_d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         except (InvalidOperation, TypeError, ValueError):
             self.discount_percentage = Decimal('0.00')
+
         if self.discount_percentage < Decimal('0.00'):
             self.discount_percentage = Decimal('0.00')
         elif self.discount_percentage > Decimal('100.00'):
-            self.discount_percentage = Decimal('100.00')
+            # If prize_type is fixed and fixed_discount_amount is not set, transfer to fixed amount
+            if getattr(self, 'prize_type', '') == 'fixed' and (self.fixed_discount_amount is None or self.fixed_discount_amount == Decimal('0.00')):
+                self.fixed_discount_amount = min(self.discount_percentage, Decimal('99999999.99'))
+                self.discount_percentage = Decimal('0.00')
+            else:
+                self.discount_percentage = Decimal('100.00')
 
         # Coerce and clamp fixed_discount_amount
         try:
             if self.fixed_discount_amount is None or str(self.fixed_discount_amount).strip() == '':
                 self.fixed_discount_amount = Decimal('0.00')
             else:
-                self.fixed_discount_amount = Decimal(str(self.fixed_discount_amount)).quantize(Decimal('0.01'))
+                raw_f = Decimal(str(self.fixed_discount_amount).strip())
+                if raw_f.is_nan() or raw_f.is_infinite():
+                    self.fixed_discount_amount = Decimal('0.00')
+                else:
+                    self.fixed_discount_amount = raw_f.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         except (InvalidOperation, TypeError, ValueError):
             self.fixed_discount_amount = Decimal('0.00')
+
         if self.fixed_discount_amount < Decimal('0.00'):
             self.fixed_discount_amount = Decimal('0.00')
         elif self.fixed_discount_amount > Decimal('99999999.99'):
@@ -934,7 +960,12 @@ class Plan(models.Model):
     )
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=50, unique=True, default='starter')
-    price_rupees = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('499.00'))
+    price_rupees = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('499.00'),
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('99999999.99'))]
+    )
     price_display = models.CharField(max_length=50, default='₹499 / month')
     billing_cycle = models.CharField(max_length=20, choices=CYCLE_CHOICES, default='monthly')
     billing_period_days = models.IntegerField(default=30)
@@ -948,8 +979,35 @@ class Plan(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def clean(self):
+        super().clean()
+        try:
+            if self.price_rupees is None or str(self.price_rupees).strip() == '':
+                self.price_rupees = Decimal('0.00')
+            else:
+                raw_p = Decimal(str(self.price_rupees).strip())
+                if raw_p.is_nan() or raw_p.is_infinite():
+                    self.price_rupees = Decimal('0.00')
+                else:
+                    self.price_rupees = raw_p.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (InvalidOperation, TypeError, ValueError):
+            self.price_rupees = Decimal('0.00')
+
+        if self.price_rupees < Decimal('0.00'):
+            self.price_rupees = Decimal('0.00')
+        elif self.price_rupees > Decimal('99999999.99'):
+            self.price_rupees = Decimal('99999999.99')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
     def formatted_price(self):
-        val_str = f"₹{int(self.price_rupees):,}" if self.price_rupees % 1 == 0 else f"₹{self.price_rupees:,.2f}"
+        try:
+            p_val = self.price_rupees or Decimal('0.00')
+            val_str = f"₹{int(p_val):,}" if p_val % 1 == 0 else f"₹{p_val:,.2f}"
+        except Exception:
+            val_str = f"₹{self.price_rupees}"
         if self.billing_cycle == 'yearly' or self.billing_period_days == 365:
             return f"{val_str} / yr"
         elif self.billing_cycle == 'monthly' or self.billing_period_days == 30:

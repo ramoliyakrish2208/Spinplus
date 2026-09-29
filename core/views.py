@@ -25,7 +25,12 @@ def parse_decimal_safe(val, default='0.00', min_val=Decimal('0.00'), max_val=Non
         if val is None or str(val).strip() == '':
             d = Decimal(str(default))
         else:
-            d = Decimal(str(val).strip())
+            clean_str = str(val).strip()
+            if len(clean_str) > 20:
+                clean_str = clean_str[:20]
+            d = Decimal(clean_str)
+        if d.is_nan() or d.is_infinite():
+            return Decimal(str(default)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         d = d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         if min_val is not None and d < min_val:
             d = min_val
@@ -33,7 +38,10 @@ def parse_decimal_safe(val, default='0.00', min_val=Decimal('0.00'), max_val=Non
             d = max_val
         return d
     except (InvalidOperation, TypeError, ValueError):
-        return Decimal(str(default))
+        try:
+            return Decimal(str(default)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except Exception:
+            return Decimal('0.00')
 
 def parse_int_safe(val, default=0, min_val=None, max_val=None):
     try:
@@ -481,13 +489,39 @@ def shop_dashboard(request):
     if not qr_code.qr_image:
         generate_shop_qr(shop, site_base)
 
-    recent_coupons = list(Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at')[:10])
+    # Safely load active campaign prizes to isolate corrupt Decimal values
+    active_prizes = []
+    if active_campaign:
+        try:
+            active_prizes = list(active_campaign.prizes.all())
+        except (InvalidOperation, Exception) as prize_err:
+            logger.error(
+                "Failed to convert or load prizes for campaign ID %s (shop ID %s): %s",
+                getattr(active_campaign, 'id', None),
+                getattr(shop, 'id', None),
+                prize_err
+            )
+            # Safe recovery fallback: retrieve display attributes without triggering Decimal conversion
+            try:
+                active_prizes = list(active_campaign.prizes.values('id', 'name', 'probability', 'display_color', 'prize_type'))
+            except Exception:
+                active_prizes = []
+
+    # Safely load recent coupons
+    try:
+        recent_coupons = list(Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at')[:10])
+    except (InvalidOperation, Exception) as coupon_err:
+        logger.error("Failed to load recent coupons with prizes for shop ID %s: %s", getattr(shop, 'id', None), coupon_err)
+        try:
+            recent_coupons = list(Coupon.objects.filter(shop=shop).select_related('redemption').order_by('-created_at')[:10])
+        except Exception:
+            recent_coupons = []
 
     checklist = [
         {'title': 'Shop Created', 'done': True},
         {'title': 'Add Logo & Cover', 'done': bool(shop.logo)},
         {'title': 'Active Campaign', 'done': bool(active_campaign)},
-        {'title': 'Prizes Configured', 'done': bool(active_campaign and active_campaign.prizes.exists())},
+        {'title': 'Prizes Configured', 'done': bool(active_campaign and (len(active_prizes) > 0 or active_campaign.prizes.exists()))},
         {'title': 'Branding Customized', 'done': bool(branding.theme != 'modern' or branding.primary_color != '#6366f1')},
         {'title': 'QR Generated', 'done': bool(qr_code.qr_image)},
         {'title': 'Coupons Issued', 'done': bool(recent_coupons)},
@@ -499,8 +533,14 @@ def shop_dashboard(request):
 
     current_resolution = get_active_shop_theme(shop)
     upcoming_events = CalendarEvent.objects.filter(is_active=True, end_date__gte=get_shop_local_datetime(shop).date()).order_by('start_date')[:4]
-    subscription = shop.get_subscription()
-    has_active_subscription = shop.has_active_subscription()
+    
+    try:
+        subscription = shop.get_subscription()
+        has_active_subscription = shop.has_active_subscription()
+    except (InvalidOperation, Exception) as sub_err:
+        logger.error("Failed to load subscription for shop ID %s: %s", getattr(shop, 'id', None), sub_err)
+        subscription = None
+        has_active_subscription = False
 
     context = {
         'shop': shop,
@@ -508,6 +548,7 @@ def shop_dashboard(request):
         'current_resolution': current_resolution,
         'upcoming_events': upcoming_events,
         'active_campaign': active_campaign,
+        'active_prizes': active_prizes,
         'subscription': subscription,
         'has_active_subscription': has_active_subscription,
         'range_filter': range_filter,
@@ -693,6 +734,14 @@ def prize_manager_view(request, campaign_id):
             p_type = request.POST.get('prize_type', 'percentage')
             disc_pct = parse_decimal_safe(request.POST.get('discount_percentage'), default='0.00', min_val=Decimal('0.00'), max_val=Decimal('100.00'))
             fixed_amt = parse_decimal_safe(request.POST.get('fixed_discount_amount'), default='0.00', min_val=Decimal('0.00'), max_val=Decimal('99999999.99'))
+            
+            # If user selected fixed discount and typed amount into discount_percentage input
+            if p_type == 'fixed' and fixed_amt == Decimal('0.00') and disc_pct > Decimal('0.00'):
+                fixed_amt = disc_pct
+                disc_pct = Decimal('0.00')
+            elif p_type != 'percentage':
+                disc_pct = Decimal('0.00')
+
             coupon_text = (request.POST.get('coupon_text') or '').strip()
             prob = parse_float_safe(request.POST.get('probability'), default=10.0, min_val=0.0, max_val=100.0)
             color = (request.POST.get('display_color') or '#6366f1').strip()
@@ -715,6 +764,14 @@ def prize_manager_view(request, campaign_id):
                 prize.discount_percentage = parse_decimal_safe(request.POST.get('discount_percentage'), default=prize.discount_percentage, min_val=Decimal('0.00'), max_val=Decimal('100.00'))
             if 'fixed_discount_amount' in request.POST:
                 prize.fixed_discount_amount = parse_decimal_safe(request.POST.get('fixed_discount_amount'), default=prize.fixed_discount_amount, min_val=Decimal('0.00'), max_val=Decimal('99999999.99'))
+            
+            # If user selected fixed discount and typed amount into discount_percentage
+            if prize.prize_type == 'fixed' and prize.fixed_discount_amount == Decimal('0.00') and prize.discount_percentage > Decimal('0.00'):
+                prize.fixed_discount_amount = prize.discount_percentage
+                prize.discount_percentage = Decimal('0.00')
+            elif prize.prize_type != 'percentage':
+                prize.discount_percentage = Decimal('0.00')
+
             prize.coupon_text = (request.POST.get('coupon_text') or prize.coupon_text).strip()
             if 'probability' in request.POST:
                 prize.probability = parse_float_safe(request.POST.get('probability'), default=prize.probability, min_val=0.0, max_val=100.0)

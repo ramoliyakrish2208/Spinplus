@@ -145,7 +145,7 @@
                 <div style="margin-bottom:20px;">
                     <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:8px;">Wheel Prizes Configuration</span>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        {% for prize in active_campaign.prizes.all %}
+                        {% for prize in active_prizes|default:active_campaign.prizes.all %}
                             <span class="badge" style="background:var(--bg-elevated);color:var(--text-primary);border:1px solid var(--border-subtle);">
                                 <span style="width:8px;height:8px;border-radius:50%;background:{{ prize.display_color }};display:inline-block;"></span>
                                 {{ prize.name }} ({{ prize.probability }}%)

@@ -226,3 +226,82 @@ class HardeningAndReliabilityTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, barcode_code)
         self.assertContains(response, "VALID COUPON READY")
+
+    def test_prize_decimal_bounds_and_clean(self):
+        """Verify Prize model clean() and save() enforce valid decimal bounds and rounding."""
+        # 1. Percentage > 100 clamped to 100.00
+        p1 = Prize.objects.create(
+            campaign=self.campaign,
+            name="150% Huge Promo",
+            prize_type="percentage",
+            discount_percentage=Decimal("150.00"),
+            probability=10.0
+        )
+        self.assertEqual(p1.discount_percentage, Decimal("100.00"))
+
+        # 2. Negative percentage clamped to 0.00
+        p2 = Prize.objects.create(
+            campaign=self.campaign,
+            name="Negative Promo",
+            prize_type="percentage",
+            discount_percentage=Decimal("-25.00"),
+            probability=10.0
+        )
+        self.assertEqual(p2.discount_percentage, Decimal("0.00"))
+
+        # 3. Fixed discount typed into discount_percentage is safely transferred
+        p3 = Prize.objects.create(
+            campaign=self.campaign,
+            name="₹500 Cash Voucher",
+            prize_type="fixed",
+            discount_percentage=Decimal("500.00"),
+            fixed_discount_amount=Decimal("0.00"),
+            probability=10.0
+        )
+        self.assertEqual(p3.discount_percentage, Decimal("0.00"))
+        self.assertEqual(p3.fixed_discount_amount, Decimal("500.00"))
+
+    def test_plan_decimal_bounds_and_clean(self):
+        """Verify Plan model clean() and save() enforce valid price bounds."""
+        from core.models import Plan
+        pl = Plan.objects.create(
+            code="test_unbounded_plan",
+            name="Test Plan",
+            price_rupees=Decimal("-50.00")
+        )
+        self.assertEqual(pl.price_rupees, Decimal("0.00"))
+
+    def test_shop_dashboard_isolates_corrupt_decimal(self):
+        """Verify /dashboard/shop/ does not crash with HTTP 500 when SQLite contains an incompatible Decimal record."""
+        from django.db import connection
+        # Insert a raw incompatible value (e.g. 1000 in a max_digits=5 column) directly via SQL
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO core_prize (campaign_id, name, prize_type, discount_percentage, fixed_discount_amount, coupon_text, probability, display_color, is_active, max_wins, remaining_quantity) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (self.campaign.id, "Corrupt Decimal Prize", "percentage", 1000, 0, "Test", 10.0, "#ff0000", True, 100, 100)
+            )
+
+        self.client.login(username="shopowner_test", password="testpassword123")
+        response = self.client.get(reverse("shop_dashboard"))
+        # Must return HTTP 200, not 500!
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Corrupt Decimal Prize")
+
+    def test_safe_stream_handler_os_error(self):
+        """Verify SafeStreamHandler swallows OSError (write error / broken pipe) cleanly."""
+        import logging
+        from spinplus.settings import SafeStreamHandler
+
+        class BrokenStream:
+            def write(self, msg):
+                raise OSError("write error: Broken pipe")
+            def flush(self):
+                raise OSError("write error: Broken pipe")
+
+        handler = SafeStreamHandler(BrokenStream())
+        record = logging.LogRecord("test", logging.INFO, "path", 1, "test message", (), None)
+        # Should not raise exception
+        handler.emit(record)
+        handler.flush()
+

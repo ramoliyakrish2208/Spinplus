@@ -295,6 +295,33 @@ class SuppressLocalHttpsWarningFilter(logging.Filter):
             return False
         return True
 
+class SafeStreamHandler(logging.StreamHandler):
+    """
+    Production-safe StreamHandler that suppresses broken-pipe / closed-descriptor
+    OSErrors (e.g. uWSGI client disconnections or truncated output buffers)
+    preventing write errors from masking or breaking request handling.
+    """
+    def emit(self, record):
+        try:
+            super().emit(record)
+        except (OSError, BrokenPipeError, IOError):
+            pass
+
+    def flush(self):
+        try:
+            super().flush()
+        except (OSError, BrokenPipeError, IOError):
+            pass
+
+    def handleError(self, record):
+        t, v, tb = sys.exc_info()
+        if t and issubclass(t, (OSError, BrokenPipeError, IOError)):
+            return
+        try:
+            super().handleError(record)
+        except (OSError, BrokenPipeError, IOError):
+            pass
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -317,10 +344,12 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 5,
             'formatter': 'verbose',
+            'encoding': 'utf-8',
+            'delay': True,
         },
         'console': {
             'level': 'INFO',
-            'class': 'logging.StreamHandler',
+            '()': SafeStreamHandler,
             'formatter': 'verbose',
             'filters': ['suppress_local_https_warnings'] if IS_RUNSERVER else [],
         },
