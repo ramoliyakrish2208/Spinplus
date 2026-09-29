@@ -8,6 +8,18 @@
 
     // Global Registry of Theme Data for the Showcase
     const SHOWCASE_THEMES = {
+        'kurti': {
+            title: 'Kurti & Indian Ethnic Boutique',
+            campaign: 'Designer Ethnic Wear • Spin & Win',
+            sub: 'Exclusive Handcrafted Kurti Boutique Offers',
+            bg: 'radial-gradient(circle at 50% 30%, #FDF4E7 0%, #FFF8EE 70%, #F8E8E8 100%)',
+            primary: '#6B1838',
+            secondary: '#B75D75',
+            accent: '#C9A45C',
+            font: 'playfair',
+            emoji: '🥻',
+            prize: 'Flat 25% OFF Designer Kurti'
+        },
         'royal_jewellery': {
             title: 'Royal Gold Jewellery',
             campaign: 'Jewellery Special • Spin & Win',

@@ -26,9 +26,15 @@
         <p style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin: 0 0 24px 0;">
             This shop profile is currently paused or inactive. Please contact store management or administrator for assistance.
         </p>
-        <a href="{% url 'login' %}" class="btn-primary" style="width: 100%; font-size: 0.88rem;">
-            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Return to Sign In
+        {% if request.user.is_authenticated and not is_public_page %}
+        <a href="{% url 'shop_dashboard' %}" class="btn-primary" style="width: 100%; font-size: 0.88rem; justify-content: center;">
+            <i data-lucide="layout-dashboard" style="width:14px;height:14px;"></i> Return to Dashboard
         </a>
+        {% else %}
+        <a href="javascript:history.back()" class="btn-secondary" style="width: 100%; font-size: 0.88rem; justify-content: center;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Go Back
+        </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

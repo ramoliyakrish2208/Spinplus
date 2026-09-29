@@ -44,11 +44,15 @@ if not SECRET_KEY:
             "A unique, high-entropy SECRET_KEY must be provided via .env or environment in production."
         )
 
-allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,testserver')
+allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,testserver,.pythonanywhere.com')
 ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
+if '.pythonanywhere.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.pythonanywhere.com')
 
-csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1,http://localhost,http://127.0.0.1:8000,http://localhost:8000')
+csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1,http://localhost,http://127.0.0.1:8000,http://localhost:8000,https://*.pythonanywhere.com')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_origins_env.split(',') if o.strip()]
+if 'https://*.pythonanywhere.com' not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append('https://*.pythonanywhere.com')
 
 # Baseline & Production Security Headers
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -332,6 +336,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
             'filters': ['suppress_local_https_warnings'] if IS_RUNSERVER else [],
+        },
+        'core': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
         },
     },
 }

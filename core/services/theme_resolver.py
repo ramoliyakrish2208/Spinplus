@@ -75,7 +75,9 @@ def adapt_theme_to_category(base_theme: str, category: str) -> str:
 
     # Generic theme category adaptations
     if base_theme in ['royal', 'default', 'minimal', 'modern', 'festival']:
-        if 'jewel' in cat:
+        if any(w in cat for w in ['kurti', 'ethnic', 'boutique', 'women', 'clothing', 'apparel', 'fashion', 'saree', 'textile', 'garment', 'wear']):
+            return 'kurti'
+        elif 'jewel' in cat:
             return 'royal_jewellery'
         elif 'coffee' in cat or 'cafe' in cat:
             return 'coffee'

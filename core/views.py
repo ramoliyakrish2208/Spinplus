@@ -1,6 +1,8 @@
 import json
 import csv
 import random
+import logging
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
@@ -9,11 +11,111 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.utils.text import slugify
 from django.db.models import Count, Q, Sum
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+logger = logging.getLogger('core')
+
+def parse_decimal_safe(val, default='0.00', min_val=Decimal('0.00'), max_val=None):
+    try:
+        if val is None or str(val).strip() == '':
+            d = Decimal(str(default))
+        else:
+            d = Decimal(str(val).strip())
+        d = d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if min_val is not None and d < min_val:
+            d = min_val
+        if max_val is not None and d > max_val:
+            d = max_val
+        return d
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal(str(default))
+
+def parse_int_safe(val, default=0, min_val=None, max_val=None):
+    try:
+        if val is None or str(val).strip() == '':
+            i = int(default)
+        else:
+            i = int(val)
+        if min_val is not None and i < min_val:
+            i = min_val
+        if max_val is not None and i > max_val:
+            i = max_val
+        return i
+    except (TypeError, ValueError):
+        return int(default)
+
+def parse_float_safe(val, default=0.0, min_val=0.0, max_val=100.0):
+    try:
+        if val is None or str(val).strip() == '':
+            f = float(default)
+        else:
+            f = float(val)
+        if min_val is not None and f < min_val:
+            f = min_val
+        if max_val is not None and f > max_val:
+            f = max_val
+        return round(f, 2)
+    except (TypeError, ValueError):
+        return float(default)
+
+def get_error_context(request, status_code: int, default_msg: str = ""):
+    path = getattr(request, 'path', '') or ''
+    is_customer_route = (
+        path.startswith('/s/') or
+        path.startswith('/coupon/') or
+        path.startswith('/verify/')
+    )
+    is_authenticated = hasattr(request, 'user') and request.user.is_authenticated
+    user = getattr(request, 'user', None)
+
+    is_admin_route = path.startswith('/dashboard/admin/')
+    is_shop_route = (
+        path.startswith('/dashboard/shop/') or
+        path.startswith('/dashboard/subscription/') or
+        path.startswith('/dashboard/billing/') or
+        path.startswith('/dashboard/account/') or
+        path.startswith('/dashboard/notifications/')
+    )
+
+    context_type = 'public'
+    if is_customer_route:
+        context_type = 'customer'
+    elif is_admin_route and is_authenticated and getattr(user, 'is_superadmin', lambda: False)():
+        context_type = 'admin'
+    elif is_shop_route and is_authenticated and (getattr(user, 'shop', None) or getattr(user, 'is_superadmin', lambda: False)()):
+        context_type = 'shop'
+
+    # Extract public token if on /s/<token>/ route
+    public_token = None
+    if path.startswith('/s/'):
+        parts = [p for p in path.split('/') if p]
+        if len(parts) >= 2 and parts[0] == 's':
+            public_token = parts[1]
+
+    # Detect API/AJAX requests
+    is_ajax = (
+        (hasattr(request, 'headers') and request.headers.get('x-requested-with') == 'XMLHttpRequest') or
+        path.endswith('/spin/') or
+        '/api/' in path or
+        'application/json' in request.META.get('HTTP_ACCEPT', '')
+    )
+
+    return {
+        'status_code': status_code,
+        'context_type': context_type,
+        'is_public_page': context_type in ('public', 'customer') or not is_authenticated,
+        'is_customer_error': context_type == 'customer',
+        'is_admin_error': context_type == 'admin',
+        'is_shop_owner_error': context_type == 'shop',
+        'public_token': public_token,
+        'is_ajax': is_ajax,
+        'default_msg': default_msg,
+    }
 
 from core.models import (
     User, Shop, ShopBranding, Campaign, Prize, QRCode,
@@ -379,7 +481,7 @@ def shop_dashboard(request):
     if not qr_code.qr_image:
         generate_shop_qr(shop, site_base)
 
-    recent_coupons = Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at')[:10]
+    recent_coupons = list(Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at')[:10])
 
     checklist = [
         {'title': 'Shop Created', 'done': True},
@@ -388,7 +490,7 @@ def shop_dashboard(request):
         {'title': 'Prizes Configured', 'done': bool(active_campaign and active_campaign.prizes.exists())},
         {'title': 'Branding Customized', 'done': bool(branding.theme != 'modern' or branding.primary_color != '#6366f1')},
         {'title': 'QR Generated', 'done': bool(qr_code.qr_image)},
-        {'title': 'Coupons Issued', 'done': bool(recent_coupons.exists())},
+        {'title': 'Coupons Issued', 'done': bool(recent_coupons)},
     ]
     completed_steps = sum(1 for item in checklist if item['done'])
 
@@ -458,7 +560,7 @@ def campaign_list_view(request):
                 desc = request.POST.get('description', '')
                 template_choice = request.POST.get('template_type', '')
                 campaign_theme = request.POST.get('theme', '').strip()
-                cooldown = int(request.POST.get('spin_cooldown_hours', 24))
+                cooldown = parse_int_safe(request.POST.get('spin_cooldown_hours'), default=24, min_val=0, max_val=720)
                 start_date = timezone.now()
                 end_date = timezone.now() + timedelta(days=60)
                 
@@ -471,17 +573,17 @@ def campaign_list_view(request):
 
                 # Initialize template prizes if selected
                 if template_choice == 'festival':
-                    Prize.objects.create(campaign=camp, name='20% OFF Festive Discount', prize_type='percentage', discount_percentage=20.0, coupon_text='20% off total bill', probability=40.0, display_color='#6366f1')
-                    Prize.objects.create(campaign=camp, name='₹100 Gift Voucher', prize_type='fixed', fixed_discount_amount=100.0, coupon_text='Flat ₹100 off', probability=30.0, display_color='#f59e0b')
+                    Prize.objects.create(campaign=camp, name='20% OFF Festive Discount', prize_type='percentage', discount_percentage=Decimal('20.00'), coupon_text='20% off total bill', probability=40.0, display_color='#6366f1')
+                    Prize.objects.create(campaign=camp, name='₹100 Gift Voucher', prize_type='fixed', fixed_discount_amount=Decimal('100.00'), coupon_text='Flat ₹100 off', probability=30.0, display_color='#f59e0b')
                     Prize.objects.create(campaign=camp, name='Free Seasonal Drink', prize_type='freebie', coupon_text='1 Free Beverage', probability=20.0, display_color='#10b981')
                     Prize.objects.create(campaign=camp, name='Better Luck Next Time', prize_type='no_win', coupon_text='Try again on next visit', probability=10.0, display_color='#64748b')
                 elif template_choice == 'weekend':
-                    Prize.objects.create(campaign=camp, name='15% OFF Weekend Special', prize_type='percentage', discount_percentage=15.0, coupon_text='15% off weekend bill', probability=50.0, display_color='#ec4899')
+                    Prize.objects.create(campaign=camp, name='15% OFF Weekend Special', prize_type='percentage', discount_percentage=Decimal('15.00'), coupon_text='15% off weekend bill', probability=50.0, display_color='#ec4899')
                     Prize.objects.create(campaign=camp, name='Buy 1 Get 1 Free', prize_type='freebie', coupon_text='1 Free item on BOGO', probability=30.0, display_color='#8b5cf6')
                     Prize.objects.create(campaign=camp, name='Try Again Next Visit', prize_type='no_win', coupon_text='Thanks for playing', probability=20.0, display_color='#64748b')
                 elif template_choice == 'grand_opening':
-                    Prize.objects.create(campaign=camp, name='25% Welcome Discount', prize_type='percentage', discount_percentage=25.0, coupon_text='25% off grand opening special', probability=40.0, display_color='#3b82f6')
-                    Prize.objects.create(campaign=camp, name='₹200 Cash Voucher', prize_type='fixed', fixed_discount_amount=200.0, coupon_text='Flat ₹200 off', probability=40.0, display_color='#f59e0b')
+                    Prize.objects.create(campaign=camp, name='25% Welcome Discount', prize_type='percentage', discount_percentage=Decimal('25.00'), coupon_text='25% off grand opening special', probability=40.0, display_color='#3b82f6')
+                    Prize.objects.create(campaign=camp, name='₹200 Cash Voucher', prize_type='fixed', fixed_discount_amount=Decimal('200.00'), coupon_text='Flat ₹200 off', probability=40.0, display_color='#f59e0b')
                     Prize.objects.create(campaign=camp, name='Free Welcome Dessert', prize_type='freebie', coupon_text='1 Complimentary Dessert', probability=20.0, display_color='#10b981')
 
                 ActivityLog.objects.create(shop=shop, actor=request.user, action="Campaign Created", details=f"Campaign {camp.name} (Template: {template_choice or 'Custom'})")
@@ -500,8 +602,25 @@ def campaign_list_view(request):
             camp.save()
             return redirect('campaign_list')
 
-    campaigns = Campaign.objects.filter(shop=shop).order_by('-created_at')
-    return render(request, 'dashboard/campaigns.html', {'shop': shop, 'campaigns': campaigns, 'error': error, 'subscription': sub})
+    campaigns_qs = Campaign.objects.filter(shop=shop).order_by('-created_at')
+    paginator = Paginator(campaigns_qs, 12)
+    page_number = request.GET.get('page', 1)
+    try:
+        campaigns_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        campaigns_page = paginator.page(1)
+    except EmptyPage:
+        campaigns_page = paginator.page(paginator.num_pages)
+
+    return render(request, 'dashboard/campaigns.html', {
+        'shop': shop,
+        'campaigns': campaigns_page,
+        'campaigns_page': campaigns_page,
+        'paginator': paginator,
+        'total_campaigns_count': campaigns_qs.count(),
+        'error': error,
+        'subscription': sub
+    })
 
 
 @shop_access_required
@@ -570,14 +689,14 @@ def prize_manager_view(request, campaign_id):
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'add_prize':
-            name = request.POST.get('name')
+            name = (request.POST.get('name') or '').strip()
             p_type = request.POST.get('prize_type', 'percentage')
-            disc_pct = float(request.POST.get('discount_percentage', 0.0))
-            fixed_amt = float(request.POST.get('fixed_discount_amount', 0.0))
-            coupon_text = request.POST.get('coupon_text', '')
-            prob = float(request.POST.get('probability', 10.0))
-            color = request.POST.get('display_color', '#6366f1')
-            qty = int(request.POST.get('remaining_quantity', 100))
+            disc_pct = parse_decimal_safe(request.POST.get('discount_percentage'), default='0.00', min_val=Decimal('0.00'), max_val=Decimal('100.00'))
+            fixed_amt = parse_decimal_safe(request.POST.get('fixed_discount_amount'), default='0.00', min_val=Decimal('0.00'), max_val=Decimal('99999999.99'))
+            coupon_text = (request.POST.get('coupon_text') or '').strip()
+            prob = parse_float_safe(request.POST.get('probability'), default=10.0, min_val=0.0, max_val=100.0)
+            color = (request.POST.get('display_color') or '#6366f1').strip()
+            qty = parse_int_safe(request.POST.get('remaining_quantity'), default=100, min_val=0)
 
             Prize.objects.create(
                 campaign=campaign, name=name, prize_type=p_type, discount_percentage=disc_pct,
@@ -590,28 +709,20 @@ def prize_manager_view(request, campaign_id):
         elif action == 'edit_prize':
             prize_id = request.POST.get('prize_id')
             prize = get_object_or_404(Prize, id=prize_id, campaign=campaign)
-            prize.name = request.POST.get('name', prize.name)
+            prize.name = (request.POST.get('name') or prize.name).strip()
             prize.prize_type = request.POST.get('prize_type', prize.prize_type)
-            try:
-                prize.discount_percentage = float(request.POST.get('discount_percentage', prize.discount_percentage))
-            except (ValueError, TypeError):
-                pass
-            try:
-                prize.fixed_discount_amount = float(request.POST.get('fixed_discount_amount', prize.fixed_discount_amount))
-            except (ValueError, TypeError):
-                pass
-            prize.coupon_text = request.POST.get('coupon_text', prize.coupon_text)
-            try:
-                prize.probability = float(request.POST.get('probability', prize.probability))
-            except (ValueError, TypeError):
-                pass
-            prize.display_color = request.POST.get('display_color', prize.display_color)
-            try:
-                qty = int(request.POST.get('remaining_quantity', prize.remaining_quantity))
+            if 'discount_percentage' in request.POST:
+                prize.discount_percentage = parse_decimal_safe(request.POST.get('discount_percentage'), default=prize.discount_percentage, min_val=Decimal('0.00'), max_val=Decimal('100.00'))
+            if 'fixed_discount_amount' in request.POST:
+                prize.fixed_discount_amount = parse_decimal_safe(request.POST.get('fixed_discount_amount'), default=prize.fixed_discount_amount, min_val=Decimal('0.00'), max_val=Decimal('99999999.99'))
+            prize.coupon_text = (request.POST.get('coupon_text') or prize.coupon_text).strip()
+            if 'probability' in request.POST:
+                prize.probability = parse_float_safe(request.POST.get('probability'), default=prize.probability, min_val=0.0, max_val=100.0)
+            prize.display_color = (request.POST.get('display_color') or prize.display_color).strip()
+            if 'remaining_quantity' in request.POST:
+                qty = parse_int_safe(request.POST.get('remaining_quantity'), default=prize.remaining_quantity, min_val=0)
                 prize.max_wins = qty
                 prize.remaining_quantity = qty
-            except (ValueError, TypeError):
-                pass
             prize.save()
             ActivityLog.objects.create(shop=shop, actor=request.user, action="Prize Updated", details=f"Prize {prize.name} updated in {campaign.name}")
             return redirect('prize_manager', campaign_id=campaign.id)
@@ -622,7 +733,7 @@ def prize_manager_view(request, campaign_id):
             return redirect('prize_manager', campaign_id=campaign.id)
 
     prizes = campaign.prizes.all()
-    total_probability = sum(p.probability for p in prizes)
+    total_probability = sum(parse_float_safe(getattr(p, 'probability', 0.0), default=0.0) for p in prizes)
 
     prizes_json = json.dumps([
         {'id': p.id, 'name': p.name, 'display_color': p.display_color, 'prize_type': p.prize_type}
@@ -659,8 +770,23 @@ def activity_logs_view(request):
     if not shop:
         return redirect('admin_dashboard')
 
-    logs = ActivityLog.objects.filter(shop=shop).select_related('actor').order_by('-timestamp')[:50]
-    return render(request, 'dashboard/activity_logs.html', {'shop': shop, 'logs': logs})
+    logs_qs = ActivityLog.objects.filter(shop=shop).select_related('actor').order_by('-timestamp')
+    paginator = Paginator(logs_qs, 25)
+    page_number = request.GET.get('page', 1)
+    try:
+        logs_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        logs_page = paginator.page(1)
+    except EmptyPage:
+        logs_page = paginator.page(paginator.num_pages)
+
+    return render(request, 'dashboard/activity_logs.html', {
+        'shop': shop,
+        'logs': logs_page,
+        'logs_page': logs_page,
+        'paginator': paginator,
+        'total_logs_count': logs_qs.count()
+    })
 
 
 @shop_access_required
@@ -950,21 +1076,22 @@ def export_coupons_csv(request):
     if not shop:
         return redirect('admin_dashboard')
 
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="Coupons_{shop.name}.csv"'
+    safe_shop_name = sanitize_filename(shop.name, prefix="Coupons")
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{safe_shop_name}.csv"'
 
     writer = csv.writer(response)
     writer.writerow(['Coupon Code', 'Prize Name', 'Status', 'Issued Date', 'Expiry Date', 'Redeemed At'])
 
-    # Single-query optimization with select_related
-    coupons = Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at')
+    # Stream query results using iterator to prevent excessive memory usage
+    coupons = Coupon.objects.filter(shop=shop).select_related('prize', 'redemption').order_by('-created_at').iterator(chunk_size=1000)
     for c in coupons:
-        redeemed_at_str = c.redemption.redeemed_at.strftime('%Y-%m-%d %H:%M') if hasattr(c, 'redemption') else ''
+        redeemed_at_str = c.redemption.redeemed_at.strftime('%Y-%m-%d %H:%M') if hasattr(c, 'redemption') and c.redemption else ''
         writer.writerow([
             c.code,
-            c.prize.name,
+            c.prize.name if c.prize else 'N/A',
             c.status,
-            c.created_at.strftime('%Y-%m-%d %H:%M'),
+            c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '',
             c.expires_at.strftime('%Y-%m-%d') if c.expires_at else '',
             redeemed_at_str
         ])
@@ -981,11 +1108,17 @@ def download_qr_view(request):
     if not shop:
         return redirect('admin_dashboard')
 
-    qr_obj = generate_shop_qr(shop, request.build_absolute_uri('/'))
-    if qr_obj and qr_obj.qr_image:
-        response = HttpResponse(qr_obj.qr_image.read(), content_type="image/png")
-        response['Content-Disposition'] = f'attachment; filename="QR_{shop.name}.png"'
-        return response
+    try:
+        qr_obj = generate_shop_qr(shop, request.build_absolute_uri('/'))
+        if qr_obj and qr_obj.qr_image:
+            safe_shop_name = sanitize_filename(shop.name, prefix="QR")
+            qr_data = qr_obj.qr_image.read()
+            response = HttpResponse(qr_data, content_type="image/png")
+            response['Content-Disposition'] = f'attachment; filename="{safe_shop_name}.png"'
+            return response
+    except Exception as e:
+        logger.error(f"Error reading QR image for download (shop={shop.id}): {e}", exc_info=True)
+
     return redirect('shop_dashboard')
 
 
@@ -1239,20 +1372,13 @@ def admin_plan_save_view(request):
     is_default = request.POST.get('is_default') == 'on'
     is_active = request.POST.get('is_active', 'on') == 'on'
 
-    try:
-        price_rupees_val = float(price_rupees)
-    except ValueError:
-        price_rupees_val = 499.0
-
-    try:
-        trial_days_val = int(trial_days)
-    except ValueError:
-        trial_days_val = 0
-
-    try:
-        billing_days_val = int(billing_period_days)
-    except ValueError:
-        billing_days_val = 30
+    price_rupees_val = parse_decimal_safe(price_rupees, default='499.00', min_val=Decimal('0.00'), max_val=Decimal('99999999.99'))
+    trial_days_val = parse_int_safe(trial_days, default=0, min_val=0)
+    billing_days_val = parse_int_safe(billing_period_days, default=30, min_val=1)
+    max_campaigns_val = parse_int_safe(max_campaigns, default=5, min_val=1)
+    max_active_campaigns_val = parse_int_safe(max_active_campaigns, default=1, min_val=1)
+    max_prizes_val = parse_int_safe(max_prizes, default=8, min_val=1)
+    max_spins_val = parse_int_safe(max_spins, default=5000, min_val=1)
 
     if not billing_cycle:
         if billing_days_val == 365:
@@ -1280,10 +1406,10 @@ def admin_plan_save_view(request):
         plan.trial_days = trial_days_val
         plan.price_display = plan.formatted_price()
         plan.description = description
-        plan.max_campaigns = int(max_campaigns)
-        plan.max_active_campaigns = int(max_active_campaigns)
-        plan.max_prizes_per_campaign = int(max_prizes)
-        plan.max_spins_per_month = int(max_spins)
+        plan.max_campaigns = max_campaigns_val
+        plan.max_active_campaigns = max_active_campaigns_val
+        plan.max_prizes_per_campaign = max_prizes_val
+        plan.max_spins_per_month = max_spins_val
         plan.is_default = is_default
         plan.is_active = is_active
         plan.save()
@@ -1304,13 +1430,15 @@ def admin_plan_save_view(request):
             billing_period_days=billing_days_val,
             trial_days=trial_days_val,
             description=description,
-            max_campaigns=int(max_campaigns),
-            max_active_campaigns=int(max_active_campaigns),
-            max_prizes_per_campaign=int(max_prizes),
-            max_spins_per_month=int(max_spins),
+            max_campaigns=max_campaigns_val,
+            max_active_campaigns=max_active_campaigns_val,
+            max_prizes_per_campaign=max_prizes_val,
+            max_spins_per_month=max_spins_val,
             is_default=is_default,
             is_active=is_active
         )
+        plan.price_display = plan.formatted_price()
+        plan.save()
         plan.price_display = plan.formatted_price()
         plan.save()
 
@@ -1963,24 +2091,24 @@ def onboarding_view(request):
 
                     if not prizes_data:
                         prizes_data = [
-                            {'name': '10% OFF Bill', 'prize_type': 'percentage', 'discount_percentage': 10.0, 'fixed_discount_amount': 0.0, 'coupon_text': '10% off your purchase', 'probability': 40.0, 'remaining_quantity': 200, 'display_color': branding.primary_color},
-                            {'name': f'Flat {currency_symbol}100 OFF', 'prize_type': 'fixed', 'discount_percentage': 0.0, 'fixed_discount_amount': 100.0, 'coupon_text': f'{currency_symbol}100 discount on your bill', 'probability': 25.0, 'remaining_quantity': 100, 'display_color': branding.accent_color},
-                            {'name': 'Complimentary Gift', 'prize_type': 'freebie', 'discount_percentage': 0.0, 'fixed_discount_amount': 0.0, 'coupon_text': 'Free surprise gift with order', 'probability': 15.0, 'remaining_quantity': 50, 'display_color': branding.secondary_color},
-                            {'name': 'Better Luck Next Time', 'prize_type': 'no_win', 'discount_percentage': 0.0, 'fixed_discount_amount': 0.0, 'coupon_text': 'Thank you for playing', 'probability': 20.0, 'remaining_quantity': 500, 'display_color': '#64748b'},
+                            {'name': '10% OFF Bill', 'prize_type': 'percentage', 'discount_percentage': Decimal('10.00'), 'fixed_discount_amount': Decimal('0.00'), 'coupon_text': '10% off your purchase', 'probability': 40.0, 'remaining_quantity': 200, 'display_color': branding.primary_color},
+                            {'name': f'Flat {currency_symbol}100 OFF', 'prize_type': 'fixed', 'discount_percentage': Decimal('0.00'), 'fixed_discount_amount': Decimal('100.00'), 'coupon_text': f'{currency_symbol}100 discount on your bill', 'probability': 25.0, 'remaining_quantity': 100, 'display_color': branding.accent_color},
+                            {'name': 'Complimentary Gift', 'prize_type': 'freebie', 'discount_percentage': Decimal('0.00'), 'fixed_discount_amount': Decimal('0.00'), 'coupon_text': 'Free surprise gift with order', 'probability': 15.0, 'remaining_quantity': 50, 'display_color': branding.secondary_color},
+                            {'name': 'Better Luck Next Time', 'prize_type': 'no_win', 'discount_percentage': Decimal('0.00'), 'fixed_discount_amount': Decimal('0.00'), 'coupon_text': 'Thank you for playing', 'probability': 20.0, 'remaining_quantity': 500, 'display_color': '#64748b'},
                         ]
 
                     for p in prizes_data:
                         Prize.objects.create(
                             campaign=camp,
-                            name=p.get('name', 'Special Reward'),
+                            name=str(p.get('name', 'Special Reward')).strip(),
                             prize_type=p.get('prize_type', 'percentage'),
-                            discount_percentage=float(p.get('discount_percentage', 0.0) or 0.0),
-                            fixed_discount_amount=float(p.get('fixed_discount_amount', 0.0) or 0.0),
-                            coupon_text=p.get('coupon_text', '') or f"Reward: {p.get('name')}",
-                            probability=float(p.get('probability', 25.0) or 25.0),
-                            remaining_quantity=int(p.get('remaining_quantity', 200) or 200),
-                            max_wins=int(p.get('max_wins', p.get('remaining_quantity', 200)) or 200),
-                            display_color=p.get('display_color', branding.primary_color)
+                            discount_percentage=parse_decimal_safe(p.get('discount_percentage'), default='0.00', min_val=Decimal('0.00'), max_val=Decimal('100.00')),
+                            fixed_discount_amount=parse_decimal_safe(p.get('fixed_discount_amount'), default='0.00', min_val=Decimal('0.00'), max_val=Decimal('99999999.99')),
+                            coupon_text=str(p.get('coupon_text', '') or f"Reward: {p.get('name')}").strip(),
+                            probability=parse_float_safe(p.get('probability'), default=25.0, min_val=0.0, max_val=100.0),
+                            remaining_quantity=parse_int_safe(p.get('remaining_quantity'), default=200, min_val=0),
+                            max_wins=parse_int_safe(p.get('max_wins', p.get('remaining_quantity', 200)), default=200, min_val=0),
+                            display_color=str(p.get('display_color', branding.primary_color)).strip()
                         )
 
                     # 7. Generate Permanent High-DPI QR Code
@@ -2291,19 +2419,32 @@ def account_settings_view(request):
 @shop_access_required
 def notifications_view(request):
     shop = request.user.shop
-    notifications = Notification.objects.filter(shop=shop).order_by('-created_at') if shop else []
+    notifications_qs = Notification.objects.filter(shop=shop).order_by('-created_at') if shop else Notification.objects.none()
+    paginator = Paginator(notifications_qs, 20)
+    page_number = request.GET.get('page', 1)
+    try:
+        notifications_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        notifications_page = paginator.page(1)
+    except EmptyPage:
+        notifications_page = paginator.page(paginator.num_pages)
+
     return render(request, 'dashboard/notifications.html', {
         'shop': shop,
-        'notifications': notifications
+        'notifications': notifications_page,
+        'notifications_page': notifications_page,
+        'paginator': paginator,
+        'total_notifications_count': notifications_qs.count()
     })
 
 
+@require_POST
 @shop_access_required
 def mark_notification_read_view(request, notification_id):
     shop = request.user.shop
     notif = get_object_or_404(Notification, id=notification_id, shop=shop)
     notif.is_read = True
-    notif.save()
+    notif.save(update_fields=['is_read'])
     return JsonResponse({'status': 'success'})
 
 
@@ -2444,16 +2585,28 @@ def health_check_view(request):
 
 
 def custom_400_view(request, exception=None):
-    return render(request, 'errors/400.html', status=400)
+    ctx = get_error_context(request, 400, default_msg="Bad Request")
+    if ctx.get('is_ajax'):
+        return JsonResponse({'status': 'error', 'code': 400, 'message': 'Bad Request: The server could not understand your request.'}, status=400)
+    return render(request, 'errors/400.html', ctx, status=400)
 
 
 def custom_403_view(request, exception=None):
-    return render(request, 'errors/403.html', status=403)
+    ctx = get_error_context(request, 403, default_msg="Access Denied")
+    if ctx.get('is_ajax'):
+        return JsonResponse({'status': 'error', 'code': 403, 'message': 'Access Denied: You do not have permission to access this resource.'}, status=403)
+    return render(request, 'errors/403.html', ctx, status=403)
 
 
 def custom_404_view(request, exception=None):
-    return render(request, 'errors/404.html', status=404)
+    ctx = get_error_context(request, 404, default_msg="Resource Not Found")
+    if ctx.get('is_ajax'):
+        return JsonResponse({'status': 'error', 'code': 404, 'message': 'Not Found: The requested resource does not exist.'}, status=404)
+    return render(request, 'errors/404.html', ctx, status=404)
 
 
 def custom_500_view(request):
-    return render(request, 'errors/500.html', status=500)
+    ctx = get_error_context(request, 500, default_msg="Internal Server Error")
+    if ctx.get('is_ajax'):
+        return JsonResponse({'status': 'error', 'code': 500, 'message': 'Internal Server Error: A temporary server error occurred. Please try again later.'}, status=500)
+    return render(request, 'errors/500.html', ctx, status=500)

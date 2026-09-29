@@ -68,6 +68,11 @@ class ThemeEngine {
         let count = this.isMobile ? 18 : 45;
         if (this.intensity === 'subtle') count = Math.floor(count * 0.4);
         if (this.intensity === 'dynamic') count = Math.floor(count * 1.5);
+        if (this.theme === 'kurti') {
+            count = this.isMobile ? 18 : 28;
+            if (this.intensity === 'subtle') count = 15;
+            if (this.intensity === 'dynamic') count = 48;
+        }
 
         const w = this.canvas ? this.canvas.width : window.innerWidth;
         const h = this.canvas ? this.canvas.height : window.innerHeight;
@@ -121,6 +126,16 @@ class ThemeEngine {
             this.coffeeCup = null;
         }
 
+        // Special Atmosphere: Kurti Boutique Soft Rose/Plum Gradient Lighting Aura
+        if (this.theme === 'kurti') {
+            this.kurtiAtmosphere = {
+                phase: 0,
+                glowRadius: Math.min(w, h) * (this.isMobile ? 0.6 : 0.45)
+            };
+        } else {
+            this.kurtiAtmosphere = null;
+        }
+
         for (let i = 0; i < count; i++) {
             this.particles.push(this.generateParticle(w, h));
         }
@@ -140,6 +155,30 @@ class ThemeEngine {
         };
 
         switch (this.theme) {
+            case 'kurti': {
+                const kurtiTypes = ['rose_petal', 'jasmine_petal', 'zari_thread', 'sequin_disc', 'embroidery_spark'];
+                const kType = kurtiTypes[Math.floor(Math.random() * kurtiTypes.length)];
+                return {
+                    ...base,
+                    type: kType,
+                    color: kType === 'rose_petal' ? ['#B75D75', '#6B1838', '#E898AC', '#D4728C'][Math.floor(Math.random() * 4)] :
+                           (kType === 'jasmine_petal' ? ['#FFF8EE', '#FFFFFF', '#FAF0E4'][Math.floor(Math.random() * 3)] :
+                           (kType === 'zari_thread' ? ['#C9A45C', '#E2BF7A', '#B58D46'][Math.floor(Math.random() * 3)] :
+                           (kType === 'sequin_disc' ? ['#C9A45C', '#FFF8EE', '#B75D75', '#6B1838'][Math.floor(Math.random() * 4)] :
+                           '#C9A45C'))),
+                    size: kType === 'rose_petal' ? (Math.random() * 6 + 3.5) :
+                          (kType === 'jasmine_petal' ? (Math.random() * 5 + 2.5) :
+                          (kType === 'zari_thread' ? (Math.random() * 8 + 4) :
+                          (kType === 'sequin_disc' ? (Math.random() * 3 + 1.8) :
+                          (Math.random() * 3 + 1.2)))),
+                    speedY: kType === 'rose_petal' || kType === 'jasmine_petal' ? (Math.random() * 0.45 + 0.15) : ((Math.random() - 0.5) * 0.3),
+                    speedX: (Math.random() - 0.5) * 0.4,
+                    spinSpeed: (Math.random() - 0.5) * 0.02,
+                    swayAngle: Math.random() * Math.PI * 2,
+                    swaySpeed: Math.random() * 0.02 + 0.01
+                };
+            }
+
             case 'luxury_black': {
                 const geomTypes = ['cube_edge', 'diamond_facet', 'champagne_bokeh', 'light_beam'];
                 const geomType = geomTypes[Math.floor(Math.random() * geomTypes.length)];
@@ -522,6 +561,8 @@ class ThemeEngine {
                 return ['#06b6d4', '#a855f7', '#f43f5e', '#38bdf8', '#3b82f6'][Math.floor(Math.random() * 5)];
             case 'coffee':
                 return ['#fcd34d', '#d97706', '#f59e0b', '#78350f', '#ffd700', '#ffffff', '#451a03'][Math.floor(Math.random() * 7)];
+            case 'kurti':
+                return ['#6B1838', '#B75D75', '#C9A45C', '#FFF8EE', '#4A2038', '#E2BF7A'][Math.floor(Math.random() * 6)];
             default:
                 return ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#ffd700'][Math.floor(Math.random() * 5)];
         }
@@ -670,6 +711,19 @@ class ThemeEngine {
                     this.ctx.shadowBlur = 0;
                 }
                 this.ctx.restore();
+            }
+
+            // Render Kurti Theme Soft Rose/Plum Gradient Lighting Aura
+            if (this.kurtiAtmosphere) {
+                const ka = this.kurtiAtmosphere;
+                ka.phase += 0.015;
+                const glowR = ka.glowRadius + Math.sin(ka.phase) * 15;
+                const aura = this.ctx.createRadialGradient(w * 0.5, h * 0.32, 10, w * 0.5, h * 0.32, glowR);
+                aura.addColorStop(0, 'rgba(183, 93, 117, 0.12)');
+                aura.addColorStop(0.5, 'rgba(107, 24, 56, 0.07)');
+                aura.addColorStop(1, 'rgba(255, 248, 238, 0)');
+                this.ctx.fillStyle = aura;
+                this.ctx.fillRect(0, 0, w, h);
             }
 
             // Render Aurora Blobs
@@ -846,6 +900,83 @@ class ThemeEngine {
                     this.ctx.arc(-fs * 0.5, 0, 1.2, 0, Math.PI * 2);
                     this.ctx.arc(0, 0, 1.2, 0, Math.PI * 2);
                     this.ctx.arc(fs * 0.5, 0, 1.2, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                } else if (p.type === 'rose_petal') {
+                    // Soft Curved Silk Rose Petal
+                    const s = p.size;
+                    if (p.swayAngle !== undefined) {
+                        p.swayAngle += p.swaySpeed || 0.02;
+                        p.x += Math.sin(p.swayAngle) * 0.35;
+                    }
+                    const rGrad = this.ctx.createLinearGradient(0, -s, 0, s);
+                    rGrad.addColorStop(0, p.color);
+                    rGrad.addColorStop(0.6, '#B75D75');
+                    rGrad.addColorStop(1, '#FFF8EE');
+                    this.ctx.fillStyle = rGrad;
+                    this.ctx.shadowBlur = 6;
+                    this.ctx.shadowColor = 'rgba(107, 24, 56, 0.35)';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, -s);
+                    this.ctx.bezierCurveTo(s * 0.7, -s * 0.3, s * 0.6, s * 0.6, 0, s);
+                    this.ctx.bezierCurveTo(-s * 0.6, s * 0.6, -s * 0.7, -s * 0.3, 0, -s);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+
+                } else if (p.type === 'jasmine_petal') {
+                    // Delicate Warm Ivory Jasmine Petal
+                    const js = p.size;
+                    if (p.swayAngle !== undefined) {
+                        p.swayAngle += p.swaySpeed || 0.02;
+                        p.x += Math.sin(p.swayAngle) * 0.3;
+                    }
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.shadowBlur = 5;
+                    this.ctx.shadowColor = 'rgba(201, 164, 92, 0.25)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 0, js * 0.45, js, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.strokeStyle = 'rgba(201, 164, 92, 0.4)';
+                    this.ctx.lineWidth = 0.8;
+                    this.ctx.stroke();
+
+                } else if (p.type === 'zari_thread') {
+                    // Antique Gold Zari Embroidery Thread Curve
+                    const ts = p.size;
+                    this.ctx.strokeStyle = p.color || '#C9A45C';
+                    this.ctx.lineWidth = 1.2;
+                    this.ctx.shadowBlur = 6;
+                    this.ctx.shadowColor = 'rgba(201, 164, 92, 0.5)';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-ts * 0.8, -ts * 0.4);
+                    this.ctx.quadraticCurveTo(0, ts * 0.6, ts * 0.8, -ts * 0.4);
+                    this.ctx.stroke();
+
+                } else if (p.type === 'sequin_disc') {
+                    // 3D Mirror-work Sequin Disc with Center Hole
+                    const sq = p.size;
+                    const sqGrad = this.ctx.createRadialGradient(-sq * 0.2, -sq * 0.2, 0.5, 0, 0, sq);
+                    sqGrad.addColorStop(0, '#FFFFFF');
+                    sqGrad.addColorStop(0.4, p.color || '#C9A45C');
+                    sqGrad.addColorStop(1, '#6B1838');
+                    this.ctx.fillStyle = sqGrad;
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = 'rgba(201, 164, 92, 0.45)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, sq, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.fillStyle = 'rgba(48, 33, 38, 0.7)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, sq * 0.25, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                } else if (p.type === 'embroidery_spark') {
+                    const es = p.size;
+                    this.ctx.fillStyle = '#C9A45C';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = '#C9A45C';
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, es * 0.75, 0, Math.PI * 2);
                     this.ctx.fill();
 
                 } else if (p.type === 'cube_edge') {

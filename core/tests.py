@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from core.models import User, Shop, ShopBranding, Campaign, Prize, SpinResult, Coupon, CouponRedemption, QRScanLog, ActivityLog, Plan, Subscription, Notification, CalendarEvent, ThemeAuditLog
 from core.qr import generate_shop_qr, generate_coupon_qr
+from core.services.theme_resolver import adapt_theme_to_category, get_active_shop_theme
 
 class SpinPlusCompleteAdminTestCase(TestCase):
     def setUp(self):
@@ -591,6 +592,47 @@ class SpinPlusCompleteAdminTestCase(TestCase):
         self.assertEqual(self.shop_a.branding.theme, 'luxury_black')
         self.assertEqual(self.shop_a.branding.primary_color, '#f3e5ab')
         self.assertEqual(self.shop_a.branding.background_color, '#050507')
+
+    def test_kurti_theme_full_lifecycle(self):
+        """Test Kurti Theme: defaults, category auto-adaptation, persistence and customer experience rendering"""
+        defaults = ShopBranding.get_theme_defaults('kurti')
+        self.assertEqual(defaults['primary_color'], '#6B1838')
+        self.assertEqual(defaults['secondary_color'], '#B75D75')
+        self.assertEqual(defaults['accent_color'], '#C9A45C')
+        self.assertEqual(defaults['background_color'], '#FFF8EE')
+        self.assertEqual(defaults['text_color'], '#302126')
+        self.assertEqual(defaults['font_family'], 'playfair')
+
+        # Test Category Auto-Adaptation
+        self.assertEqual(adapt_theme_to_category('royal', 'Designer Kurti Boutique'), 'kurti')
+        self.assertEqual(adapt_theme_to_category('default', 'Ethnic Wear & Bridal Sarees'), 'kurti')
+        self.assertEqual(adapt_theme_to_category('minimal', 'Women Fashion Clothing'), 'kurti')
+
+        # Test Theme Persistence via Dashboard Branding
+        self.client.login(username='owner_a', password='password123')
+        res_post = self.client.post('/dashboard/shop/branding/', {
+            'action': 'save',
+            'theme': 'kurti',
+            'font_family': 'playfair',
+            'primary_color': '#6B1838',
+            'secondary_color': '#B75D75',
+            'accent_color': '#C9A45C',
+            'background_color': '#FFF8EE',
+            'text_color': '#302126',
+            'spin_button_text': 'SPIN & UNLOCK STYLE'
+        })
+        self.assertEqual(res_post.status_code, 302)
+        self.shop_a.branding.refresh_from_db()
+        self.assertEqual(self.shop_a.branding.theme, 'kurti')
+        self.assertEqual(self.shop_a.branding.primary_color, '#6B1838')
+
+        # Test Customer Landing View with Kurti Theme
+        res_cust = self.client.get(f'/s/{self.shop_a.public_token}/')
+        self.assertEqual(res_cust.status_code, 200)
+        self.assertEqual(res_cust.context['active_theme'], 'kurti')
+        self.assertContains(res_cust, 'data-theme="kurti"')
+        self.assertContains(res_cust, 'DESIGNER ETHNIC COLLECTION')
+        self.assertContains(res_cust, 'kurti-hero-visual')
 
     def test_shop_resolve_theme_method(self):
         """Test Theme 3.0: Shop.resolve_theme method priority"""

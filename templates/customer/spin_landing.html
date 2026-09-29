@@ -275,7 +275,9 @@
         <h1 class="poster-main-title">SPIN & WIN</h1>
 
         <div class="poster-theme-subtitle">
-            {% if 'sports' in active_theme %}
+            {% if 'kurti' in active_theme or 'ethnic' in active_theme %}
+            Discover Elegance • Spin Your Style
+            {% elif 'sports' in active_theme %}
             Gear Up & Win
             {% elif 'jewellery' in active_theme or 'royal' in active_theme %}
             Win Exclusive Jewellery
@@ -316,6 +318,8 @@
 
         {% if theme_resolution.is_pre_festival %}
         <span class="badge badge-janmashtami">JANMASHTAMI COMING SOON ({{ theme_resolution.pre_festival_days_left }}d)</span>
+        {% elif 'kurti' in active_theme or 'ethnic' in active_theme %}
+        <span class="badge badge-kurti">DESIGNER ETHNIC COLLECTION • EXCLUSIVE REWARDS</span>
         {% elif 'sports' in active_theme %}
         <span class="badge badge-sports">SPORTY RED • ATHLETIC REWARDS</span>
         {% elif 'jewellery' in active_theme or 'royal' in active_theme %}
@@ -353,11 +357,62 @@
         {% endif %}
     </div>
 
+    {% if 'kurti' in active_theme %}
+    <!-- Kurti Hero Visual: Editorial Handcrafted Kurti Composition -->
+    <div class="kurti-hero-visual" aria-hidden="true">
+        <svg viewBox="0 0 200 240" width="160" height="190" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 8px 20px rgba(107, 24, 56, 0.22));">
+            <defs>
+                <linearGradient id="kurtiSilk" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#8A244A"/>
+                    <stop offset="45%" stop-color="#6B1838"/>
+                    <stop offset="85%" stop-color="#4A2038"/>
+                </linearGradient>
+                <linearGradient id="kurtiGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#FFF8EE"/>
+                    <stop offset="40%" stop-color="#C9A45C"/>
+                    <stop offset="100%" stop-color="#946B00"/>
+                </linearGradient>
+                <linearGradient id="kurtiFold" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#4A2038" stop-opacity="0.5"/>
+                    <stop offset="50%" stop-color="#FFF8EE" stop-opacity="0.15"/>
+                    <stop offset="100%" stop-color="#4A2038" stop-opacity="0.5"/>
+                </linearGradient>
+            </defs>
+            <!-- Sleeves -->
+            <path d="M70 42 L32 85 C30 88 34 94 40 91 L66 65 Z" fill="url(#kurtiSilk)"/>
+            <path d="M130 42 L168 85 C170 88 166 94 160 91 L134 65 Z" fill="url(#kurtiSilk)"/>
+            <!-- Sleeve Gold Gota Borders -->
+            <path d="M32 85 L40 91" stroke="url(#kurtiGold)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M168 85 L160 91" stroke="url(#kurtiGold)" stroke-width="3" stroke-linecap="round"/>
+            <!-- Main Kurti Tunic Body -->
+            <path d="M70 40 L64 100 Q60 145 48 215 Q100 225 152 215 Q140 145 136 100 L130 40 Q100 48 70 40 Z" fill="url(#kurtiSilk)"/>
+            <!-- Subtle Fabric Drape Folds -->
+            <path d="M85 70 Q82 140 76 218" stroke="url(#kurtiFold)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M115 70 Q118 140 124 218" stroke="url(#kurtiFold)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M100 68 L100 220" stroke="url(#kurtiGold)" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>
+            <!-- Embroidered Neckline (Keyhole & Zari) -->
+            <path d="M82 42 C86 64 114 64 118 42" stroke="url(#kurtiGold)" stroke-width="3" fill="none"/>
+            <path d="M100 64 L100 105" stroke="url(#kurtiGold)" stroke-width="2.5"/>
+            <!-- Zari Buttons / Mirror Studs along Placket -->
+            <circle cx="100" cy="74" r="2.5" fill="#FFF8EE" stroke="#C9A45C" stroke-width="1"/>
+            <circle cx="100" cy="86" r="2.5" fill="#FFF8EE" stroke="#C9A45C" stroke-width="1"/>
+            <circle cx="100" cy="98" r="2.5" fill="#FFF8EE" stroke="#C9A45C" stroke-width="1"/>
+            <!-- Paisley / Floral Buta Embroideries on Hem -->
+            <circle cx="75" cy="180" r="3.5" fill="#C9A45C" opacity="0.85"/>
+            <circle cx="100" cy="175" r="4" fill="#C9A45C" opacity="0.85"/>
+            <circle cx="125" cy="180" r="3.5" fill="#C9A45C" opacity="0.85"/>
+            <!-- Gota Patti Bottom Hem Border -->
+            <path d="M48 215 Q100 225 152 215" stroke="url(#kurtiGold)" stroke-width="5" fill="none"/>
+            <path d="M49 210 Q100 220 151 210" stroke="#FFF8EE" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+        </svg>
+    </div>
+    {% endif %}
+
     {% if existing_coupon %}
     <!-- Active / Previously Spun Coupon -->
     <div class="win-result-card">
         <h2 style="font-size:1.3rem;font-weight:800;margin:0 0 6px 0;">
-            {% if 'janmashtami' in active_theme %}Your Janmashtami Reward{% elif 'diwali' in active_theme %}Your Diwali Reward{% elif 'coffee' in active_theme %}Your Café Reward{% else %}Your Active Coupon{% endif %}
+            {% if 'kurti' in active_theme %}Your Boutique Offer{% elif 'janmashtami' in active_theme %}Your Janmashtami Reward{% elif 'diwali' in active_theme %}Your Diwali Reward{% elif 'coffee' in active_theme %}Your Café Reward{% else %}Your Active Coupon{% endif %}
         </h2>
         <p style="font-size:0.82rem;color:var(--text-secondary, #94a3b8);margin:0;">You have already spun for this offer!</p>
 
@@ -432,7 +487,7 @@
                 <i data-lucide="sparkles" style="width:36px;height:36px;"></i>
             </div>
             <h2 style="font-size:1.4rem;font-weight:800;margin:0 0 4px 0;color:var(--text-primary, #ffffff);">
-                {% if 'janmashtami' in active_theme %}KRISHNA'S BLESSING UNLOCKED!{% elif 'diwali' in active_theme %}DIWALI BLESSING UNLOCKED!{% elif 'coffee' in active_theme %}BARISTA REWARD UNLOCKED!{% else %}REWARD UNLOCKED!{% endif %}
+                {% if 'kurti' in active_theme %}EXCLUSIVE BOUTIQUE OFFER UNLOCKED!{% elif 'janmashtami' in active_theme %}KRISHNA'S BLESSING UNLOCKED!{% elif 'diwali' in active_theme %}DIWALI BLESSING UNLOCKED!{% elif 'coffee' in active_theme %}BARISTA REWARD UNLOCKED!{% else %}REWARD UNLOCKED!{% endif %}
             </h2>
             <p style="font-size:0.85rem;color:var(--text-secondary, #94a3b8);margin:0 0 10px 0;">Exclusive reward for {{ shop.name }}</p>
 

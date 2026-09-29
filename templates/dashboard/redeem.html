@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Express Redemption Terminal — {{ shop.name }}{% endblock %}
 
 {% block extra_css %}
@@ -31,6 +32,41 @@
         box-shadow: var(--shadow-gold);
         outline: none;
     }
+    .scanner-laser {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #ef4444, #f59e0b, #ef4444, transparent);
+        box-shadow: 0 0 10px #ef4444, 0 0 4px #f59e0b;
+        animation: scanLaserMotion 2s ease-in-out infinite;
+    }
+    @keyframes scanLaserMotion {
+        0% { top: 8%; opacity: 0.6; }
+        50% { top: 88%; opacity: 1; }
+        100% { top: 8%; opacity: 0.6; }
+    }
+    .scanner-box {
+        position: relative;
+        width: 86%;
+        max-width: 440px;
+        height: 140px;
+        border: 2px solid rgba(245, 158, 11, 0.85);
+        border-radius: 12px;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62), inset 0 0 12px rgba(245, 158, 11, 0.25);
+        overflow: hidden;
+    }
+    .scanner-corner {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-color: #f59e0b;
+        border-style: solid;
+    }
+    .scanner-corner-tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-top-left-radius: 10px; }
+    .scanner-corner-tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-top-right-radius: 10px; }
+    .scanner-corner-bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-bottom-left-radius: 10px; }
+    .scanner-corner-br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-bottom-right-radius: 10px; }
 </style>
 {% endblock %}
 
@@ -85,10 +121,34 @@
             </div>
         {% else %}
             <!-- Camera Video Scanner Container -->
-            <div id="cameraStreamContainer" style="display:none;margin:16px 0;position:relative;border-radius:var(--radius-md);overflow:hidden;border:2px solid var(--color-primary);">
-                <video id="videoElement" autoplay playsinline style="width:100%;height:240px;object-fit:cover;background:#000;"></video>
-                <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;">
-                    <button type="button" onclick="stopCamera()" class="btn-secondary" style="font-size:0.78rem;padding:4px 12px;">
+            <div id="cameraStreamContainer" style="display:none;margin:16px 0;position:relative;border-radius:var(--radius-md);overflow:hidden;border:2px solid var(--color-primary);background:#000;">
+                <video id="videoElement" autoplay playsinline muted style="width:100%;height:300px;object-fit:cover;background:#000;display:block;cursor:crosshair;" onclick="tapToFocus(event)"></video>
+
+                <!-- Viewfinder Reticle Overlay for 1D Barcode alignment -->
+                <div id="scannerOverlay" style="position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <div class="scanner-box">
+                        <div class="scanner-corner scanner-corner-tl"></div>
+                        <div class="scanner-corner scanner-corner-tr"></div>
+                        <div class="scanner-corner scanner-corner-bl"></div>
+                        <div class="scanner-corner scanner-corner-br"></div>
+                        <div class="scanner-laser"></div>
+                        <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:0.68rem;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:1px;text-transform:uppercase;">
+                            Align 1D Barcode Inside
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Badge at Top -->
+                <div id="scannerStatusBadge" style="position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.85);border:1px solid rgba(245,158,11,0.5);color:#fef08a;font-size:0.75rem;font-weight:700;padding:4px 14px;border-radius:20px;backdrop-filter:blur(4px);z-index:10;white-space:nowrap;">
+                    Scanning for 1D Barcode...
+                </div>
+
+                <!-- Scanner Controls Bar at Bottom -->
+                <div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:0 12px;z-index:10;">
+                    <button type="button" id="torchBtn" onclick="toggleTorch()" class="btn-secondary" style="font-size:0.78rem;padding:6px 14px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.25);color:#fff;backdrop-filter:blur(4px);display:none;">
+                        🔦 Torch
+                    </button>
+                    <button type="button" onclick="stopCamera()" class="btn-secondary" style="font-size:0.78rem;padding:6px 14px;background:rgba(220,38,38,0.85);border:1px solid rgba(239,68,68,0.5);color:#fff;backdrop-filter:blur(4px);">
                         ⏹️ Stop Camera
                     </button>
                 </div>
@@ -146,36 +206,369 @@
     </div>
 </div>
 
+<script src="{% static 'js/zxing.min.js' %}"></script>
 <script>
-    let mediaStream = null;
+    if (!window.ZXing) {
+        document.write('<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"><\/script>');
+    }
+</script>
 
-    function startCamera() {
+<script>
+    // State management for 1D barcode scanner
+    let mediaStream = null;
+    let videoTrack = null;
+    let zxingReader = null;
+    let nativeDetector = null;
+    let scanIntervalTimer = null;
+    let isScanning = false;
+    let isProcessingScan = false;
+    let isTorchOn = false;
+    let offscreenCanvas = null;
+    let offscreenCtx = null;
+
+    // Supported 1D Barcode Formats Configuration
+    const SUPPORTED_1D_FORMATS_NATIVE = [
+        'code_128', 'code_39', 'code_93', 'codabar',
+        'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e'
+    ];
+
+    function getBarcodeFormatName(fmtCode) {
+        if (!window.ZXing || !window.ZXing.BarcodeFormat) return String(fmtCode || '1D Barcode');
+        const bf = window.ZXing.BarcodeFormat;
+        for (const k in bf) {
+            if (bf[k] === fmtCode) return k.replace('_', ' ');
+        }
+        return '1D Barcode';
+    }
+
+    function initZXingReader() {
+        if (zxingReader || !window.ZXing) return zxingReader;
+        try {
+            const hints = new Map();
+            const formats = [
+                ZXing.BarcodeFormat.CODE_128,
+                ZXing.BarcodeFormat.CODE_39,
+                ZXing.BarcodeFormat.CODE_93,
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.UPC_A,
+                ZXing.BarcodeFormat.UPC_E,
+                ZXing.BarcodeFormat.ITF,
+                ZXing.BarcodeFormat.CODABAR
+            ];
+            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            zxingReader = new ZXing.BrowserMultiFormatReader(hints, 90);
+            console.log("[1D Barcode Scanner] ZXing 1D engine initialized.");
+        } catch (e) {
+            console.warn("[1D Barcode Scanner] ZXing initialization warning:", e);
+        }
+        return zxingReader;
+    }
+
+    async function initNativeDetector() {
+        if (nativeDetector) return nativeDetector;
+        if ('BarcodeDetector' in window) {
+            try {
+                const supported = await BarcodeDetector.getSupportedFormats();
+                const available = SUPPORTED_1D_FORMATS_NATIVE.filter(f => supported.includes(f));
+                if (available.length > 0) {
+                    nativeDetector = new BarcodeDetector({ formats: available });
+                    console.log("[1D Barcode Scanner] Native BarcodeDetector engine active with formats:", available);
+                    return nativeDetector;
+                }
+            } catch (e) {
+                console.warn("[1D Barcode Scanner] Native BarcodeDetector query warning:", e);
+            }
+        }
+        return null;
+    }
+
+    async function startCamera() {
+        if (isScanning) return;
+
         const container = document.getElementById('cameraStreamContainer');
         const video = document.getElementById('videoElement');
+        const statusBadge = document.getElementById('scannerStatusBadge');
+        const torchBtn = document.getElementById('torchBtn');
 
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => {
-                mediaStream = stream;
-                video.srcObject = stream;
-                container.style.display = 'block';
-                showToast("Camera scanner activated", "info");
-            })
-            .catch(err => {
-                showToast("Unable to access camera", "warning");
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast("Camera scanning is not supported by this browser. Please ensure HTTPS or modern browser.", "warning");
+            return;
+        }
+
+        try {
+            isProcessingScan = false;
+            container.style.display = 'block';
+            if (statusBadge) {
+                statusBadge.innerText = "Initializing 1D Scanner...";
+                statusBadge.style.borderColor = "rgba(245,158,11,0.5)";
+                statusBadge.style.color = "#fef08a";
+            }
+
+            // High-resolution constraints tailored for narrow vertical 1D barcode lines
+            // Request ideal 720p/1080p rear camera with continuous autofocus
+            const constraints = {
+                audio: false,
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1280, min: 640 },
+                    height: { ideal: 720, min: 480 },
+                    advanced: [{ focusMode: "continuous" }]
+                }
+            };
+
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (strictErr) {
+                console.warn("[1D Barcode Scanner] Fallback to basic environment constraints:", strictErr);
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: { facingMode: "environment" }
+                });
+            }
+
+            mediaStream = stream;
+            video.srcObject = stream;
+            await video.play();
+
+            videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack) {
+                const caps = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+                
+                // Configure continuous autofocus if supported by camera hardware
+                if (caps.focusMode && caps.focusMode.includes('continuous')) {
+                    try {
+                        await videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+                    } catch (fErr) {}
+                }
+
+                // Show torch toggle if device supports flashlight
+                if (caps.torch) {
+                    if (torchBtn) {
+                        torchBtn.style.display = 'inline-flex';
+                        isTorchOn = false;
+                        torchBtn.innerHTML = '🔦 Torch';
+                        torchBtn.style.color = '#ffffff';
+                    }
+                } else if (torchBtn) {
+                    torchBtn.style.display = 'none';
+                }
+            }
+
+            isScanning = true;
+            if (statusBadge) {
+                statusBadge.innerText = "Align 1D Barcode horizontally inside box";
+            }
+
+            // Initialize both engines for dual-engine resilience
+            initZXingReader();
+            await initNativeDetector();
+
+            // Prepare offscreen canvas for zero-lag frame decoding
+            if (!offscreenCanvas) {
+                offscreenCanvas = document.createElement('canvas');
+                offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+            }
+
+            // Launch frame analysis loop (~11 FPS / 90ms interval)
+            startFrameAnalysis(video);
+            showToast("Camera active — point at 1D barcode on coupon", "info");
+
+        } catch (err) {
+            console.error("[1D Barcode Scanner] Camera error:", err);
+            container.style.display = 'none';
+            isScanning = false;
+
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                showToast("Camera permission denied. Please allow camera access in your browser settings.", "warning");
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                showToast("No camera detected on this device.", "warning");
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                showToast("Camera is currently in use by another application.", "warning");
+            } else {
+                showToast("Unable to access camera: " + (err.message || "Unknown error"), "warning");
+            }
+        }
+    }
+
+    function startFrameAnalysis(video) {
+        if (scanIntervalTimer) clearInterval(scanIntervalTimer);
+
+        scanIntervalTimer = setInterval(async () => {
+            if (!isScanning || isProcessingScan) return;
+            if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || video.videoWidth === 0) return;
+
+            // Engine 1: Native BarcodeDetector (GPU/NPU Hardware accelerated)
+            if (nativeDetector) {
+                try {
+                    const barcodes = await nativeDetector.detect(video);
+                    if (barcodes && barcodes.length > 0) {
+                        const raw = String(barcodes[0].rawValue || '').trim();
+                        if (raw.length > 0) {
+                            handleBarcodeScanned(raw, barcodes[0].format || '1D Barcode');
+                            return;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            // Engine 2: ZXing MultiFormat 1D Engine (Universal fallback & orientation invariant)
+            if (zxingReader && window.ZXing) {
+                try {
+                    offscreenCanvas.width = video.videoWidth;
+                    offscreenCanvas.height = video.videoHeight;
+                    offscreenCtx.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
+                    const lumSource = new ZXing.HTMLCanvasElementLuminanceSource(offscreenCanvas);
+                    const bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lumSource));
+                    const result = zxingReader.decodeBitmap(bitmap);
+
+                    if (result && result.getText) {
+                        const text = String(result.getText() || '').trim();
+                        if (text.length > 0) {
+                            const fmtName = result.getBarcodeFormat ? getBarcodeFormatName(result.getBarcodeFormat()) : '1D Barcode';
+                            handleBarcodeScanned(text, fmtName);
+                            return;
+                        }
+                    }
+                } catch (zxErr) {
+                    // NotFoundException is thrown every frame when no barcode is in view; safely ignored
+                }
+            }
+        }, 90);
+    }
+
+    function handleBarcodeScanned(barcodeValue, formatName) {
+        // Prevent duplicate callbacks & race conditions
+        if (isProcessingScan) return;
+        isProcessingScan = true;
+
+        console.log(`[1D Barcode Scanner] SUCCESS: Decoded "${barcodeValue}" [${formatName}]`);
+
+        // Haptic feedback if supported by device
+        if (navigator.vibrate) {
+            try { navigator.vibrate(120); } catch (e) {}
+        }
+
+        // Update status badge UI
+        const statusBadge = document.getElementById('scannerStatusBadge');
+        if (statusBadge) {
+            statusBadge.innerText = `✓ Scanned: ${barcodeValue}`;
+            statusBadge.style.borderColor = "#10b981";
+            statusBadge.style.color = "#a7f3d0";
+        }
+
+        // Preserve exact string value (never parse as int, keep leading zeros)
+        const cleanCode = String(barcodeValue).trim();
+        const codeInput = document.getElementById('codeInput');
+        if (codeInput) {
+            codeInput.value = cleanCode;
+            codeInput.focus();
+        }
+
+        // Stop camera and release hardware resources immediately
+        stopCamera();
+        showToast(`Barcode Scanned (${formatName}): ${cleanCode}`, "success");
+
+        // Submit form after 280ms visual confirmation delay
+        const form = document.getElementById('redeemForm');
+        if (form) {
+            setTimeout(() => {
+                form.submit();
+            }, 280);
+        }
+    }
+
+    async function toggleTorch() {
+        if (!videoTrack) return;
+        try {
+            isTorchOn = !isTorchOn;
+            await videoTrack.applyConstraints({
+                advanced: [{ torch: isTorchOn }]
             });
-        } else {
-            showToast("Camera scanning not supported on this device", "warning");
+            const torchBtn = document.getElementById('torchBtn');
+            if (torchBtn) {
+                torchBtn.innerHTML = isTorchOn ? '🔦 Torch On' : '🔦 Torch Off';
+                torchBtn.style.color = isTorchOn ? '#fef08a' : '#ffffff';
+            }
+        } catch (e) {
+            console.warn("[1D Barcode Scanner] Torch toggle error:", e);
+            showToast("Torch is not supported on this camera.", "warning");
+        }
+    }
+
+    async function tapToFocus(event) {
+        if (!videoTrack) return;
+        const caps = videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
+        if (caps.focusMode && caps.focusMode.includes('continuous')) {
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ focusMode: 'continuous' }]
+                });
+            } catch (e) {}
         }
     }
 
     function stopCamera() {
+        isScanning = false;
+
+        // Clear scanning interval
+        if (scanIntervalTimer) {
+            clearInterval(scanIntervalTimer);
+            scanIntervalTimer = null;
+        }
+
+        // Turn off torch and release track
+        if (videoTrack) {
+            try {
+                if (isTorchOn) {
+                    videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+                }
+            } catch (e) {}
+            videoTrack = null;
+        }
+
+        // Stop and release media stream
         if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream.getTracks().forEach(track => {
+                try { track.stop(); } catch (e) {}
+            });
             mediaStream = null;
         }
+
+        // Release video element
+        const video = document.getElementById('videoElement');
+        if (video) {
+            try { video.pause(); } catch (e) {}
+            video.srcObject = null;
+        }
+
+        // Reset ZXing internal state
+        if (zxingReader) {
+            try { zxingReader.reset(); } catch (e) {}
+        }
+
         const container = document.getElementById('cameraStreamContainer');
         if (container) container.style.display = 'none';
+
+        const torchBtn = document.getElementById('torchBtn');
+        if (torchBtn) torchBtn.style.display = 'none';
+        isTorchOn = false;
     }
+
+    // Lifecycle cleanups: stop camera when user leaves or hides tab
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && isScanning) {
+            stopCamera();
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (isScanning) {
+            stopCamera();
+        }
+    });
 </script>
 {% endblock %}

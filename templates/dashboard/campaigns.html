@@ -53,7 +53,7 @@
     <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;">
         <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);margin-right:4px;">Filter:</span>
         <button class="btn-secondary btn-primary" onclick="filterCampaigns('all', this)"
-            style="font-size:0.78rem;padding:4px 12px;min-height:34px;">All Campaigns ({{ campaigns.count }})</button>
+            style="font-size:0.78rem;padding:4px 12px;min-height:34px;">All Campaigns ({{ total_campaigns_count }})</button>
         <button class="btn-secondary" onclick="filterCampaigns('active', this)"
             style="font-size:0.78rem;padding:4px 12px;min-height:34px;">Active / Live</button>
         <button class="btn-secondary" onclick="filterCampaigns('draft', this)"
@@ -145,6 +145,22 @@
         </div>
         {% endfor %}
     </div>
+
+    {% if paginator.num_pages > 1 %}
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:24px;flex-wrap:wrap;">
+        {% if campaigns_page.has_previous %}
+        <a href="?page=1" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">« First</a>
+        <a href="?page={{ campaigns_page.previous_page_number }}" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">‹ Prev</a>
+        {% endif %}
+        <span style="font-size:0.85rem;color:var(--text-secondary);padding:0 8px;">
+            Page {{ campaigns_page.number }} of {{ paginator.num_pages }}
+        </span>
+        {% if campaigns_page.has_next %}
+        <a href="?page={{ campaigns_page.next_page_number }}" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">Next ›</a>
+        <a href="?page={{ paginator.num_pages }}" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">Last »</a>
+        {% endif %}
+    </div>
+    {% endif %}
     {% else %}
     <div class="bento-card" style="text-align:center;padding:48px 24px;">
         <div
@@ -212,6 +228,7 @@
                     </optgroup>
 
                     <optgroup label="💎 Luxury & Premium Elegance">
+                        <option value="kurti">🥻 Kurti & Indian Ethnic Boutique</option>
                         <option value="royal">👑 Royal Gold</option>
                         <option value="royal_jewellery">💍 Royal Jewellery (Gold & Ruby)</option>
                         <option value="luxury_black">🖤 Luxury Black Velvet</option>

@@ -48,9 +48,11 @@ def redeem_coupon_atomically(code: str, shop: Shop, actor: User, notes: str = ""
         if coupon.status != 'active':
             raise CouponRedemptionError(f"Cannot redeem: coupon status is '{coupon.status}'.", status_code=400)
 
-        # Mark redeemed
-        coupon.status = 'redeemed'
-        coupon.save(update_fields=['status'])
+        # Mark redeemed atomically
+        rows_updated = Coupon.objects.filter(id=coupon.id, status='active').update(status='redeemed')
+        if rows_updated == 0:
+            raise CouponRedemptionError(f"Coupon '{clean_code}' was ALREADY REDEEMED.", status_code=409)
+        coupon.refresh_from_db()
 
         CouponRedemption.objects.create(
             coupon=coupon,

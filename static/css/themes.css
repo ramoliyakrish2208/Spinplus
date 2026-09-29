@@ -2765,6 +2765,221 @@ body[data-theme="coffee"],
 }
 
 /* =========================================================
+   KURTI & INDIAN ETHNIC FASHION BOUTIQUE THEME
+   Extreme Premium • Handcrafted Textile • Antique Gold & Deep Wine
+   ========================================================= */
+
+[data-theme="kurti"] {
+    --bg-main: #FFF8EE;
+    --bg-surface: #FFFFFF;
+    --bg-elevated: #FDF4E7;
+    --bg-glass: rgba(255, 248, 238, 0.94);
+
+    --text-primary: #302126;
+    --text-secondary: #77656A;
+    --text-muted: #968388;
+    --text-accent: #6B1838;
+
+    --color-primary: #6B1838;
+    --color-primary-hover: #54112B;
+    --color-primary-dark: #4A2038;
+    --color-secondary: #B75D75;
+    --color-accent: #C9A45C;
+    --color-accent-glow: rgba(201, 164, 92, 0.38);
+
+    --border-subtle: rgba(201, 164, 92, 0.28);
+    --border-highlight: rgba(201, 164, 92, 0.75);
+    --border-embroidery: rgba(107, 24, 56, 0.22);
+
+    --shadow-bento: 0 12px 36px -6px rgba(74, 32, 56, 0.12), 0 0 24px rgba(201, 164, 92, 0.10);
+    --shadow-gold: 0 8px 28px rgba(201, 164, 92, 0.32);
+    --shadow-card: 0 10px 30px rgba(107, 24, 56, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+body[data-theme="kurti"],
+[data-theme="kurti"] .customer-container {
+    background-color: #FFF8EE !important;
+    background-image: 
+        radial-gradient(circle at 50% -8%, rgba(183, 93, 117, 0.18) 0%, rgba(255, 248, 238, 0) 55%),
+        radial-gradient(circle at 10% 35%, rgba(201, 164, 92, 0.09) 0%, transparent 40%),
+        radial-gradient(circle at 90% 65%, rgba(107, 24, 56, 0.09) 0%, transparent 45%),
+        radial-gradient(circle at 50% 100%, rgba(74, 32, 56, 0.12) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%236B1838' fill-opacity='0.035'%3E%3Cpath d='M60 15 C55 30 40 40 40 50 C40 62 50 70 60 70 C70 70 80 62 80 50 C80 40 65 30 60 15 Z'/%3E%3Cpath d='M60 25 C63 35 70 42 70 50 C70 56 65 62 60 62 C55 62 50 56 50 50 C50 42 57 35 60 25 Z' fill='%23C9A45C' fill-opacity='0.04'/%3E%3Ccircle cx='60' cy='50' r='4' fill='%23C9A45C' fill-opacity='0.05'/%3E%3Cpath d='M20 90 C15 98 5 102 5 108 C5 114 10 118 16 118 C22 118 27 114 27 108 C27 102 23 98 20 90 Z'/%3E%3Cpath d='M100 90 C95 98 85 102 85 108 C85 114 90 118 96 118 C102 118 107 114 107 108 C107 102 103 98 100 90 Z'/%3E%3Ccircle cx='20' cy='20' r='2' fill='%23C9A45C' fill-opacity='0.05'/%3E%3Ccircle cx='100' cy='20' r='2' fill='%23C9A45C' fill-opacity='0.05'/%3E%3C/g%3E%3C/svg%3E"),
+        linear-gradient(135deg, #FFF8EE 0%, #FAF0E4 50%, #F8E8E8 100%) !important;
+    background-attachment: fixed;
+    color: #302126 !important;
+}
+
+[data-theme="kurti"] .bento-card,
+[data-theme="kurti"] .shop-header-box,
+[data-theme="kurti"] .how-step-card,
+[data-theme="kurti"] .trust-box {
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 248, 238, 0.94) 100%) !important;
+    border: 1px solid rgba(201, 164, 92, 0.32) !important;
+    box-shadow: 0 10px 32px rgba(107, 24, 56, 0.08), 0 1px 3px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    color: #302126 !important;
+    border-radius: var(--radius-lg, 16px);
+}
+
+[data-theme="kurti"] .bento-card:hover {
+    border-color: rgba(201, 164, 92, 0.6) !important;
+    box-shadow: 0 14px 40px rgba(107, 24, 56, 0.12), 0 0 20px rgba(201, 164, 92, 0.18) !important;
+}
+
+[data-theme="kurti"] .shop-brand-badge-pill {
+    background: rgba(255, 248, 238, 0.95) !important;
+    border: 1px solid rgba(201, 164, 92, 0.45) !important;
+    color: #6B1838 !important;
+    font-weight: 700;
+    box-shadow: 0 2px 10px rgba(107, 24, 56, 0.06);
+    letter-spacing: 0.8px;
+}
+
+[data-theme="kurti"] .poster-main-title {
+    color: #6B1838 !important;
+    font-family: 'Playfair Display', serif, Georgia !important;
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 12px rgba(201, 164, 92, 0.25);
+}
+
+[data-theme="kurti"] .poster-theme-subtitle {
+    color: #77656A !important;
+    font-family: 'Playfair Display', serif, Georgia;
+    font-style: italic;
+    font-size: 0.96rem;
+    letter-spacing: 0.5px;
+}
+
+[data-theme="kurti"] .badge-kurti {
+    background: linear-gradient(135deg, rgba(107, 24, 56, 0.10) 0%, rgba(183, 93, 117, 0.16) 100%) !important;
+    color: #6B1838 !important;
+    border: 1px solid rgba(201, 164, 92, 0.45) !important;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 10px rgba(107, 24, 56, 0.06);
+}
+
+[data-theme="kurti"] .spin-btn,
+[data-theme="kurti"] .btn-primary {
+    background: linear-gradient(135deg, #6B1838 0%, #54112B 60%, #4A2038 100%) !important;
+    color: #FFF8EE !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    border: 1.5px solid #C9A45C !important;
+    box-shadow: 0 8px 24px rgba(107, 24, 56, 0.35), 0 0 16px rgba(201, 164, 92, 0.25), inset 0 1px 0 rgba(255, 248, 238, 0.25) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-theme="kurti"] .spin-btn:hover:not(:disabled),
+[data-theme="kurti"] .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(107, 24, 56, 0.45), 0 0 24px rgba(201, 164, 92, 0.45) !important;
+    border-color: #E2BF7A !important;
+}
+
+[data-theme="kurti"] .spin-btn:active:not(:disabled),
+[data-theme="kurti"] .btn-primary:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+[data-theme="kurti"] .btn-secondary {
+    background: #FFF8EE !important;
+    color: #6B1838 !important;
+    border: 1.5px solid #6B1838 !important;
+    font-weight: 700 !important;
+}
+
+[data-theme="kurti"] .btn-secondary:hover {
+    background: #F8E8E8 !important;
+    color: #4A2038 !important;
+    border-color: #C9A45C !important;
+}
+
+/* Transformed Kurti Boutique Voucher */
+[data-theme="kurti"] .win-result-card,
+[data-theme="kurti"] .voucher-card-bento {
+    background: linear-gradient(145deg, #FFFDF9 0%, #FFF8EE 60%, #FDF4E7 100%) !important;
+    border: 2px solid #C9A45C !important;
+    box-shadow: 0 14px 44px rgba(107, 24, 56, 0.15), 0 0 24px rgba(201, 164, 92, 0.22) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="kurti"] .win-result-card::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 28px;
+    border-top: 2px solid #C9A45C;
+    border-left: 2px solid #C9A45C;
+    border-top-left-radius: 4px;
+    pointer-events: none;
+    opacity: 0.75;
+}
+
+[data-theme="kurti"] .win-result-card::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-bottom: 2px solid #C9A45C;
+    border-right: 2px solid #C9A45C;
+    border-bottom-right-radius: 4px;
+    pointer-events: none;
+    opacity: 0.75;
+}
+
+[data-theme="kurti"] .code-display-box,
+[data-theme="kurti"] .voucher-code-box {
+    background: #FFF8EE !important;
+    color: #6B1838 !important;
+    border: 1.5px dashed #C9A45C !important;
+    font-family: 'Space Grotesk', monospace !important;
+    font-weight: 800 !important;
+    letter-spacing: 2px !important;
+    box-shadow: inset 0 2px 6px rgba(107, 24, 56, 0.06) !important;
+    text-shadow: none !important;
+}
+
+[data-theme="kurti"] .wheel-box {
+    filter: drop-shadow(0 12px 30px rgba(107, 24, 56, 0.20));
+}
+
+.kurti-hero-visual {
+    display: none;
+}
+
+[data-theme="kurti"] .kurti-hero-visual {
+    display: block;
+    max-width: 220px;
+    margin: 8px auto 14px;
+    animation: kurtiFloat 6s ease-in-out infinite;
+}
+
+@keyframes kurtiFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes silkSheen {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-theme="kurti"] .kurti-hero-visual {
+        animation: none !important;
+    }
+}
+
+/* =========================================================
    GLOBAL & SIDEBAR MODERN SLIM SCROLLBAR SYSTEM
    ========================================================= */
 * {

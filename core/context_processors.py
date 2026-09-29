@@ -5,7 +5,11 @@ def shop_theme_processor(request):
     """
     Global Shop Theme context processor for Spin & Win SaaS Platform.
     Dynamically calculates active theme via Smart Theme Engine across all pages (Dashboard, Studio, Staff, CRM, Analytics, Errors, etc.).
+    Uses request-level caching to prevent duplicate database round-trips.
     """
+    if hasattr(request, '_cached_shop_theme_context'):
+        return request._cached_shop_theme_context
+
     res = {
         'active_theme': 'royal',
         'font_family': 'inter',
@@ -16,6 +20,7 @@ def shop_theme_processor(request):
         'theme_defaults': ShopBranding.get_theme_defaults('royal')
     }
 
+    path = getattr(request, 'path', '')
     shop = None
     if hasattr(request, 'user') and request.user.is_authenticated:
         if getattr(request.user, 'shop', None):
@@ -24,7 +29,7 @@ def shop_theme_processor(request):
             shop_id = request.GET.get('shop_id')
             if shop_id:
                 shop = Shop.objects.filter(id=shop_id).first()
-            if not shop:
+            elif path.startswith('/dashboard/'):
                 shop = Shop.objects.first()
     elif hasattr(request, 'shop') and request.shop:
         shop = request.shop
@@ -44,8 +49,9 @@ def shop_theme_processor(request):
         res['theme_resolution'] = resolution.to_dict()
         res['theme_defaults'] = ShopBranding.get_theme_defaults(resolution.theme)
 
-    # Provide pending plan requests count for superadmin notification badge
-    if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_superadmin():
+    # Provide pending plan requests count for superadmin notification badge only on dashboard routes
+    if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_superadmin() and path.startswith('/dashboard/'):
         res['pending_plan_requests_count'] = PlanRequest.objects.filter(status='pending').count()
 
+    request._cached_shop_theme_context = res
     return res

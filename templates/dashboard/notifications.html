@@ -58,6 +58,22 @@
         </div>
         {% endfor %}
     </div>
+
+    {% if paginator.num_pages > 1 %}
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
+        {% if notifications_page.has_previous %}
+        <a href="?page=1" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">« First</a>
+        <a href="?page={{ notifications_page.previous_page_number }}" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">‹ Prev</a>
+        {% endif %}
+        <span style="font-size:0.85rem;color:var(--text-secondary);padding:0 8px;">
+            Page {{ notifications_page.number }} of {{ paginator.num_pages }} ({{ total_notifications_count }} total)
+        </span>
+        {% if notifications_page.has_next %}
+        <a href="?page={{ notifications_page.next_page_number }}" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">Next ›</a>
+        <a href="?page={{ paginator.num_pages }}" class="btn-secondary" style="padding:6px 12px;font-size:0.8rem;">Last »</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <script>

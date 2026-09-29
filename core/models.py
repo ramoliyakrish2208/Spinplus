@@ -1,5 +1,6 @@
 import uuid
 import secrets
+from decimal import Decimal, InvalidOperation
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
@@ -166,6 +167,7 @@ class ShopBranding(models.Model):
         ('emerald', 'Emerald Green'),
         ('burgundy', 'Burgundy Fashion'),
         ('fashion', 'Haute Couture Fashion'),
+        ('kurti', 'Kurti & Indian Ethnic Boutique'),
         ('modern_blue', 'Modern Blue Tech'),
         ('festival', 'Festival Celebration'),
         ('diwali', 'Diwali Lights & Dhanteras'),
@@ -423,6 +425,15 @@ class ShopBranding(models.Model):
                 'text_color': '#fafafa',
                 'font_family': 'cinzel',
                 'spin_button_text': 'SPIN HAUTE COUTURE'
+            },
+            'kurti': {
+                'primary_color': '#6B1838',
+                'secondary_color': '#B75D75',
+                'accent_color': '#C9A45C',
+                'background_color': '#FFF8EE',
+                'text_color': '#302126',
+                'font_family': 'playfair',
+                'spin_button_text': 'SPIN & UNLOCK STYLE'
             },
             'electronics': {
                 'primary_color': '#06b6d4',
@@ -719,14 +730,63 @@ class Prize(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, related_name='prizes')
     name = models.CharField(max_length=100)
     prize_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default='percentage')
-    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
-    fixed_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    fixed_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     coupon_text = models.CharField(max_length=255, blank=True)
     probability = models.FloatField(default=15.0, help_text='Weight percentage (e.g. 25.0)')
     display_color = models.CharField(max_length=20, default='#6366f1')
     is_active = models.BooleanField(default=True)
     max_wins = models.IntegerField(default=500)
     remaining_quantity = models.IntegerField(default=500)
+
+    def clean(self):
+        super().clean()
+        # Coerce and clamp discount_percentage
+        try:
+            if self.discount_percentage is None or str(self.discount_percentage).strip() == '':
+                self.discount_percentage = Decimal('0.00')
+            else:
+                self.discount_percentage = Decimal(str(self.discount_percentage)).quantize(Decimal('0.01'))
+        except (InvalidOperation, TypeError, ValueError):
+            self.discount_percentage = Decimal('0.00')
+        if self.discount_percentage < Decimal('0.00'):
+            self.discount_percentage = Decimal('0.00')
+        elif self.discount_percentage > Decimal('100.00'):
+            self.discount_percentage = Decimal('100.00')
+
+        # Coerce and clamp fixed_discount_amount
+        try:
+            if self.fixed_discount_amount is None or str(self.fixed_discount_amount).strip() == '':
+                self.fixed_discount_amount = Decimal('0.00')
+            else:
+                self.fixed_discount_amount = Decimal(str(self.fixed_discount_amount)).quantize(Decimal('0.01'))
+        except (InvalidOperation, TypeError, ValueError):
+            self.fixed_discount_amount = Decimal('0.00')
+        if self.fixed_discount_amount < Decimal('0.00'):
+            self.fixed_discount_amount = Decimal('0.00')
+        elif self.fixed_discount_amount > Decimal('99999999.99'):
+            self.fixed_discount_amount = Decimal('99999999.99')
+
+        # Coerce and clamp probability
+        try:
+            self.probability = max(0.0, min(100.0, round(float(self.probability or 0.0), 2)))
+        except (ValueError, TypeError):
+            self.probability = 0.0
+
+        # Coerce quantities
+        try:
+            self.remaining_quantity = max(0, int(self.remaining_quantity if self.remaining_quantity is not None else 0))
+        except (ValueError, TypeError):
+            self.remaining_quantity = 0
+
+        try:
+            self.max_wins = max(0, int(self.max_wins if self.max_wins is not None else self.remaining_quantity))
+        except (ValueError, TypeError):
+            self.max_wins = self.remaining_quantity
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} - {self.campaign.name}"
@@ -874,7 +934,7 @@ class Plan(models.Model):
     )
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=50, unique=True, default='starter')
-    price_rupees = models.DecimalField(max_digits=10, decimal_places=2, default=499.00)
+    price_rupees = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('499.00'))
     price_display = models.CharField(max_length=50, default='₹499 / month')
     billing_cycle = models.CharField(max_length=20, choices=CYCLE_CHOICES, default='monthly')
     billing_period_days = models.IntegerField(default=30)

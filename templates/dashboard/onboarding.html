@@ -506,6 +506,13 @@
             <input type="hidden" id="selectedTheme" value="{{ branding.theme|default:'royal' }}">
 
             <div class="theme-grid">
+                <!-- Kurti & Indian Ethnic Boutique -->
+                <div class="theme-card {% if branding.theme == 'kurti' %}selected{% endif %}" onclick="selectThemeCard('kurti', 'Kurti Boutique', '#6B1838', '#C9A45C', '#FFF8EE', 'SPIN & UNLOCK STYLE', 'playfair')">
+                    <div class="theme-card-preview" style="background:linear-gradient(135deg, #6B1838, #B75D75);color:#C9A45C;">🥻</div>
+                    <div style="font-weight:800;font-size:0.85rem;color:var(--text-primary);">Kurti Boutique</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">Deep Wine & Antique Gold</div>
+                </div>
+
                 <!-- Royal Gold -->
                 <div class="theme-card {% if not branding or branding.theme == 'royal' %}selected{% endif %}" onclick="selectThemeCard('royal', 'Royal Gold', '#d4af37', '#ffd700', '#0a060d', 'SPIN & WIN GOLD', 'cinzel')">
                     <div class="theme-card-preview" style="background:linear-gradient(135deg, #d4af37, #4a152d);color:#ffd700;">👑</div>
@@ -1103,7 +1110,10 @@
     function handleCategorySelection(cat) {
         // Auto recommend matching theme if user hasn't explicitly locked one
         const catLower = cat.toLowerCase();
-        if (catLower.includes('jewel') || catLower.includes('gold')) {
+        if (catLower.includes('kurti') || catLower.includes('ethnic') || catLower.includes('fashion') || catLower.includes('boutique') || catLower.includes('cloth') || catLower.includes('women')) {
+            const card = document.querySelector(".theme-card[onclick*='kurti']");
+            if (card) card.click();
+        } else if (catLower.includes('jewel') || catLower.includes('gold')) {
             const card = document.querySelector(".theme-card[onclick*='royal_jewellery']");
             if (card) card.click();
         } else if (catLower.includes('coffee') || catLower.includes('bakery')) {

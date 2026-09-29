@@ -16,9 +16,21 @@
             <a href="javascript:location.reload()" class="btn-primary" style="width: 100%; justify-content: center;">
                 <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> Reload Page
             </a>
-            {% if request.user.is_authenticated %}
+            {% if is_admin_error %}
+            <a href="{% url 'admin_dashboard' %}" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">
+                <i data-lucide="shield" style="width:13px;height:13px;"></i> Return to Admin Dashboard
+            </a>
+            {% elif is_shop_owner_error %}
             <a href="{% url 'shop_dashboard' %}" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">
                 <i data-lucide="layout-dashboard" style="width:13px;height:13px;"></i> Back to Dashboard
+            </a>
+            {% elif public_token %}
+            <a href="{% url 'public_shop' public_token %}" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">
+                <i data-lucide="disc-3" style="width:13px;height:13px;"></i> Return to Spin & Win
+            </a>
+            {% elif is_customer_error %}
+            <a href="javascript:history.back()" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">
+                <i data-lucide="arrow-left" style="width:13px;height:13px;"></i> Go Back
             </a>
             {% else %}
             <a href="/" class="btn-secondary" style="width: 100%; justify-content: center; font-size: 0.82rem;">

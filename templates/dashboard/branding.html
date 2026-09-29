@@ -140,6 +140,7 @@
         <!-- Category Recommendations -->
         <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
             <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Recommended For:</span>
+            <button type="button" class="recommendation-chip" onclick="selectThemePreset('kurti')">🥻 Kurti & Ethnic Boutique</button>
             <button type="button" class="recommendation-chip" onclick="selectThemePreset('janmashtami')">🦚 Krishna Janmashtami</button>
             <button type="button" class="recommendation-chip" onclick="selectThemePreset('royal_jewellery')">👑 Jewellery (Royal Jewellery)</button>
             <button type="button" class="recommendation-chip" onclick="selectThemePreset('minimal_luxury')">✨ Fashion & Luxury (Minimal Luxury)</button>
@@ -329,6 +330,7 @@
                     <label class="form-label">Select Visual Identity</label>
                     <select name="theme" id="themeSelect" class="form-select" onchange="onThemePresetChange(this.value)">
                         <optgroup label="👑 A. Premium Business Themes">
+                            <option value="kurti" {% if branding.theme == 'kurti' %}selected{% endif %}>🥻 Kurti & Indian Ethnic Boutique (Deep Wine & Antique Gold)</option>
                             <option value="royal_jewellery" {% if branding.theme == 'royal_jewellery' or branding.theme == 'royal' %}selected{% endif %}>💎 Royal Jewellery (Gold & Diamond Luxury)</option>
                             <option value="minimal_luxury" {% if branding.theme == 'minimal_luxury' or branding.theme == 'minimal' %}selected{% endif %}>✨ Minimal Luxury (Editorial & Restrained)</option>
                             <option value="luxury_black" {% if branding.theme == 'luxury_black' %}selected{% endif %}>🖤 Luxury Black (Dark Chrome & Champagne)</option>
@@ -527,6 +529,7 @@
         'restaurant': { primary: '#d97706', secondary: '#451a03', accent: '#f59e0b', bg: '#1c1917', font: 'playfair', cta: 'SPIN GOURMET REWARDS' },
         'coffee': { primary: '#b45309', secondary: '#78350f', accent: '#fcd34d', bg: '#1a0e05', font: 'playfair', cta: 'SIP & WIN REWARDS' },
         'fashion': { primary: '#e4e4e7', secondary: '#27272a', accent: '#d4af37', bg: '#09090b', font: 'cinzel', cta: 'SPIN HAUTE COUTURE' },
+        'kurti': { primary: '#6B1838', secondary: '#B75D75', accent: '#C9A45C', bg: '#FFF8EE', font: 'playfair', cta: 'SPIN & UNLOCK STYLE' },
         'beauty': { primary: '#ec4899', secondary: '#831843', accent: '#fbcfe8', bg: '#180814', font: 'playfair', cta: 'SPIN BEAUTY GLOW' },
         'sports': { primary: '#ef4444', secondary: '#1e293b', accent: '#f59e0b', bg: '#0b0f19', font: 'outfit', cta: 'SPIN FOR ENERGY' },
         'electronics': { primary: '#06b6d4', secondary: '#1e3a8a', accent: '#38bdf8', bg: '#030712', font: 'space_grotesk', cta: 'SPIN TECH REWARDS' },

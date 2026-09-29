@@ -13,9 +13,21 @@
             The server could not understand or process your request due to invalid parameters or an expired session.
         </p>
         <div style="display: flex; flex-direction: column; gap: 10px;">
-            {% if request.user.is_authenticated %}
+            {% if is_admin_error %}
+            <a href="{% url 'admin_dashboard' %}" class="btn-primary" style="width: 100%; justify-content: center;">
+                <i data-lucide="shield" style="width:15px;height:15px;"></i> Go to Admin Dashboard
+            </a>
+            {% elif is_shop_owner_error %}
             <a href="{% url 'shop_dashboard' %}" class="btn-primary" style="width: 100%; justify-content: center;">
                 <i data-lucide="layout-dashboard" style="width:15px;height:15px;"></i> Go to Dashboard
+            </a>
+            {% elif public_token %}
+            <a href="{% url 'public_shop' public_token %}" class="btn-primary" style="width: 100%; justify-content: center;">
+                <i data-lucide="disc-3" style="width:15px;height:15px;"></i> Return to Spin & Win
+            </a>
+            {% elif is_customer_error %}
+            <a href="javascript:history.back()" class="btn-primary" style="width: 100%; justify-content: center;">
+                <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Go Back
             </a>
             {% else %}
             <a href="/" class="btn-primary" style="width: 100%; justify-content: center;">

@@ -6,6 +6,16 @@
 
 const THEME_SPINNER_REGISTRY = {
   // ── 1. ROYAL & JEWELLERY ──
+  kurti: {
+    geometry: { outerRingWidth: 17, innerBezelWidth: 6, hubRadius: 36, pointerScale: 1.15 },
+    palette: ['#FFF8EE', '#B75D75', '#6B1838', '#F8E8E8', '#4A2038', '#C9A45C'],
+    ringStyle: 'antique_gold_embroidered',
+    hubType: 'kurti_medallion',
+    pointerType: 'ornamental_dagger',
+    fontFamily: 'playfair',
+    studCount: 16,
+    audioProfile: 'silk_chime'
+  },
   royal: {
     geometry: { outerRingWidth: 16, innerBezelWidth: 6, hubRadius: 34, pointerScale: 1.1 },
     palette: ['#6d28d9', '#4c1d95', '#d4af37', '#8b5cf6', '#10b981', '#f59e0b'],
@@ -614,7 +624,7 @@ class SpinWheel {
       gain.connect(this.audioCtx.destination);
       osc.start();
       osc.stop(now + 0.04);
-    } else if (profile === 'festive_bell' || profile === 'royal_chime') {
+    } else if (profile === 'festive_bell' || profile === 'royal_chime' || profile === 'silk_chime') {
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
       osc.type = 'sine';
@@ -676,6 +686,20 @@ class SpinWheel {
         gain.connect(this.audioCtx.destination);
         osc.start(now + idx * 0.08);
         osc.stop(now + idx * 0.08 + 0.3);
+      });
+    } else if (profile === 'silk_chime') {
+      const notes = [587.33, 739.99, 880.00, 1174.66, 1479.98];
+      notes.forEach((freq, idx) => {
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.14, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.55);
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.55);
       });
     } else {
       const notes = [523.25, 659.25, 783.99, 1046.50];
@@ -770,7 +794,7 @@ class SpinWheel {
       this.ctx.moveTo(centerX, centerY);
       this.ctx.lineTo(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius);
       this.ctx.lineWidth = config.ringStyle === 'neon_tube' ? 2.2 : 1.8;
-      this.ctx.strokeStyle = config.ringStyle === 'neon_tube' ? 'rgba(0, 229, 255, 0.85)' : (config.ringStyle === 'champagne_minimal' ? 'rgba(243, 229, 171, 0.5)' : 'rgba(255, 215, 0, 0.75)');
+      this.ctx.strokeStyle = config.ringStyle === 'neon_tube' ? 'rgba(0, 229, 255, 0.85)' : (config.ringStyle === 'antique_gold_embroidered' ? 'rgba(201, 164, 92, 0.85)' : (config.ringStyle === 'champagne_minimal' ? 'rgba(243, 229, 171, 0.5)' : 'rgba(255, 215, 0, 0.75)'));
       this.ctx.stroke();
 
       // ── 4. LAYER 4: INTELLIGENT AUTO-SCALED TYPOGRAPHY ──
@@ -850,6 +874,16 @@ class SpinWheel {
       this.ctx.fillStyle = rimGrad;
       this.ctx.shadowColor = 'rgba(217, 119, 6, 0.4)';
       this.ctx.shadowBlur = 10;
+      this.ctx.fill();
+    } else if (ringStyle === 'antique_gold_embroidered') {
+      rimGrad.addColorStop(0, '#C9A45C');
+      rimGrad.addColorStop(0.25, '#FFF8EE');
+      rimGrad.addColorStop(0.5, '#6B1838');
+      rimGrad.addColorStop(0.75, '#B75D75');
+      rimGrad.addColorStop(1, '#C9A45C');
+      this.ctx.fillStyle = rimGrad;
+      this.ctx.shadowColor = 'rgba(107, 24, 56, 0.4)';
+      this.ctx.shadowBlur = 14;
       this.ctx.fill();
     } else if (ringStyle === 'carbon_sport') {
       rimGrad.addColorStop(0, '#ef4444');
@@ -1000,6 +1034,9 @@ class SpinWheel {
 
     // 3. Theme-Specific 3D Procedural Center Motif
     switch (hubType) {
+      case 'kurti_medallion':
+        this.drawKurtiMedallionMotif(centerX, centerY, innerR);
+        break;
       case 'peacock_flute':
         this.drawPeacockFluteMotif(centerX, centerY, innerR);
         break;
@@ -1050,6 +1087,63 @@ class SpinWheel {
   }
 
   // ── PROCEDURAL HUB MOTIF DRAWERS ──
+  drawKurtiMedallionMotif(cx, cy, r) {
+    // 1. Antique Gold Bezel Rim
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    const grad = this.ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, r);
+    grad.addColorStop(0, '#FFF8EE');
+    grad.addColorStop(0.35, '#C9A45C');
+    grad.addColorStop(0.75, '#6B1838');
+    grad.addColorStop(1, '#4A2038');
+    this.ctx.fillStyle = grad;
+    this.ctx.fill();
+
+    // 2. Deep Wine Center with Soft Silk Texture
+    const innerR = r * 0.72;
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, innerR, 0, 2 * Math.PI);
+    const wineGrad = this.ctx.createRadialGradient(cx, cy - 2, 1, cx, cy, innerR);
+    wineGrad.addColorStop(0, '#8A244A');
+    wineGrad.addColorStop(0.7, '#6B1838');
+    wineGrad.addColorStop(1, '#4A2038');
+    this.ctx.fillStyle = wineGrad;
+    this.ctx.fill();
+    this.ctx.strokeStyle = '#C9A45C';
+    this.ctx.lineWidth = 1.5;
+    this.ctx.stroke();
+
+    // 3. Handcrafted Golden Lotus Zari Emblem
+    const s = innerR * 0.52;
+    this.ctx.fillStyle = '#C9A45C';
+    this.ctx.shadowColor = 'rgba(201, 164, 92, 0.6)';
+    this.ctx.shadowBlur = 6;
+    
+    // Central petal
+    this.ctx.beginPath();
+    this.ctx.moveTo(cx, cy - s);
+    this.ctx.bezierCurveTo(cx + s * 0.45, cy - s * 0.3, cx + s * 0.35, cy + s * 0.4, cx, cy + s * 0.55);
+    this.ctx.bezierCurveTo(cx - s * 0.35, cy + s * 0.4, cx - s * 0.45, cy - s * 0.3, cx, cy - s);
+    this.ctx.fill();
+
+    // Side petals
+    [-1, 1].forEach(dir => {
+      this.ctx.beginPath();
+      this.ctx.moveTo(cx, cy + s * 0.35);
+      this.ctx.bezierCurveTo(cx + dir * s * 0.6, cy + s * 0.1, cx + dir * s * 0.8, cy - s * 0.3, cx + dir * s * 0.7, cy - s * 0.5);
+      this.ctx.bezierCurveTo(cx + dir * s * 0.3, cy - s * 0.2, cx + dir * s * 0.2, cy + s * 0.1, cx, cy + s * 0.35);
+      this.ctx.fill();
+    });
+
+    // Center pearl bead
+    this.ctx.fillStyle = '#FFF8EE';
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy + s * 0.15, 2.2, 0, 2 * Math.PI);
+    this.ctx.fill();
+
+    this.ctx.restore();
+  }
   drawPeacockFluteMotif(cx, cy, r) {
     // 1. Golden Krishna Flute
     this.ctx.strokeStyle = '#ffd700';
@@ -1389,6 +1483,37 @@ class SpinWheel {
     this.ctx.shadowBlur = 6;
 
     switch (pType) {
+      case 'ornamental_dagger':
+        // Antique Gold Dagger with Ruby Gem
+        this.ctx.fillStyle = '#C9A45C';
+        this.ctx.shadowColor = 'rgba(107, 24, 56, 0.65)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 20);
+        this.ctx.lineTo(8, 2);
+        this.ctx.bezierCurveTo(11, -6, 8, -14, 0, -18);
+        this.ctx.bezierCurveTo(-8, -14, -11, -6, -8, 2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.strokeStyle = '#FFF8EE';
+        this.ctx.lineWidth = 1.2;
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = '#6B1838';
+        this.ctx.beginPath();
+        this.ctx.arc(0, -4, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.strokeStyle = '#C9A45C';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+
+        this.ctx.fillStyle = '#FFF8EE';
+        this.ctx.beginPath();
+        this.ctx.arc(-1.2, -5.2, 1.2, 0, 2 * Math.PI);
+        this.ctx.fill();
+        break;
+
       case 'feather':
         // Peacock Plume Pointer
         this.ctx.fillStyle = '#ffd700';
