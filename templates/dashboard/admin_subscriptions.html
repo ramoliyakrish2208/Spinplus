@@ -184,12 +184,12 @@
                         <td data-label="Actions">
                             <div style="display:flex;gap:6px;">
                                 <button type="button"
-                                    onclick="editPlan('{{ p.id }}', '{{ p.name|escapejs }}', '{{ p.code|escapejs }}', '{{ p.price_rupees }}', '{{ p.billing_period_days }}', '{{ p.max_campaigns }}', '{{ p.max_active_campaigns }}', '{{ p.max_prizes_per_campaign }}', '{{ p.max_spins_per_month }}', '{{ p.description|escapejs }}', {{ p.is_default|yesno:'true,false' }}, {{ p.is_active|yesno:'true,false' }})"
+                                    onclick="editPlan('{{ p.id }}', '{{ p.name|escapejs }}', '{{ p.code|escapejs }}', '{{ p.price_rupees }}', '{{ p.billing_cycle|default:'monthly'|escapejs }}', '{{ p.billing_period_days }}', '{{ p.trial_days|default:0 }}', '{{ p.max_campaigns }}', '{{ p.max_active_campaigns }}', '{{ p.max_prizes_per_campaign }}', '{{ p.max_spins_per_month }}', '{{ p.description|escapejs }}', {{ p.is_default|yesno:'true,false' }}, {{ p.is_active|yesno:'true,false' }})"
                                     class="btn-secondary" style="font-size:0.75rem;padding:4px 8px;min-height:30px;">
                                     <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
                                 </button>
-                                <button type="button" onclick="confirmDeletePlan(this.form, '{{ p.name|escapejs }}')"
-                                    class="btn-danger" style="font-size:0.75rem;padding:4px 8px;min-height:30px;">
+                                <button type="button" onclick="confirmDeletePlan('{{ p.id }}', '{{ p.name|escapejs }}')"
+                                    class="btn-danger" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="Delete Plan">
                                     <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
                                 </button>
                                 <form method="POST" action="{% url 'admin_plan_delete' p.id %}"
@@ -403,7 +403,7 @@
                                 <form method="POST" action="{% url 'admin_subscription_status' s.subscription.id %}" id="expireSubForm_{{ s.subscription.id }}" style="display:inline;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="instant_expire">
-                                    <button type="button" onclick="confirmExpireSub(this.form, '{{ s.name|escapejs }}')" class="btn-danger" style="font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Instant Expire">
+                                    <button type="button" onclick="confirmExpireSub('{{ s.subscription.id }}', '{{ s.name|escapejs }}')" class="btn-danger" style="font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Instant Expire">
                                         Expire
                                     </button>
                                 </form>
@@ -416,6 +416,14 @@
                                     </button>
                                 </form>
                                 {% endif %}
+
+                                <form method="POST" action="{% url 'admin_subscription_delete' s.subscription.id %}" id="deleteSubForm_{{ s.subscription.id }}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="button" onclick="confirmDeleteSub('{{ s.subscription.id }}', '{{ s.name|escapejs }}')" class="btn-ghost" style="color:var(--color-danger);font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Delete / Cancel Subscription">
+                                        <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                    </button>
+                                </form>
                             </div>
                             {% if s.subscription.future_plan %}
                             <div style="margin-top:6px;display:flex;gap:4px;justify-content:flex-end;">
@@ -752,19 +760,45 @@
         document.getElementById('assignModal').classList.remove('open');
     }
 
-    function confirmDeletePlan(formEl, planName) {
+    function confirmDeletePlan(planId, planName) {
         showConfirmModal(
+            'Delete Subscription Plan',
+            `Are you sure you want to delete "${planName}"?\n\nActive subscribers on this plan will be safely reassigned to the default plan.`,
+            () => {
+                const form = document.getElementById('deletePlanForm_' + planId);
+                if (form) form.submit();
+            },
+            null,
             'Delete Plan',
-            `Are you sure you want to delete "${planName}"? Active subscribers will be safely reassigned to the default plan.`,
-            () => formEl.submit()
+            'btn-danger'
         );
     }
 
-    function confirmExpireSub(formEl, shopName) {
+    function confirmExpireSub(subId, shopName) {
         showConfirmModal(
             'Instant Expire Subscription',
-            `Instantly expire the subscription for "${shopName}"? Customer spins on their wheel will pause immediately until renewed.`,
-            () => formEl.submit()
+            `Instantly expire the subscription for "${shopName}"?\n\nCustomer spins on their wheel will pause immediately until renewed.`,
+            () => {
+                const form = document.getElementById('expireSubForm_' + subId);
+                if (form) form.submit();
+            },
+            null,
+            'Expire Now',
+            'btn-danger'
+        );
+    }
+
+    function confirmDeleteSub(subId, shopName) {
+        showConfirmModal(
+            'Delete Subscription',
+            `Are you sure you want to delete and cancel the subscription for "${shopName}"?\n\nCustomer spins on their wheel will pause immediately until a new plan is assigned.`,
+            () => {
+                const form = document.getElementById('deleteSubForm_' + subId);
+                if (form) form.submit();
+            },
+            null,
+            'Delete Subscription',
+            'btn-danger'
         );
     }
 </script>

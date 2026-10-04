@@ -56,6 +56,7 @@ urlpatterns = [
     path('dashboard/admin/plans/<int:plan_id>/delete/', views.admin_plan_delete_view, name='admin_plan_delete'),
     path('dashboard/admin/subscriptions/assign/', views.admin_subscription_assign_view, name='admin_subscription_assign'),
     path('dashboard/admin/subscriptions/<int:sub_id>/status/', views.admin_subscription_status_view, name='admin_subscription_status'),
+    path('dashboard/admin/subscriptions/<int:sub_id>/delete/', views.admin_subscription_delete_view, name='admin_subscription_delete'),
 
     # Error Preview Routes (For Live Verification in Development & Production)
     path('errors/404/', views.custom_404_view, name='error_404_preview'),

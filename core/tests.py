@@ -1313,6 +1313,46 @@ class SubscriptionsManagementTestCase(TestCase):
         sub.refresh_from_db()
         self.assertGreaterEqual(sub.days_left(), 74)
 
+    def test_admin_delete_subscription_endpoint(self):
+        """Super Admin can delete/cancel a shop subscription via dedicated delete endpoint"""
+        sub = self.shop.get_subscription()
+        sub.status = 'active'
+        sub.expires_at = timezone.now() + timedelta(days=30)
+        sub.save()
+
+        # Non-admin cannot delete subscription (403 Forbidden)
+        self.client.login(username='sub_owner', password='password123')
+        res_unauth = self.client.post(f'/dashboard/admin/subscriptions/{sub.id}/delete/')
+        self.assertEqual(res_unauth.status_code, 403)
+
+        # Super Admin can delete subscription
+        self.client.login(username='sub_admin', password='password123')
+        res_del = self.client.post(f'/dashboard/admin/subscriptions/{sub.id}/delete/')
+        self.assertEqual(res_del.status_code, 302)
+
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'cancelled')
+        self.assertFalse(sub.is_active)
+        self.assertFalse(sub.is_valid())
+        self.assertTrue(ActivityLog.objects.filter(shop=self.shop, action="Subscription Deleted").exists())
+
+    def test_admin_delete_subscription_via_status_action(self):
+        """Super Admin can delete/cancel a shop subscription via status view action='delete'"""
+        self.client.login(username='sub_admin', password='password123')
+        sub = self.shop.get_subscription()
+        sub.status = 'active'
+        sub.expires_at = timezone.now() + timedelta(days=30)
+        sub.save()
+
+        res = self.client.post(f'/dashboard/admin/subscriptions/{sub.id}/status/', {
+            'action': 'delete'
+        })
+        self.assertEqual(res.status_code, 302)
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'cancelled')
+        self.assertFalse(sub.is_active)
+        self.assertFalse(sub.is_valid())
+
     def test_shop_owner_subscription_view_and_renewal(self):
         """Shop Owner views subscription in ₹ and renews or upgrades plan"""
         self.client.login(username='sub_owner', password='password123')

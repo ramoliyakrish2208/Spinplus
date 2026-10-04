@@ -1778,8 +1778,22 @@ def admin_plan_delete_view(request, plan_id):
 
     if default_plan:
         Subscription.objects.filter(plan=plan).update(plan=default_plan)
+        Subscription.objects.filter(future_plan=plan).update(future_plan=None, future_starts_at=None, future_expires_at=None, future_notes='')
+    else:
+        Subscription.objects.filter(plan=plan).update(plan=None)
+        Subscription.objects.filter(future_plan=plan).update(future_plan=None, future_starts_at=None, future_expires_at=None, future_notes='')
 
+    plan_name = plan.name
+    plan_code = plan.code
     plan.delete()
+
+    ActivityLog.objects.create(
+        shop=None,
+        actor=request.user,
+        action="Subscription Plan Deleted",
+        details=f"Subscription plan '{plan_name}' (Code: {plan_code}) was deleted by Super Admin."
+    )
+    messages.success(request, f"Subscription plan '{plan_name}' was successfully deleted.")
     return redirect('admin_subscriptions')
 
 
@@ -1895,11 +1909,14 @@ def admin_subscription_status_view(request, sub_id):
         sub.save()
         messages.success(request, f"Plan activated for {sub.shop.name}.")
 
-    elif action == 'cancel':
+    elif action in ['cancel', 'delete']:
+        sub.cancel_future_plan()
         sub.status = 'cancelled'
         sub.is_active = False
+        sub.expires_at = now - timezone.timedelta(minutes=1)
+        sub.notes = f"Subscription cancelled/deleted by admin on {now.strftime('%d %b %Y %H:%M')}"
         sub.save()
-        messages.info(request, f"Subscription for {sub.shop.name} cancelled.")
+        messages.success(request, f"Subscription for {sub.shop.name} has been successfully deleted/cancelled.")
 
     elif action == 'extend':
         try:
@@ -1951,6 +1968,32 @@ def admin_subscription_status_view(request, sub_id):
         details=f"Action: {action}, New Status: {sub.status}, Expires: {sub.expires_at.strftime('%d %b %Y %H:%M') if sub.expires_at else 'N/A'}"
     )
 
+    return redirect('admin_subscriptions')
+
+
+@require_POST
+@superadmin_required
+def admin_subscription_delete_view(request, sub_id):
+    """Delete / Cancel a tenant shop's subscription"""
+    sub = get_object_or_404(Subscription, id=sub_id)
+    shop = sub.shop
+    shop_name = shop.name
+    now = timezone.now()
+
+    sub.cancel_future_plan()
+    sub.status = 'cancelled'
+    sub.is_active = False
+    sub.expires_at = now - timezone.timedelta(minutes=1)
+    sub.notes = f"Subscription cancelled/deleted by admin on {now.strftime('%d %b %Y %H:%M')}"
+    sub.save()
+
+    ActivityLog.objects.create(
+        shop=shop,
+        actor=request.user,
+        action="Subscription Deleted",
+        details=f"Subscription for '{shop_name}' was cancelled/deleted by Super Admin."
+    )
+    messages.success(request, f"Subscription for '{shop_name}' has been successfully deleted/cancelled.")
     return redirect('admin_subscriptions')
 
 
