@@ -277,9 +277,9 @@ class HardeningAndReliabilityTests(TestCase):
         # Insert a raw incompatible value (e.g. 1000 in a max_digits=5 column) directly via SQL
         with connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO core_prize (campaign_id, name, prize_type, discount_percentage, fixed_discount_amount, coupon_text, probability, display_color, is_active, max_wins, remaining_quantity) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (self.campaign.id, "Corrupt Decimal Prize", "percentage", 1000, 0, "Test", 10.0, "#ff0000", True, 100, 100)
+                "INSERT INTO core_prize (campaign_id, name, prize_type, discount_percentage, fixed_discount_amount, coupon_text, probability, display_color, is_active, max_wins, remaining_quantity, design_config) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (self.campaign.id, "Corrupt Decimal Prize", "percentage", 1000, 0, "Test", 10.0, "#ff0000", True, 100, 100, '{}')
             )
 
         self.client.login(username="shopowner_test", password="testpassword123")

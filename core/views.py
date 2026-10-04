@@ -1,6 +1,7 @@
 import json
 import csv
 import random
+import re
 import logging
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import timedelta
@@ -70,6 +71,190 @@ def parse_float_safe(val, default=0.0, min_val=0.0, max_val=100.0):
         return round(f, 2)
     except (TypeError, ValueError):
         return float(default)
+
+def sanitize_segment_design_config(raw_config):
+    """
+    Sanitizes and normalizes segment design parameters.
+    Ensures safe font families, colors, numeric ranges, and prevents script injection.
+    """
+    if not raw_config:
+        return {}
+    if isinstance(raw_config, str):
+        try:
+            raw_config = json.loads(raw_config)
+        except Exception:
+            return {}
+    if not isinstance(raw_config, dict):
+        return {}
+
+    ALLOWED_FONTS = {
+        'inter', 'poppins', 'montserrat', 'roboto', 'lato', 'nunito', 'outfit',
+        'manrope', 'dm_sans', 'plus_jakarta_sans', 'oswald', 'bebas_neue',
+        'anton', 'playfair', 'cormorant_garamond', 'cinzel', 'raleway',
+        'quicksand', 'rubik', 'space_grotesk', 'archivo', 'barlow_condensed',
+        'league_spartan'
+    }
+
+    clean = {}
+
+    def clean_color(val, default='#ffffff'):
+        s = str(val or '').strip()
+        if re.match(r'^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$', s):
+            return s
+        return default
+
+    # Font family
+    font = str(raw_config.get('font_family', '')).lower().strip().replace(' ', '_').replace('-', '_')
+    if font in ALLOWED_FONTS:
+        clean['font_family'] = font
+
+    # Typography
+    if 'font_weight' in raw_config:
+        try:
+            w = int(raw_config['font_weight'])
+            if w in [300, 400, 500, 600, 700, 800, 900]:
+                clean['font_weight'] = w
+        except (ValueError, TypeError):
+            pass
+
+    if 'font_size' in raw_config:
+        try:
+            fs = int(raw_config['font_size'])
+            if 8 <= fs <= 36:
+                clean['font_size'] = fs
+        except (ValueError, TypeError):
+            pass
+
+    align = str(raw_config.get('text_align', '')).lower().strip()
+    if align in ['left', 'center', 'right']:
+        clean['text_align'] = align
+
+    transform = str(raw_config.get('text_transform', '')).lower().strip()
+    if transform in ['none', 'uppercase', 'lowercase', 'capitalize']:
+        clean['text_transform'] = transform
+
+    if 'letter_spacing' in raw_config:
+        try:
+            ls = float(raw_config['letter_spacing'])
+            clean['letter_spacing'] = round(max(-2.0, min(10.0, ls)), 1)
+        except (ValueError, TypeError):
+            pass
+
+    font_style = str(raw_config.get('font_style', '')).lower().strip()
+    if font_style in ['normal', 'italic']:
+        clean['font_style'] = font_style
+
+    if 'line_height' in raw_config:
+        try:
+            lh = float(raw_config['line_height'])
+            clean['line_height'] = round(max(0.8, min(2.5, lh)), 2)
+        except (ValueError, TypeError):
+            pass
+
+    # Text Appearance
+    if 'text_color' in raw_config:
+        clean['text_color'] = clean_color(raw_config['text_color'], '#ffffff')
+
+    if 'text_opacity' in raw_config:
+        try:
+            op = int(raw_config['text_opacity'])
+            clean['text_opacity'] = max(0, min(100, op))
+        except (ValueError, TypeError):
+            pass
+
+    # Shadow
+    if raw_config.get('text_shadow_enabled'):
+        clean['text_shadow_enabled'] = True
+        clean['text_shadow_color'] = clean_color(raw_config.get('text_shadow_color'), '#000000')
+        try:
+            clean['text_shadow_blur'] = max(0, min(30, int(raw_config.get('text_shadow_blur', 4))))
+            clean['text_shadow_x'] = max(-20, min(20, int(raw_config.get('text_shadow_x', 0))))
+            clean['text_shadow_y'] = max(-20, min(20, int(raw_config.get('text_shadow_y', 2))))
+        except (ValueError, TypeError):
+            pass
+
+    # Stroke
+    if raw_config.get('text_stroke_enabled'):
+        clean['text_stroke_enabled'] = True
+        clean['text_stroke_color'] = clean_color(raw_config.get('text_stroke_color'), '#000000')
+        try:
+            clean['text_stroke_width'] = max(1, min(6, int(raw_config.get('text_stroke_width', 2))))
+        except (ValueError, TypeError):
+            pass
+
+    # Background
+    bg_type = str(raw_config.get('bg_type', '')).lower().strip()
+    if bg_type in ['solid', 'gradient', 'pattern']:
+        clean['bg_type'] = bg_type
+        if 'bg_color_1' in raw_config:
+            clean['bg_color_1'] = clean_color(raw_config['bg_color_1'], '#6366f1')
+        if 'bg_color_2' in raw_config:
+            clean['bg_color_2'] = clean_color(raw_config['bg_color_2'], '#4f46e5')
+        if 'bg_color_3' in raw_config and raw_config['bg_color_3']:
+            clean['bg_color_3'] = clean_color(raw_config['bg_color_3'], '#ffd700')
+        if 'gradient_type' in raw_config:
+            g_type = str(raw_config['gradient_type']).lower().strip()
+            if g_type in ['linear', 'radial']:
+                clean['gradient_type'] = g_type
+        if 'gradient_angle' in raw_config:
+            try:
+                clean['gradient_angle'] = max(0, min(360, int(raw_config['gradient_angle'])))
+            except (ValueError, TypeError):
+                pass
+        if 'bg_pattern' in raw_config:
+            pat = str(raw_config['bg_pattern']).lower().strip()
+            if pat in ['dots', 'stripes', 'stars', 'chevrons', 'none']:
+                clean['bg_pattern'] = pat
+
+    # Segment Icon
+    icon_type = str(raw_config.get('icon_type', '')).lower().strip()
+    if icon_type in ['none', 'preset']:
+        clean['icon_type'] = icon_type
+        if icon_type == 'preset':
+            icon_name = str(raw_config.get('icon_name', '')).strip()
+            ALLOWED_ICONS = {
+                'gift', 'percent', 'tag', 'star', 'crown', 'sparkles',
+                'flame', 'trophy', 'diamond', 'heart', 'coffee',
+                'shopping-bag', 'zap', 'smile', 'frown', 'award', 'ticket'
+            }
+            if icon_name in ALLOWED_ICONS:
+                clean['icon_name'] = icon_name
+            pos = str(raw_config.get('icon_position', '')).lower().strip()
+            if pos in ['above', 'below', 'left', 'right']:
+                clean['icon_position'] = pos
+            try:
+                clean['icon_size'] = max(10, min(36, int(raw_config.get('icon_size', 16))))
+            except (ValueError, TypeError):
+                pass
+            try:
+                clean['icon_spacing'] = max(0, min(24, int(raw_config.get('icon_spacing', 6))))
+            except (ValueError, TypeError):
+                pass
+
+    # Borders & Effects
+    if raw_config.get('border_enabled'):
+        clean['border_enabled'] = True
+        clean['border_color'] = clean_color(raw_config.get('border_color'), '#ffd700')
+        try:
+            clean['border_width'] = max(1, min(6, int(raw_config.get('border_width', 2))))
+        except (ValueError, TypeError):
+            pass
+        b_style = str(raw_config.get('border_style', '')).lower().strip()
+        if b_style in ['solid', 'dashed', 'dotted']:
+            clean['border_style'] = b_style
+
+    if raw_config.get('glow_enabled'):
+        clean['glow_enabled'] = True
+        clean['glow_color'] = clean_color(raw_config.get('glow_color'), '#ffd700')
+        try:
+            clean['glow_intensity'] = max(1, min(10, int(raw_config.get('glow_intensity', 5))))
+        except (ValueError, TypeError):
+            pass
+
+    if raw_config.get('highlight_enabled'):
+        clean['highlight_enabled'] = True
+
+    return clean
 
 def get_error_context(request, status_code: int, default_msg: str = ""):
     path = getattr(request, 'path', '') or ''
@@ -284,18 +469,28 @@ def public_shop_view(request, public_token):
         if hasattr(recent_spin, 'coupon'):
             existing_coupon = recent_spin.coupon
 
+    winning_segment_index = None
+    if recent_spin and recent_spin.prize:
+        for idx, p in enumerate(prizes):
+            if p.id == recent_spin.prize_id:
+                winning_segment_index = idx
+                break
+
     prizes_data = [
         {
             'id': p.id,
             'name': p.name,
             'display_color': p.display_color,
-            'prize_type': p.prize_type
+            'prize_type': p.prize_type,
+            'design_config': p.design_config or {}
         } for p in prizes
     ]
 
+    center_hub_config = campaign.get_center_hub_config() if campaign else {}
     context = {
         'shop': shop,
         'branding': branding,
+        'font_family': getattr(branding, 'font_family', 'inter') if branding else 'inter',
         'active_theme': active_theme,
         'theme_resolution': theme_resolution,
         'theme_intensity': getattr(branding, 'intensity', 'balanced') or 'balanced',
@@ -307,6 +502,9 @@ def public_shop_view(request, public_token):
         'is_in_cooldown': is_in_cooldown,
         'cooldown_remaining_seconds': cooldown_remaining_seconds,
         'cooldown_remaining_formatted': cooldown_remaining_formatted,
+        'winning_segment_index': winning_segment_index,
+        'center_hub_config': center_hub_config,
+        'center_hub_config_json': json.dumps(center_hub_config),
         'is_public_page': True
     }
     return render(request, 'customer/spin_landing.html', context)
@@ -746,11 +944,14 @@ def prize_manager_view(request, campaign_id):
             prob = parse_float_safe(request.POST.get('probability'), default=10.0, min_val=0.0, max_val=100.0)
             color = (request.POST.get('display_color') or '#6366f1').strip()
             qty = parse_int_safe(request.POST.get('remaining_quantity'), default=100, min_val=0)
+            raw_design = request.POST.get('design_config')
+            design_config = sanitize_segment_design_config(raw_design)
 
             Prize.objects.create(
                 campaign=campaign, name=name, prize_type=p_type, discount_percentage=disc_pct,
                 fixed_discount_amount=fixed_amt, coupon_text=coupon_text, probability=prob,
-                display_color=color, max_wins=qty, remaining_quantity=qty
+                display_color=color, max_wins=qty, remaining_quantity=qty,
+                design_config=design_config
             )
             ActivityLog.objects.create(shop=shop, actor=request.user, action="Prize Added", details=f"Prize {name} added to {campaign.name}")
             return redirect('prize_manager', campaign_id=campaign.id)
@@ -780,6 +981,9 @@ def prize_manager_view(request, campaign_id):
                 qty = parse_int_safe(request.POST.get('remaining_quantity'), default=prize.remaining_quantity, min_val=0)
                 prize.max_wins = qty
                 prize.remaining_quantity = qty
+            if 'design_config' in request.POST:
+                raw_design = request.POST.get('design_config')
+                prize.design_config = sanitize_segment_design_config(raw_design)
             prize.save()
             ActivityLog.objects.create(shop=shop, actor=request.user, action="Prize Updated", details=f"Prize {prize.name} updated in {campaign.name}")
             return redirect('prize_manager', campaign_id=campaign.id)
@@ -789,11 +993,67 @@ def prize_manager_view(request, campaign_id):
             Prize.objects.filter(id=prize_id, campaign=campaign).delete()
             return redirect('prize_manager', campaign_id=campaign.id)
 
+        elif action == 'update_wheel_center':
+            hub_mode = request.POST.get('hub_mode', 'motif')
+            hub_type = request.POST.get('hub_type', '')
+            hub_icon = request.POST.get('hub_icon', 'crown')
+            icon_color = request.POST.get('icon_color', '#ffd700')
+            rim_color = request.POST.get('rim_color', '#ffd700')
+            bg_color = request.POST.get('bg_color', '#1e1324')
+            remove_logo = request.POST.get('remove_logo') == '1'
+
+            current_cfg = dict(campaign.wheel_config or {})
+            current_cfg.update({
+                'mode': hub_mode,
+                'hubType': hub_type,
+                'icon': hub_icon,
+                'iconColor': icon_color,
+                'rimColor': rim_color,
+                'bgColor': bg_color,
+            })
+
+            if 'center_logo' in request.FILES:
+                campaign.center_logo = request.FILES['center_logo']
+                campaign.save()
+                current_cfg['center_logo_url'] = campaign.center_logo.url
+            elif remove_logo:
+                campaign.center_logo = None
+                campaign.save()
+                current_cfg['center_logo_url'] = ''
+
+            use_shop_logo = request.POST.get('use_shop_logo') == '1'
+            if use_shop_logo and shop.logo:
+                current_cfg['center_logo_url'] = shop.logo.url
+
+            campaign.wheel_config = current_cfg
+            campaign.save()
+
+            ActivityLog.objects.create(
+                shop=shop, actor=request.user,
+                action="Wheel Center Hub Updated",
+                details=f"Center Hub mode '{hub_mode}' updated for campaign '{campaign.name}'"
+            )
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('ajax') == '1':
+                return JsonResponse({'status': 'ok', 'wheel_config': current_cfg, 'center_hub_config': campaign.get_center_hub_config()})
+            return redirect('prize_manager', campaign_id=campaign.id)
+
     prizes = campaign.prizes.all()
     total_probability = sum(parse_float_safe(getattr(p, 'probability', 0.0), default=0.0) for p in prizes)
 
     prizes_json = json.dumps([
-        {'id': p.id, 'name': p.name, 'display_color': p.display_color, 'prize_type': p.prize_type}
+        {
+            'id': p.id,
+            'name': p.name,
+            'display_color': p.display_color,
+            'prize_type': p.prize_type,
+            'discount_percentage': str(p.discount_percentage),
+            'fixed_discount_amount': str(p.fixed_discount_amount),
+            'probability': p.probability,
+            'coupon_text': p.coupon_text,
+            'remaining_quantity': p.remaining_quantity,
+            'design_config': p.design_config or {}
+        }
         for p in prizes
     ])
 
@@ -801,6 +1061,9 @@ def prize_manager_view(request, campaign_id):
     from core.services.theme_resolver import get_active_shop_theme
     theme_resolution = get_active_shop_theme(shop, campaign)
     active_theme = theme_resolution.theme
+
+    center_hub_config = campaign.get_center_hub_config()
+    center_hub_config_json = json.dumps(center_hub_config)
 
     return render(request, 'dashboard/prize_manager.html', {
         'shop': shop,
@@ -810,7 +1073,9 @@ def prize_manager_view(request, campaign_id):
         'theme_resolution': theme_resolution,
         'prizes': prizes,
         'total_probability': round(total_probability, 1),
-        'prizes_json': prizes_json
+        'prizes_json': prizes_json,
+        'center_hub_config': center_hub_config,
+        'center_hub_config_json': center_hub_config_json
     })
 
 
@@ -2523,7 +2788,8 @@ def preview_campaign_view(request, campaign_id):
         'id': p.id if hasattr(p, 'id') else p.get('id', 0),
         'name': p.name if hasattr(p, 'name') else p.get('name', 'Sample Reward'),
         'display_color': p.display_color if hasattr(p, 'display_color') else p.get('display_color', '#6366f1'),
-        'prize_type': p.prize_type if hasattr(p, 'prize_type') else p.get('prize_type', 'percentage')
+        'prize_type': p.prize_type if hasattr(p, 'prize_type') else p.get('prize_type', 'percentage'),
+        'design_config': (p.design_config if hasattr(p, 'design_config') else p.get('design_config', {})) or {}
     } for p in prizes])
 
     from core.services.theme_resolver import get_active_shop_theme, ThemeResolution
@@ -2535,14 +2801,19 @@ def preview_campaign_view(request, campaign_id):
         theme_resolution = get_active_shop_theme(shop, camp)
         active_theme = theme_resolution.theme
 
+    center_hub_config = camp.get_center_hub_config()
     return render(request, 'customer/spin_landing.html', {
         'shop': shop,
         'campaign': camp,
         'branding': branding,
+        'font_family': getattr(branding, 'font_family', 'inter') if branding else 'inter',
         'active_theme': active_theme,
         'theme_resolution': theme_resolution,
+        'theme_intensity': getattr(branding, 'intensity', 'balanced') or 'balanced',
         'prizes': prizes,
         'prizes_json': prizes_json,
+        'center_hub_config': center_hub_config,
+        'center_hub_config_json': json.dumps(center_hub_config),
         'is_preview': True,
         'is_public_page': True
     })

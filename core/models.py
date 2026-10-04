@@ -703,6 +703,8 @@ class Campaign(models.Model):
     hero_image = models.ImageField(upload_to='campaign_heroes/', blank=True, null=True)
     template_type = models.CharField(max_length=50, blank=True)
     theme = models.CharField(max_length=50, default='', blank=True)
+    center_logo = models.ImageField(upload_to='wheel_center_logos/', blank=True, null=True)
+    wheel_config = models.JSONField(default=dict, blank=True, null=True)
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -716,6 +718,48 @@ class Campaign(models.Model):
 
     def get_welcome_subtitle(self):
         return self.welcome_subtitle if self.welcome_subtitle else self.description
+
+    def get_center_hub_config(self):
+        config = self.wheel_config or {}
+        logo_url = None
+        branding = getattr(self.shop, 'branding', None)
+
+        explicit_url = config.get('center_logo_url')
+        if explicit_url is not None:
+            logo_url = explicit_url if explicit_url else None
+        elif self.center_logo:
+            try:
+                logo_url = self.center_logo.url
+            except Exception:
+                logo_url = None
+        elif branding and getattr(branding, 'wheel_center_logo', None):
+            try:
+                logo_url = branding.wheel_center_logo.url
+            except Exception:
+                logo_url = None
+        elif getattr(self.shop, 'logo', None):
+            try:
+                logo_url = self.shop.logo.url
+            except Exception:
+                logo_url = None
+
+        mode = config.get('mode')
+        if not mode:
+            mode = 'image' if logo_url else 'motif'
+
+        active_logo_url = logo_url if mode == 'image' else None
+
+        return {
+            'mode': mode,
+            'hubType': config.get('hubType', ''),
+            'icon': config.get('icon', 'crown'),
+            'iconColor': config.get('iconColor', '#ffd700'),
+            'iconSize': config.get('iconSize', 24),
+            'rimColor': config.get('rimColor', '#ffd700'),
+            'bgColor': config.get('bgColor', '#1e1324'),
+            'logoUrl': active_logo_url,
+            'rawLogoUrl': logo_url
+        }
 
     def __str__(self):
         return f"{self.name} ({self.shop.name})"
@@ -749,6 +793,7 @@ class Prize(models.Model):
     is_active = models.BooleanField(default=True)
     max_wins = models.IntegerField(default=500)
     remaining_quantity = models.IntegerField(default=500)
+    design_config = models.JSONField(default=dict, blank=True, null=True)
 
     def clean(self):
         super().clean()

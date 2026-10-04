@@ -4,6 +4,117 @@
  * 14 Procedural Center Hubs, 11 Dedicated Pointers, Outer Bezels, & Web Audio Synthesis
  */
 
+const LOADED_GOOGLE_FONTS = new Set();
+function ensureGoogleFontLoaded(fontFamily) {
+  if (!fontFamily || typeof document === 'undefined') return;
+  const fontSlug = fontFamily.toLowerCase().trim().replace(/_/g, '-');
+  if (LOADED_GOOGLE_FONTS.has(fontSlug)) return;
+
+  const fontMapping = {
+    'inter': 'Inter:wght@400;600;700;800;900',
+    'poppins': 'Poppins:wght@400;600;700;800;900',
+    'montserrat': 'Montserrat:wght@400;600;700;800;900',
+    'roboto': 'Roboto:wght@400;500;700;900',
+    'lato': 'Lato:wght@400;700;900',
+    'nunito': 'Nunito:wght@400;600;700;800;900',
+    'outfit': 'Outfit:wght@400;600;700;800;900',
+    'manrope': 'Manrope:wght@400;600;700;800',
+    'dm-sans': 'DM+Sans:wght@400;500;700;800',
+    'plus-jakarta-sans': 'Plus+Jakarta+Sans:wght@400;600;700;800',
+    'oswald': 'Oswald:wght@400;600;700',
+    'bebas-neue': 'Bebas+Neue',
+    'anton': 'Anton',
+    'playfair': 'Playfair+Display:ital,wght@0,600;0,700;0,800;1,600',
+    'playfair-display': 'Playfair+Display:ital,wght@0,600;0,700;0,800;1,600',
+    'cormorant-garamond': 'Cormorant+Garamond:wght@400;600;700',
+    'cinzel': 'Cinzel:wght@600;700;800;900',
+    'raleway': 'Raleway:wght@400;600;700;800',
+    'quicksand': 'Quicksand:wght@400;600;700',
+    'rubik': 'Rubik:wght@400;600;700;800',
+    'space-grotesk': 'Space+Grotesk:wght@500;600;700',
+    'archivo': 'Archivo:wght@400;600;700;800',
+    'barlow-condensed': 'Barlow+Condensed:wght@400;600;700;800',
+    'league-spartan': 'League+Spartan:wght@400;600;700;800'
+  };
+
+  const familyParam = fontMapping[fontSlug];
+  if (familyParam) {
+    LOADED_GOOGLE_FONTS.add(fontSlug);
+    const linkId = `gfont-${fontSlug}`;
+    if (!document.getElementById(linkId)) {
+      const link = document.createElement('link');
+      link.id = linkId;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${familyParam}&display=swap`;
+      document.head.appendChild(link);
+    }
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        if (window.activeSpinWheelInstance) {
+          window.activeSpinWheelInstance.draw();
+        }
+      }).catch(() => {});
+    }
+  }
+}
+
+function resolveCanvasFontName(fontFamily) {
+  if (!fontFamily) return "'Inter', sans-serif";
+  const slug = fontFamily.toLowerCase().trim().replace(/_/g, '-');
+  ensureGoogleFontLoaded(slug);
+  switch (slug) {
+    case 'poppins': return "'Poppins', sans-serif";
+    case 'montserrat': return "'Montserrat', sans-serif";
+    case 'roboto': return "'Roboto', sans-serif";
+    case 'lato': return "'Lato', sans-serif";
+    case 'nunito': return "'Nunito', sans-serif";
+    case 'outfit': return "'Outfit', sans-serif";
+    case 'manrope': return "'Manrope', sans-serif";
+    case 'dm-sans': return "'DM Sans', sans-serif";
+    case 'plus-jakarta-sans': return "'Plus Jakarta Sans', sans-serif";
+    case 'oswald': return "'Oswald', sans-serif";
+    case 'bebas-neue': return "'Bebas Neue', sans-serif";
+    case 'anton': return "'Anton', sans-serif";
+    case 'playfair':
+    case 'playfair-display': return "'Playfair Display', serif";
+    case 'cormorant-garamond': return "'Cormorant Garamond', serif";
+    case 'cinzel': return "'Cinzel', serif";
+    case 'raleway': return "'Raleway', sans-serif";
+    case 'quicksand': return "'Quicksand', sans-serif";
+    case 'rubik': return "'Rubik', sans-serif";
+    case 'space-grotesk': return "'Space Grotesk', monospace";
+    case 'archivo': return "'Archivo', sans-serif";
+    case 'barlow-condensed': return "'Barlow Condensed', sans-serif";
+    case 'league-spartan': return "'League Spartan', sans-serif";
+    default: return "'Inter', sans-serif";
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.ensureGoogleFontLoaded = ensureGoogleFontLoaded;
+  window.resolveCanvasFontName = resolveCanvasFontName;
+}
+
+const SEGMENT_ICON_SYMBOL_MAP = {
+  'gift': '🎁',
+  'percent': '%',
+  'tag': '🏷️',
+  'star': '⭐',
+  'crown': '👑',
+  'sparkles': '✨',
+  'flame': '🔥',
+  'trophy': '🏆',
+  'diamond': '💎',
+  'heart': '❤️',
+  'coffee': '☕',
+  'shopping-bag': '🛍️',
+  'zap': '⚡',
+  'smile': '😊',
+  'frown': '🙁',
+  'award': '🎖️',
+  'ticket': '🎫'
+};
+
 const THEME_SPINNER_REGISTRY = {
   // ── 1. ROYAL & JEWELLERY ──
   kurti: {
@@ -509,6 +620,28 @@ class SpinWheel {
     this.soundToggle = options.soundToggleId ? document.getElementById(options.soundToggleId) : null;
     this.onSpinClick = options.onSpinClick || null;
 
+    this.centerConfig = options.centerConfig || {};
+    const effectiveMode = this.centerConfig.mode || (options.centerLogo || this.centerConfig.logoUrl ? 'image' : 'motif');
+    if (effectiveMode === 'image') {
+      this.centerLogoUrl = options.centerLogo || this.centerConfig.logoUrl || null;
+    } else {
+      this.centerLogoUrl = null;
+    }
+    this.centerLogoImg = null;
+    if (this.centerLogoUrl) {
+      this.centerLogoImg = new Image();
+      this.centerLogoImg.crossOrigin = 'anonymous';
+      this.centerLogoImg.onload = () => {
+        this.draw();
+      };
+      this.centerLogoImg.onerror = () => {
+        console.warn('Center logo failed to load, falling back to theme motif');
+        this.centerLogoImg = null;
+        this.draw();
+      };
+      this.centerLogoImg.src = this.centerLogoUrl;
+    }
+
     this.currentAngle = 0;
     this.isSpinning = false;
     this.soundMuted = false;
@@ -520,6 +653,46 @@ class SpinWheel {
     window.activeSpinWheelInstance = this;
 
     this.init();
+  }
+
+  setPrizes(newPrizes) {
+    this.prizes = newPrizes;
+    this.draw();
+  }
+
+  setCenterLogo(logoUrl) {
+    this.centerLogoUrl = logoUrl;
+    if (this.centerConfig) {
+      this.centerConfig.logoUrl = logoUrl;
+    }
+    if (logoUrl) {
+      this.centerLogoImg = new Image();
+      this.centerLogoImg.crossOrigin = 'anonymous';
+      this.centerLogoImg.onload = () => {
+        this.draw();
+      };
+      this.centerLogoImg.onerror = () => {
+        console.warn('Center logo failed to load, falling back to theme motif');
+        this.centerLogoImg = null;
+        this.draw();
+      };
+      this.centerLogoImg.src = logoUrl;
+    } else {
+      this.centerLogoImg = null;
+      this.draw();
+    }
+  }
+
+  setCenterConfig(newConfig) {
+    this.centerConfig = Object.assign({}, this.centerConfig, newConfig);
+    const effectiveMode = this.centerConfig.mode || (this.centerConfig.logoUrl ? 'image' : 'motif');
+    if (effectiveMode !== 'image') {
+      this.setCenterLogo(null);
+    } else if (newConfig.logoUrl !== undefined) {
+      this.setCenterLogo(newConfig.logoUrl);
+    } else {
+      this.draw();
+    }
   }
 
   init() {
@@ -553,20 +726,33 @@ class SpinWheel {
 
   setupHighDPI() {
     if (!this.canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = this.canvas.getBoundingClientRect();
-    const displayWidth = (rect && rect.width > 50) ? rect.width : (parseInt(this.canvas.getAttribute('width')) || 330);
-    const displayHeight = (rect && rect.height > 50) ? rect.height : (parseInt(this.canvas.getAttribute('height')) || 330);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    
+    // Check available parent container width for responsive sizing
+    let containerWidth = 330;
+    if (this.canvas.parentElement && this.canvas.parentElement.clientWidth > 50) {
+      containerWidth = this.canvas.parentElement.clientWidth;
+    } else if (typeof window !== 'undefined' && window.innerWidth) {
+      containerWidth = Math.min(window.innerWidth - 32, 340);
+    }
 
-    this.canvas.width = Math.round(displayWidth * dpr);
-    this.canvas.height = Math.round(displayHeight * dpr);
-    this.canvas.style.width = displayWidth + 'px';
-    this.canvas.style.height = displayHeight + 'px';
-    this.ctx.resetTransform();
+    // Maintain a true circle with responsive size between 260px and 360px
+    let size = Math.max(260, Math.min(containerWidth, 360));
+
+    this.canvas.width = Math.round(size * dpr);
+    this.canvas.height = Math.round(size * dpr);
+    this.canvas.style.width = size + 'px';
+    this.canvas.style.height = size + 'px';
+
+    if (this.ctx.resetTransform) {
+      this.ctx.resetTransform();
+    } else {
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
     this.ctx.scale(dpr, dpr);
 
-    this.displayWidth = displayWidth;
-    this.displayHeight = displayHeight;
+    this.displayWidth = size;
+    this.displayHeight = size;
   }
 
   getThemeConfig() {
@@ -760,7 +946,8 @@ class SpinWheel {
       const prize = prizesToDraw[i];
       const startAngle = this.currentAngle + i * sliceAngle;
       const endAngle = startAngle + sliceAngle;
-      const baseColor = palette[i % palette.length];
+      const dConfig = (prize && prize.design_config) ? prize.design_config : {};
+      const baseColor = (dConfig.bg_color_1) || (prize && prize.display_color) || palette[i % palette.length];
 
       this.ctx.save();
       this.ctx.beginPath();
@@ -768,13 +955,66 @@ class SpinWheel {
       this.ctx.arc(centerX, centerY, radius, startAngle, endAngle);
       this.ctx.closePath();
 
-      // Multi-stop 3D radial depth gradient for segment
-      const segGrad = this.ctx.createRadialGradient(centerX, centerY, geom.hubRadius * 0.5, centerX, centerY, radius);
-      segGrad.addColorStop(0, this.adjustHexBrightness(baseColor, 25));
-      segGrad.addColorStop(0.7, baseColor);
-      segGrad.addColorStop(1, this.adjustHexBrightness(baseColor, -35));
-      this.ctx.fillStyle = segGrad;
-      this.ctx.fill();
+      if (dConfig.bg_type === 'solid') {
+        this.ctx.fillStyle = dConfig.bg_color_1 || baseColor;
+        this.ctx.fill();
+      } else if (dConfig.bg_type === 'gradient') {
+        const c1 = dConfig.bg_color_1 || baseColor;
+        const c2 = dConfig.bg_color_2 || this.adjustHexBrightness(c1, -30);
+        const c3 = dConfig.bg_color_3 || null;
+
+        if (dConfig.gradient_type === 'radial') {
+          const radGrad = this.ctx.createRadialGradient(centerX, centerY, geom.hubRadius * 0.5, centerX, centerY, radius);
+          radGrad.addColorStop(0, c1);
+          if (c3) {
+            radGrad.addColorStop(0.5, c2);
+            radGrad.addColorStop(1, c3);
+          } else {
+            radGrad.addColorStop(1, c2);
+          }
+          this.ctx.fillStyle = radGrad;
+        } else {
+          // Linear gradient aligned with angle
+          const angle = dConfig.gradient_angle !== undefined ? (dConfig.gradient_angle * Math.PI / 180) : (startAngle + sliceAngle / 2);
+          const x1 = centerX + Math.cos(angle) * (geom.hubRadius * 0.8);
+          const y1 = centerY + Math.sin(angle) * (geom.hubRadius * 0.8);
+          const x2 = centerX + Math.cos(angle) * radius;
+          const y2 = centerY + Math.sin(angle) * radius;
+          const linGrad = this.ctx.createLinearGradient(x1, y1, x2, y2);
+          linGrad.addColorStop(0, c1);
+          if (c3) {
+            linGrad.addColorStop(0.5, c2);
+            linGrad.addColorStop(1, c3);
+          } else {
+            linGrad.addColorStop(1, c2);
+          }
+          this.ctx.fillStyle = linGrad;
+        }
+        this.ctx.fill();
+      } else {
+        // Multi-stop 3D radial depth gradient for segment
+        const segGrad = this.ctx.createRadialGradient(centerX, centerY, geom.hubRadius * 0.5, centerX, centerY, radius);
+        segGrad.addColorStop(0, this.adjustHexBrightness(baseColor, 25));
+        segGrad.addColorStop(0.7, baseColor);
+        segGrad.addColorStop(1, this.adjustHexBrightness(baseColor, -35));
+        this.ctx.fillStyle = segGrad;
+        this.ctx.fill();
+      }
+
+      // Background Pattern overlay if enabled
+      if (dConfig.bg_pattern && dConfig.bg_pattern !== 'none') {
+        this.drawSegmentPattern(centerX, centerY, radius, geom.hubRadius, startAngle, sliceAngle, dConfig.bg_pattern);
+      }
+
+      // Highlight sheen overlay if enabled
+      if (dConfig.highlight_enabled) {
+        const sheen = this.ctx.createRadialGradient(centerX, centerY, geom.hubRadius, centerX, centerY, radius);
+        sheen.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+        sheen.addColorStop(0.6, 'rgba(255, 255, 255, 0.1)');
+        sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        this.ctx.fillStyle = sheen;
+        this.ctx.fill();
+      }
 
       // Winning slice pulse highlight
       if (this.winningSegment === i) {
@@ -789,16 +1029,43 @@ class SpinWheel {
       this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
       this.ctx.stroke();
 
-      // Segment Separator Line
-      this.ctx.beginPath();
-      this.ctx.moveTo(centerX, centerY);
-      this.ctx.lineTo(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius);
-      this.ctx.lineWidth = config.ringStyle === 'neon_tube' ? 2.2 : 1.8;
-      this.ctx.strokeStyle = config.ringStyle === 'neon_tube' ? 'rgba(0, 229, 255, 0.85)' : (config.ringStyle === 'antique_gold_embroidered' ? 'rgba(201, 164, 92, 0.85)' : (config.ringStyle === 'champagne_minimal' ? 'rgba(243, 229, 171, 0.5)' : 'rgba(255, 215, 0, 0.75)'));
-      this.ctx.stroke();
+      // Custom Segment Border or Glow
+      if (dConfig.border_enabled) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX, centerY);
+        this.ctx.arc(centerX, centerY, radius - 1, startAngle, endAngle);
+        this.ctx.closePath();
+        this.ctx.lineWidth = dConfig.border_width || 2;
+        this.ctx.strokeStyle = dConfig.border_color || '#ffd700';
+        if (dConfig.border_style === 'dashed') this.ctx.setLineDash([4, 4]);
+        else if (dConfig.border_style === 'dotted') this.ctx.setLineDash([2, 3]);
+        else this.ctx.setLineDash([]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+      } else {
+        // Standard Segment Separator Line
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX, centerY);
+        this.ctx.lineTo(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius);
+        this.ctx.lineWidth = config.ringStyle === 'neon_tube' ? 2.2 : 1.8;
+        this.ctx.strokeStyle = config.ringStyle === 'neon_tube' ? 'rgba(0, 229, 255, 0.85)' : (config.ringStyle === 'antique_gold_embroidered' ? 'rgba(201, 164, 92, 0.85)' : (config.ringStyle === 'champagne_minimal' ? 'rgba(243, 229, 171, 0.5)' : 'rgba(255, 215, 0, 0.75)'));
+        this.ctx.stroke();
+      }
+
+      if (dConfig.glow_enabled) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, radius - 2, startAngle, endAngle);
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeStyle = dConfig.glow_color || '#ffd700';
+        this.ctx.shadowColor = dConfig.glow_color || '#ffd700';
+        this.ctx.shadowBlur = (dConfig.glow_intensity || 5) * 2;
+        this.ctx.stroke();
+        this.ctx.restore();
+      }
 
       // ── 4. LAYER 4: INTELLIGENT AUTO-SCALED TYPOGRAPHY ──
-      this.drawSegmentText(centerX, centerY, radius, geom.hubRadius, startAngle, sliceAngle, prize.name, config);
+      this.drawSegmentText(centerX, centerY, radius, geom.hubRadius, startAngle, sliceAngle, prize.name, config, prize);
       this.ctx.restore();
     }
 
@@ -962,57 +1229,300 @@ class SpinWheel {
     this.ctx.restore();
   }
 
-  drawSegmentText(centerX, centerY, radius, hubRadius, startAngle, sliceAngle, rawText, config) {
-    const text = rawText || 'Reward';
+  drawSegmentPattern(centerX, centerY, radius, hubRadius, startAngle, sliceAngle, patternType) {
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.moveTo(centerX, centerY);
+    this.ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+    this.ctx.closePath();
+    this.ctx.clip();
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    
+    if (patternType === 'dots') {
+      const mid = startAngle + sliceAngle / 2;
+      for (let r = hubRadius + 14; r < radius - 10; r += 16) {
+        const px = centerX + Math.cos(mid) * r;
+        const py = centerY + Math.sin(mid) * r;
+        this.ctx.beginPath();
+        this.ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
+        this.ctx.fill();
+      }
+    } else if (patternType === 'stars') {
+      const mid = startAngle + sliceAngle / 2;
+      for (let r = hubRadius + 18; r < radius - 14; r += 22) {
+        const px = centerX + Math.cos(mid) * r;
+        const py = centerY + Math.sin(mid) * r;
+        this.ctx.font = '11px "Segoe UI Emoji", sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('✦', px, py);
+      }
+    } else if (patternType === 'stripes') {
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+      this.ctx.lineWidth = 1.5;
+      for (let step = 0.2; step < 0.9; step += 0.2) {
+        const ang = startAngle + sliceAngle * step;
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX + Math.cos(ang) * hubRadius, centerY + Math.sin(ang) * hubRadius);
+        this.ctx.lineTo(centerX + Math.cos(ang) * radius, centerY + Math.sin(ang) * radius);
+        this.ctx.stroke();
+      }
+    } else if (patternType === 'chevrons') {
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      this.ctx.lineWidth = 1.8;
+      const mid = startAngle + sliceAngle / 2;
+      for (let r = hubRadius + 16; r < radius - 12; r += 20) {
+        const px = centerX + Math.cos(mid) * r;
+        const py = centerY + Math.sin(mid) * r;
+        this.ctx.beginPath();
+        this.ctx.moveTo(px - 5, py - 4);
+        this.ctx.lineTo(px, py + 2);
+        this.ctx.lineTo(px + 5, py - 4);
+        this.ctx.stroke();
+      }
+    }
+    this.ctx.restore();
+  }
+
+  drawSegmentText(centerX, centerY, radius, hubRadius, startAngle, sliceAngle, rawText, config, prize = null) {
+    const dConfig = (prize && prize.design_config) ? prize.design_config : {};
+    let text = rawText || (prize ? prize.name : 'Reward');
+
+    // Text transformation
+    if (dConfig.text_transform === 'uppercase') {
+      text = text.toUpperCase();
+    } else if (dConfig.text_transform === 'lowercase') {
+      text = text.toLowerCase();
+    } else if (dConfig.text_transform === 'capitalize') {
+      text = text.replace(/\b\w/g, l => l.toUpperCase());
+    }
+
     const midAngle = startAngle + sliceAngle / 2;
-    const textRadius = hubRadius + (radius - hubRadius) * 0.65;
+
+    // Upright text orientation: prevent upside-down unreadable text
+    const normAngle = ((midAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const isFlipped = normAngle > Math.PI * 0.5 && normAngle < Math.PI * 1.5;
 
     this.ctx.save();
     this.ctx.translate(centerX, centerY);
-    this.ctx.rotate(midAngle);
-    this.ctx.textAlign = 'right';
-    this.ctx.textBaseline = 'middle';
+    if (isFlipped) {
+      this.ctx.rotate(midAngle + Math.PI);
+    } else {
+      this.ctx.rotate(midAngle);
+    }
 
-    // Theme-specific typography font selection
-    let fontName = 'sans-serif';
-    if (config.fontFamily === 'cinzel') fontName = "'Cinzel', serif";
+    // Font family selection
+    let fontName = "'Inter', sans-serif";
+    if (dConfig.font_family) {
+      fontName = resolveCanvasFontName(dConfig.font_family);
+    } else if (config.fontFamily === 'cinzel') fontName = "'Cinzel', serif";
     else if (config.fontFamily === 'playfair') fontName = "'Playfair Display', serif";
     else if (config.fontFamily === 'space_grotesk') fontName = "'Space Grotesk', monospace";
     else if (config.fontFamily === 'poppins') fontName = "'Poppins', sans-serif";
     else if (config.fontFamily === 'outfit') fontName = "'Outfit', sans-serif";
     else fontName = "'Inter', sans-serif";
 
-    // Auto-scale font size based on text length and radius
-    let fontSize = 13.5;
-    if (text.length > 15) fontSize = 11;
-    if (text.length > 20) fontSize = 9.5;
-    if (radius < 130) fontSize = Math.max(fontSize - 2, 8.5);
+    // Responsive, attractive font sizing
+    const baseScale = radius / 140;
+    let baseFontSize = sliceAngle >= 1.2 ? 18 : (sliceAngle >= 0.8 ? 16 : (sliceAngle >= 0.55 ? 14 : 12));
+    let fontSize = dConfig.font_size ? Number(dConfig.font_size) : Math.round(baseFontSize * baseScale);
 
-    this.ctx.font = `bold ${fontSize}px ${fontName}`;
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-    this.ctx.shadowBlur = 5;
+    const fontWeight = dConfig.font_weight || 'bold';
+    const fontStyle = dConfig.font_style || 'normal';
 
-    let displayText = text;
-    if (text.length > 22) displayText = text.substring(0, 20) + '...';
-    this.ctx.fillText(displayText, radius - 14, 0);
+    let displayText = text.trim();
+    if (displayText.length > 28) displayText = displayText.substring(0, 26) + '…';
+
+    // Segment Icon integration
+    const iconName = (dConfig.icon_type === 'preset' && dConfig.icon_name) ? dConfig.icon_name : null;
+    const iconSymbol = iconName ? (SEGMENT_ICON_SYMBOL_MAP[iconName] || '') : '';
+    const iconPos = dConfig.icon_position || 'left';
+    const iconSize = dConfig.icon_size ? Number(dConfig.icon_size) : 14;
+    const iconSpacing = dConfig.icon_spacing !== undefined ? Number(dConfig.icon_spacing) : 6;
+
+    // Available radial length inside wedge
+    const maxLen = (radius - hubRadius) * 0.85;
+
+    // Intelligent multi-line decision:
+    // If multi-word text and slice is wide enough (>= 0.55 rad), split into 2 clean lines
+    let lines = [];
+    const words = displayText.split(/\s+/);
+    const canUseTwoLines = words.length >= 2 && sliceAngle >= 0.52 && iconPos !== 'above' && iconPos !== 'below';
+
+    if (canUseTwoLines) {
+      let bestDiff = Infinity;
+      let bestIdx = 1;
+      for (let i = 1; i < words.length; i++) {
+        const l1 = words.slice(0, i).join(' ');
+        const l2 = words.slice(i).join(' ');
+        const diff = Math.abs(l1.length - l2.length);
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestIdx = i;
+        }
+      }
+      lines = [words.slice(0, bestIdx).join(' '), words.slice(bestIdx).join(' ')];
+      if (iconSymbol && iconPos === 'left') lines[0] = `${iconSymbol} ${lines[0]}`;
+      if (iconSymbol && iconPos === 'right') lines[1] = `${lines[1]} ${iconSymbol}`;
+    } else {
+      let singleText = displayText;
+      if (iconSymbol && iconPos === 'left') singleText = `${iconSymbol} ${singleText}`;
+      if (iconSymbol && iconPos === 'right') singleText = `${singleText} ${iconSymbol}`;
+      lines = [singleText];
+    }
+
+    // Auto-fit font size to ensure lines fit inside available radial length
+    this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontName}`;
+    let maxMeasuredW = 0;
+    for (const line of lines) {
+      const w = this.ctx.measureText(line).width;
+      if (w > maxMeasuredW) maxMeasuredW = w;
+    }
+    if (maxMeasuredW > maxLen && maxLen > 25) {
+      const fitRatio = maxLen / maxMeasuredW;
+      fontSize = Math.max(9, Math.floor(fontSize * fitRatio));
+    }
+    this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontName}`;
+
+    // Letter spacing if supported
+    if (dConfig.letter_spacing !== undefined && 'letterSpacing' in this.ctx) {
+      this.ctx.letterSpacing = `${dConfig.letter_spacing}px`;
+    }
+
+    // Alignment and radial positioning
+    const rMid = hubRadius + (radius - hubRadius) * 0.56;
+    let posX = isFlipped ? -rMid : rMid;
+    let textAlign = 'center';
+
+    if (dConfig.text_align === 'right') {
+      posX = isFlipped ? -(radius - 14) : (radius - 14);
+      textAlign = isFlipped ? 'left' : 'right';
+    } else if (dConfig.text_align === 'left') {
+      posX = isFlipped ? -(hubRadius + 14) : (hubRadius + 14);
+      textAlign = isFlipped ? 'right' : 'left';
+    }
+    this.ctx.textAlign = textAlign;
+    this.ctx.textBaseline = 'middle';
+
+    // Contrast check & safe text color
+    const palette = config.palette || ['#d4af37', '#ffd700'];
+    const baseColor = (dConfig.bg_color_1) || (prize && prize.display_color) || palette[0];
+    
+    function getLuminance(hex) {
+      if (!hex || typeof hex !== 'string' || hex[0] !== '#') return 0.5;
+      let clean = hex.slice(1);
+      if (clean.length === 3) clean = clean.split('').map(c => c + c).join('');
+      const num = parseInt(clean, 16);
+      if (isNaN(num)) return 0.5;
+      return (0.299 * ((num >> 16) & 255) + 0.587 * ((num >> 8) & 255) + 0.114 * (num & 255)) / 255;
+    }
+
+    const bgLum = getLuminance(baseColor);
+    const defaultColor = bgLum > 0.52 ? '#0f172a' : '#ffffff';
+    let textColor = dConfig.text_color || defaultColor;
+    const textLum = getLuminance(textColor);
+    const isLowContrast = Math.abs(bgLum - textLum) < 0.28;
+
+    const opacity = dConfig.text_opacity !== undefined ? (Number(dConfig.text_opacity) / 100) : 1.0;
+    this.ctx.fillStyle = textColor;
+    this.ctx.globalAlpha = opacity;
+
+    // Text Shadow
+    if (dConfig.text_shadow_enabled) {
+      this.ctx.shadowColor = dConfig.text_shadow_color || (bgLum > 0.5 ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.85)');
+      this.ctx.shadowBlur = dConfig.text_shadow_blur !== undefined ? Number(dConfig.text_shadow_blur) : 5;
+      this.ctx.shadowOffsetX = dConfig.text_shadow_x !== undefined ? Number(dConfig.text_shadow_x) : 0;
+      this.ctx.shadowOffsetY = dConfig.text_shadow_y !== undefined ? Number(dConfig.text_shadow_y) : 2;
+    } else if (dConfig.text_shadow_enabled === false) {
+      this.ctx.shadowColor = 'transparent';
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+    } else {
+      this.ctx.shadowColor = bgLum > 0.5 ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.85)';
+      this.ctx.shadowBlur = 5;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+    }
+
+    // Auto-stroke for low contrast or custom stroke
+    const needsStroke = dConfig.text_stroke_enabled || isLowContrast;
+    const strokeColor = dConfig.text_stroke_enabled ? (dConfig.text_stroke_color || '#000000') : (bgLum > 0.5 ? '#ffffff' : '#000000');
+    const strokeWidth = dConfig.text_stroke_enabled ? (dConfig.text_stroke_width ? Number(dConfig.text_stroke_width) : 2) : 2.4;
+
+    if (lines.length === 2) {
+      const lineGap = fontSize * 1.15;
+      const y1 = -lineGap * 0.5;
+      const y2 = lineGap * 0.5;
+
+      if (needsStroke) {
+        this.ctx.save();
+        this.ctx.strokeStyle = strokeColor;
+        this.ctx.lineWidth = strokeWidth;
+        this.ctx.strokeText(lines[0], posX, y1);
+        this.ctx.strokeText(lines[1], posX, y2);
+        this.ctx.restore();
+      }
+
+      this.ctx.fillText(lines[0], posX, y1);
+      this.ctx.fillText(lines[1], posX, y2);
+    } else {
+      let textY = 0;
+      let iconY = 0;
+      if (iconSymbol && iconPos === 'above') {
+        textY = fontSize * 0.45;
+        iconY = -fontSize * 0.65 - iconSpacing;
+      } else if (iconSymbol && iconPos === 'below') {
+        textY = -fontSize * 0.45;
+        iconY = fontSize * 0.65 + iconSpacing;
+      }
+
+      if (needsStroke) {
+        this.ctx.save();
+        this.ctx.strokeStyle = strokeColor;
+        this.ctx.lineWidth = strokeWidth;
+        this.ctx.strokeText(lines[0], posX, textY);
+        this.ctx.restore();
+      }
+
+      this.ctx.fillText(lines[0], posX, textY);
+
+      if (iconSymbol && (iconPos === 'above' || iconPos === 'below')) {
+        this.ctx.save();
+        this.ctx.font = `${iconSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+        this.ctx.fillText(iconSymbol, posX, iconY);
+        this.ctx.restore();
+      }
+    }
 
     this.ctx.restore();
   }
 
   drawThemeHub(centerX, centerY, hubRadius, config) {
-    const hubType = config.hubType || 'crown';
+    const cConfig = this.centerConfig || config.centerConfig || {};
+    const hubMode = cConfig.mode || (this.centerLogoImg ? 'image' : 'motif');
+    const hubType = cConfig.hubType || config.hubType || 'crown';
 
     this.ctx.save();
 
     // 1. Outer Hub Ring with drop shadow
     this.ctx.beginPath();
     this.ctx.arc(centerX, centerY, hubRadius, 0, 2 * Math.PI);
-    const rimGrad = this.ctx.createLinearGradient(centerX - hubRadius, centerY - hubRadius, centerX + hubRadius, centerY + hubRadius);
-    rimGrad.addColorStop(0, '#ffd700');
-    rimGrad.addColorStop(0.35, '#ffffff');
-    rimGrad.addColorStop(0.7, '#d4af37');
-    rimGrad.addColorStop(1, '#854d0e');
+    const rimColor = cConfig.rimColor;
+    let rimGrad;
+    if (rimColor) {
+      rimGrad = this.ctx.createLinearGradient(centerX - hubRadius, centerY - hubRadius, centerX + hubRadius, centerY + hubRadius);
+      rimGrad.addColorStop(0, rimColor);
+      rimGrad.addColorStop(0.35, '#ffffff');
+      rimGrad.addColorStop(0.7, rimColor);
+      rimGrad.addColorStop(1, '#111827');
+    } else {
+      rimGrad = this.ctx.createLinearGradient(centerX - hubRadius, centerY - hubRadius, centerX + hubRadius, centerY + hubRadius);
+      rimGrad.addColorStop(0, '#ffd700');
+      rimGrad.addColorStop(0.35, '#ffffff');
+      rimGrad.addColorStop(0.7, '#d4af37');
+      rimGrad.addColorStop(1, '#854d0e');
+    }
     this.ctx.fillStyle = rimGrad;
     this.ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
     this.ctx.shadowBlur = 10;
@@ -1023,16 +1533,76 @@ class SpinWheel {
     const innerR = hubRadius * 0.75;
     this.ctx.beginPath();
     this.ctx.arc(centerX, centerY, innerR, 0, 2 * Math.PI);
-    const innerGrad = this.ctx.createRadialGradient(centerX - 4, centerY - 4, 2, centerX, centerY, innerR);
-    innerGrad.addColorStop(0, '#1e1324');
-    innerGrad.addColorStop(1, '#09050d');
+    const bgColor = cConfig.bgColor;
+    let innerGrad;
+    if (bgColor) {
+      innerGrad = this.ctx.createRadialGradient(centerX - 4, centerY - 4, 2, centerX, centerY, innerR);
+      innerGrad.addColorStop(0, bgColor);
+      innerGrad.addColorStop(1, '#09050d');
+    } else {
+      innerGrad = this.ctx.createRadialGradient(centerX - 4, centerY - 4, 2, centerX, centerY, innerR);
+      innerGrad.addColorStop(0, '#1e1324');
+      innerGrad.addColorStop(1, '#09050d');
+    }
     this.ctx.fillStyle = innerGrad;
     this.ctx.lineWidth = 2;
-    this.ctx.strokeStyle = '#ffd700';
+    this.ctx.strokeStyle = rimColor || '#ffd700';
     this.ctx.fill();
     this.ctx.stroke();
 
-    // 3. Theme-Specific 3D Procedural Center Motif
+    // 3. Custom Wheel Center Image or Custom Icon or Theme-Specific 3D Procedural Center Motif
+    if (hubMode === 'image') {
+      if (this.centerLogoImg && this.centerLogoImg.complete && this.centerLogoImg.naturalWidth > 0) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, innerR - 2, 0, 2 * Math.PI);
+        this.ctx.clip();
+
+        // High-DPI cover-crop maintaining aspect ratio
+        const nw = this.centerLogoImg.naturalWidth;
+        const nh = this.centerLogoImg.naturalHeight;
+        const targetRadius = innerR - 2;
+        const targetD = targetRadius * 2;
+        const scale = Math.max(targetD / nw, targetD / nh);
+        const dw = nw * scale;
+        const dh = nh * scale;
+        const dx = centerX - dw / 2;
+        const dy = centerY - dh / 2;
+        this.ctx.drawImage(this.centerLogoImg, dx, dy, dw, dh);
+
+        this.ctx.restore();
+        this.ctx.beginPath();
+        this.ctx.arc(centerX, centerY, innerR - 2, 0, 2 * Math.PI);
+        this.ctx.strokeStyle = rimColor ? `${rimColor}88` : 'rgba(255, 215, 0, 0.4)';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.stroke();
+      } else {
+        // Fallback gracefully to procedural motif
+        this.drawHubMotifByType(hubType, centerX, centerY, innerR);
+      }
+    } else if (hubMode === 'icon' || (cConfig.icon && hubMode !== 'motif' && hubMode !== 'image')) {
+      const iconKey = cConfig.icon || 'star';
+      const iconChar = SEGMENT_ICON_SYMBOL_MAP[iconKey] || iconKey;
+      const iconSize = cConfig.iconSize || Math.round(innerR * 0.95);
+      const iconColor = cConfig.iconColor || '#ffd700';
+
+      this.ctx.save();
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.font = `900 ${iconSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      this.ctx.shadowBlur = 6;
+      this.ctx.fillStyle = iconColor;
+      this.ctx.fillText(iconChar, centerX, centerY + 1);
+      this.ctx.restore();
+    } else {
+      this.drawHubMotifByType(hubType, centerX, centerY, innerR);
+    }
+
+    this.ctx.restore();
+  }
+
+  drawHubMotifByType(hubType, centerX, centerY, innerR) {
     switch (hubType) {
       case 'kurti_medallion':
         this.drawKurtiMedallionMotif(centerX, centerY, innerR);
@@ -1082,8 +1652,6 @@ class SpinWheel {
         this.drawCrownMotif(centerX, centerY, innerR);
         break;
     }
-
-    this.ctx.restore();
   }
 
   // ── PROCEDURAL HUB MOTIF DRAWERS ──
@@ -1705,7 +2273,13 @@ class SpinWheel {
 
   adjustHexBrightness(hex, percent) {
     if (!hex || hex[0] !== '#') return hex || '#6366f1';
-    let num = parseInt(hex.slice(1), 16);
+    let cleanHex = hex.slice(1);
+    if (cleanHex.length === 3) {
+      cleanHex = cleanHex.split('').map(c => c + c).join('');
+    }
+    if (cleanHex.length !== 6) return hex;
+    const num = parseInt(cleanHex, 16);
+    if (isNaN(num)) return hex;
     let r = (num >> 16) + percent;
     let g = ((num >> 8) & 0x00FF) + percent;
     let b = (num & 0x0000FF) + percent;

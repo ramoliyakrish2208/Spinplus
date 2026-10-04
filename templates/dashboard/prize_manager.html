@@ -2,12 +2,355 @@
 {% block title %}Reward Manager — Bento Prize Builder — {{ campaign.name }}{% endblock %}
 
 {% block extra_css %}
+<!-- Preload Google Fonts for Live Dropdown & Canvas Previews -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@500;700&family=Barlow+Condensed:wght@500;700&family=Bebas+Neue&family=Cinzel:wght@600;800&family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@500;700&family=Inter:wght@400;600;700&family=Lato:wght@400;700&family=League+Spartan:wght@600;800&family=Manrope:wght@500;700&family=Montserrat:wght@500;700&family=Nunito:wght@600;800&family=Oswald:wght@500;700&family=Outfit:wght@500;700&family=Playfair+Display:wght@600;800&family=Plus+Jakarta+Sans:wght@500;700&family=Poppins:wght@500;700&family=Quicksand:wght@600;700&family=Raleway:wght@500;700&family=Roboto:wght@500;700&family=Rubik:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
 <style>
     .prize-bento-wrap {
         width: 100%;
-        max-width: 1240px;
+        max-width: 1260px;
         margin: 0 auto;
         padding: 32px 24px;
+    }
+
+    /* ── Segment Design Accordion ── */
+    .segment-design-box {
+        margin-top: 18px;
+        border: 1px solid var(--border-subtle);
+        background: var(--bg-surface);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .segment-design-box:focus-within {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 1px var(--color-primary);
+    }
+    .design-accordion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        background: var(--bg-elevated);
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s ease;
+    }
+    .design-accordion-header:hover {
+        background: rgba(255,255,255,0.06);
+    }
+    .design-accordion-body {
+        padding: 18px;
+        display: none;
+        border-top: 1px solid var(--border-subtle);
+        background: var(--bg-surface);
+    }
+    .design-accordion-body.open {
+        display: block;
+    }
+
+    /* ── Sub-Tabs Nav ── */
+    .design-tabs-nav {
+        display: flex;
+        gap: 6px;
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: 10px;
+        margin-bottom: 18px;
+        overflow-x: auto;
+    }
+    .design-tab-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        transition: all 0.15s ease;
+    }
+    .design-tab-btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-elevated);
+    }
+    .design-tab-btn.active {
+        color: var(--color-primary);
+        background: rgba(99, 102, 241, 0.12);
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+    .design-tab-pane {
+        display: none;
+    }
+    .design-tab-pane.active {
+        display: block;
+    }
+
+    /* ── Searchable Font Picker ── */
+    .font-picker-wrap {
+        position: relative;
+    }
+    .font-picker-btn {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 0.15s;
+    }
+    .font-picker-btn:hover, .font-picker-btn:focus {
+        border-color: var(--color-primary);
+    }
+    .font-picker-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: 280px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        z-index: 1000;
+        overflow-y: auto;
+        padding: 8px;
+    }
+    .font-picker-dropdown.open {
+        display: block;
+    }
+    .font-search-input {
+        width: 100%;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        font-size: 0.85rem;
+    }
+    .font-search-input:focus {
+        border-color: var(--color-primary);
+        outline: none;
+    }
+    .font-option-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background 0.12s;
+    }
+    .font-option-item:hover, .font-option-item.selected {
+        background: rgba(99, 102, 241, 0.15);
+    }
+    .font-option-item .font-name {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .font-option-item .font-cat {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    /* ── Icon Picker Grid ── */
+    .icon-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+        gap: 8px;
+        max-height: 180px;
+        overflow-y: auto;
+        padding: 4px;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        background: var(--bg-elevated);
+    }
+    .icon-picker-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 4px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        background: var(--bg-surface);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .icon-picker-item:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-1px);
+    }
+    .icon-picker-item.active {
+        border-color: var(--color-primary);
+        background: rgba(99, 102, 241, 0.18);
+        box-shadow: 0 0 0 1px var(--color-primary);
+    }
+    .icon-picker-item .icon-sym {
+        font-size: 1.3rem;
+        margin-bottom: 2px;
+        line-height: 1.2;
+    }
+    .icon-picker-item .icon-lbl {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    /* ── Segmented Control Pills ── */
+    .segmented-control {
+        display: flex;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        padding: 3px;
+        gap: 2px;
+    }
+    .segmented-control button {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 6px 8px;
+        border-radius: calc(var(--radius-sm) - 2px);
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+    }
+    .segmented-control button:hover {
+        color: var(--text-primary);
+    }
+    .segmented-control button.active {
+        background: var(--color-primary);
+        color: #fff;
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* ── Range Slider with Value Badge ── */
+    .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .slider-row input[type="range"] {
+        flex: 1;
+        accent-color: var(--color-primary);
+        cursor: pointer;
+    }
+    .slider-val-badge {
+        font-size: 0.75rem;
+        font-weight: 800;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        padding: 3px 8px;
+        border-radius: var(--radius-sm);
+        color: var(--text-primary);
+        min-width: 44px;
+        text-align: center;
+    }
+
+    /* ── Color Swatch + Hex Input Group ── */
+    .color-hex-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .color-hex-group input[type="color"] {
+        width: 38px;
+        height: 38px;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        padding: 2px;
+        background: var(--bg-elevated);
+        cursor: pointer;
+    }
+    .color-hex-group input[type="text"] {
+        flex: 1;
+        font-family: monospace;
+        font-size: 0.85rem;
+        padding: 8px 10px;
+    }
+
+    /* ── Clean Toggle Switch ── */
+    .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        margin-bottom: 10px;
+    }
+    .toggle-row label {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+    }
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 20px;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(255,255,255,0.2);
+        transition: .2s;
+        border-radius: 20px;
+    }
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .2s;
+        border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: var(--color-primary);
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(16px);
     }
 </style>
 {% endblock %}
@@ -25,10 +368,10 @@
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
             <div>
                 <span class="badge badge-gold" style="margin-bottom:8px;">
-                    <i data-lucide="sparkles" style="width:12px;height:12px;"></i> BENTO REWARD BUILDER
+                    <i data-lucide="sparkles" style="width:12px;height:12px;"></i> BENTO REWARD BUILDER 2.0
                 </span>
                 <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 4px 0;letter-spacing:-0.4px;">Wheel Segment Prizes</h1>
-                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Campaign: <strong>{{ campaign.name }}</strong></p>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin:0;">Campaign: <strong>{{ campaign.name }}</strong> (Theme: <strong>{{ active_theme|default:"royal"|title }}</strong>)</p>
             </div>
             <div>
                 {% if total_probability == 100.0 %}
@@ -92,7 +435,22 @@
                                 <span class="badge" style="background:var(--bg-elevated);color:var(--text-secondary);font-size:0.7rem;">{{ p.get_prize_type_display }}</span>
                             </div>
 
-                            <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px 0;">{{ p.coupon_text|default:"Valid for single spin transaction" }}</p>
+                            <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 10px 0;">{{ p.coupon_text|default:"Valid for single spin transaction" }}</p>
+
+                            <!-- Design Indicators if customized -->
+                            {% if p.design_config %}
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">
+                                {% if p.design_config.font_family %}
+                                    <span class="badge" style="font-size:0.65rem;background:rgba(99,102,241,0.15);color:var(--color-primary);">🔤 {{ p.design_config.font_family|title }}</span>
+                                {% endif %}
+                                {% if p.design_config.bg_type and p.design_config.bg_type != 'solid' %}
+                                    <span class="badge" style="font-size:0.65rem;background:rgba(245,158,11,0.15);color:#f59e0b;">🌈 {{ p.design_config.bg_type|title }}</span>
+                                {% endif %}
+                                {% if p.design_config.icon_type == 'preset' and p.design_config.icon_name %}
+                                    <span class="badge" style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#10b981;">Icon: {{ p.design_config.icon_name }}</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
                             <div style="margin-bottom:12px;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;font-weight:700;margin-bottom:4px;">
@@ -119,7 +477,19 @@
                                 </span>
 
                                 <div style="display:flex;align-items:center;gap:4px;">
-                                    <button type="button" onclick="openEditPrizeModal({{ p.id }}, '{{ p.name|escapejs }}', '{{ p.prize_type }}', '{{ p.discount_percentage }}', '{{ p.fixed_discount_amount }}', '{{ p.probability }}', '{{ p.display_color }}', '{{ p.coupon_text|escapejs }}', '{{ p.remaining_quantity }}')" class="btn-ghost" style="color:var(--color-primary);padding:3px 8px;font-size:0.75rem;">
+                                    <button type="button" 
+                                            class="btn-ghost edit-prize-btn" 
+                                            data-prize-id="{{ p.id }}"
+                                            data-name="{{ p.name|escape }}"
+                                            data-type="{{ p.prize_type }}"
+                                            data-disc="{{ p.discount_percentage }}"
+                                            data-fixed="{{ p.fixed_discount_amount }}"
+                                            data-prob="{{ p.probability }}"
+                                            data-color="{{ p.display_color }}"
+                                            data-coupon="{{ p.coupon_text|escape }}"
+                                            data-qty="{{ p.remaining_quantity }}"
+                                            onclick="openEditPrizeModal(this)" 
+                                            style="color:var(--color-primary);padding:3px 8px;font-size:0.75rem;cursor:pointer;">
                                         <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
                                     </button>
                                     <form method="POST" action="{% url 'prize_manager' campaign.id %}" id="deleteForm-{{ p.id }}" style="margin:0;">
@@ -144,56 +514,430 @@
 
             <!-- Add Prize Form Bento Card -->
             <div class="bento-card">
-                <h3 style="font-size:1.1rem;font-weight:800;margin:0 0 16px 0;"><i data-lucide="plus-circle" style="width:16px;height:16px;"></i> + Add Wheel Segment Prize</h3>
+                <h3 style="font-size:1.15rem;font-weight:800;margin:0 0 16px 0;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--color-primary);"></i> + Add Wheel Segment Prize
+                </h3>
                 
-                <form method="POST" action="{% url 'prize_manager' campaign.id %}">
+                <form method="POST" action="{% url 'prize_manager' campaign.id %}" id="addPrizeForm" onsubmit="document.getElementById('addDesignConfig').value = JSON.stringify(extractDesignConfig('add'));">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="add_prize">
+                    <input type="hidden" name="design_config" id="addDesignConfig" value="{}">
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                        <div class="form-group">
+                    <!-- Basic Properties -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                        <div class="form-group" style="margin:0;">
                             <label class="form-label">Reward Name</label>
-                            <input type="text" name="name" required placeholder="e.g. 20% OFF Total Bill" class="form-input">
+                            <input type="text" name="name" id="addPrizeName" required placeholder="e.g. 20% OFF Total Bill" class="form-input">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin:0;">
                             <label class="form-label">Reward Type</label>
-                            <select name="prize_type" class="form-select">
-                                <option value="percentage">Percentage Discount</option>
-                                <option value="fixed">Fixed Amount Discount</option>
+                            <select name="prize_type" id="addPrizeType" class="form-select">
+                                <option value="percentage">Percentage Discount (%)</option>
+                                <option value="fixed">Fixed Amount Discount ({{ shop.currency_symbol|default:'₹' }})</option>
                                 <option value="freebie">Free Gift / Item</option>
-                                <option value="no_win">Try Again / No Win</option>
+                                <option value="no_win">Try Again / No Win (Teaser)</option>
                             </select>
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
-                        <div class="form-group">
+                    <!-- Dynamic Conditional Reward Fields -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+                        <!-- Field 1: Discount % (Shown for Percentage) -->
+                        <div class="form-group" id="addDiscPctGroup" style="margin:0;">
                             <label class="form-label">Discount %</label>
-                            <input type="number" step="0.1" name="discount_percentage" value="10" class="form-input">
+                            <input type="number" step="0.1" min="0" max="100" name="discount_percentage" id="addDiscountPct" value="10" class="form-input">
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Percentage off total order.</div>
                         </div>
-                        <div class="form-group">
+
+                        <!-- Field 2: Fixed Amount (Shown for Fixed) -->
+                        <div class="form-group" id="addFixedAmtGroup" style="margin:0;display:none;">
+                            <label class="form-label">Fixed Amount ({{ shop.currency_symbol|default:'₹' }})</label>
+                            <input type="number" step="0.1" min="0" name="fixed_discount_amount" id="addFixedAmt" value="50" class="form-input">
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Flat discount amount.</div>
+                        </div>
+
+                        <!-- Field 3: Probability Weight -->
+                        <div class="form-group" style="margin:0;">
                             <label class="form-label">Weight % (Probability)</label>
-                            <input type="number" step="0.1" min="0" max="100" name="probability" value="20" required class="form-input">
-                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Set to <strong>0%</strong> for a teaser segment that never wins.</div>
+                            <input type="number" step="0.1" min="0" max="100" name="probability" id="addProbability" value="20" required class="form-input">
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Set to <strong>0%</strong> for a teaser segment.</div>
                         </div>
-                        <div class="form-group">
+
+                        <!-- Field 4: Segment Base Color -->
+                        <div class="form-group" style="margin:0;">
                             <label class="form-label">Segment Color</label>
-                            <input type="color" name="display_color" value="#6366f1" style="width:100%;height:44px;padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);background:var(--bg-elevated);cursor:pointer;">
+                            <div class="color-hex-group">
+                                <input type="color" name="display_color" id="addDisplayColor" value="#6366f1">
+                                <input type="text" id="addDisplayColorHex" value="#6366f1" class="form-input" maxlength="7">
+                            </div>
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                        <div class="form-group">
+                    <!-- Additional Terms & Stock -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                        <div class="form-group" style="margin:0;">
                             <label class="form-label">Coupon Condition / Terms</label>
-                            <input type="text" name="coupon_text" placeholder="e.g. Valid on minimum $20 spend" class="form-input">
+                            <input type="text" name="coupon_text" id="addCouponText" placeholder="e.g. Valid on minimum $20 spend" class="form-input">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="margin:0;">
                             <label class="form-label">Max Quantity (Stock)</label>
-                            <input type="number" name="remaining_quantity" value="500" class="form-input">
+                            <input type="number" name="remaining_quantity" id="addRemainingQty" value="500" class="form-input">
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary" style="width:100%;margin-top:8px;">
+                    <!-- ── DEDICATED SEGMENT DESIGN SECTION (COLLAPSIBLE) ── -->
+                    <div class="segment-design-box" id="addDesignAccordion">
+                        <div class="design-accordion-header" onclick="toggleDesignAccordion('add')">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <i data-lucide="palette" style="width:18px;height:18px;color:var(--color-primary);"></i>
+                                <span style="font-size:0.92rem;font-weight:800;color:var(--text-primary);">Custom Segment Design & Styling</span>
+                                <span class="badge" style="background:rgba(99,102,241,0.15);color:var(--color-primary);font-size:0.68rem;">OPTIONAL</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span id="addDesignBadge" style="font-size:0.72rem;color:var(--text-muted);">Theme Default</span>
+                                <i data-lucide="chevron-down" id="addAccordionIcon" style="width:16px;height:16px;transition:transform 0.2s;"></i>
+                            </div>
+                        </div>
+
+                        <div class="design-accordion-body" id="addDesignBody">
+                            <!-- Sub Tabs -->
+                            <div class="design-tabs-nav">
+                                <button type="button" class="design-tab-btn active" onclick="switchDesignTab('add', 'typography', event)">
+                                    🔤 Font & Typography
+                                </button>
+                                <button type="button" class="design-tab-btn" onclick="switchDesignTab('add', 'appearance', event)">
+                                    ✨ Text FX & Stroke
+                                </button>
+                                <button type="button" class="design-tab-btn" onclick="switchDesignTab('add', 'background', event)">
+                                    🌈 Gradient & Texture
+                                </button>
+                                <button type="button" class="design-tab-btn" onclick="switchDesignTab('add', 'icon', event)">
+                                    🎁 Segment Motif / Icon
+                                </button>
+                                <button type="button" class="design-tab-btn" onclick="switchDesignTab('add', 'border', event)">
+                                    ⭐ Border & Glow
+                                </button>
+                            </div>
+
+                            <!-- TAB 1: FONT & TYPOGRAPHY -->
+                            <div class="design-tab-pane active" id="addTab-typography">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Font Family (23 Curated Google Fonts)</label>
+                                        <div class="font-picker-wrap" id="addFontPickerWrap">
+                                            <button type="button" class="font-picker-btn" id="addFontPickerBtn" onclick="toggleFontDropdown('add')">
+                                                <span id="addFontPickerLabel">Inter (Default)</span>
+                                                <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+                                            </button>
+                                            <div class="font-picker-dropdown" id="addFontDropdown">
+                                                <input type="text" placeholder="Search fonts (e.g. Poppins, Cinzel)..." class="font-search-input" id="addFontSearch" oninput="filterFonts('add')">
+                                                <div id="addFontOptionsList"></div>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" id="addFontFamily" value="inter">
+                                    </div>
+
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Font Weight</label>
+                                        <select id="addFontWeight" class="form-select">
+                                            <option value="400">400 - Regular</option>
+                                            <option value="500">500 - Medium</option>
+                                            <option value="600">600 - Semi Bold</option>
+                                            <option value="700" selected>700 - Bold (Default)</option>
+                                            <option value="800">800 - Extra Bold</option>
+                                            <option value="900">900 - Black</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Font Size</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="addFontSize" min="8" max="32" value="13" step="1">
+                                            <span class="slider-val-badge" id="addFontSizeVal">13px</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Letter Spacing</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="addLetterSpacing" min="-1" max="6" value="0" step="0.5">
+                                            <span class="slider-val-badge" id="addLetterSpacingVal">0px</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Alignment</label>
+                                        <select id="addTextAlign" class="form-select">
+                                            <option value="center" selected>Center (Balanced)</option>
+                                            <option value="left">Towards Outer Rim</option>
+                                            <option value="right">Towards Center Hub</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Text Transform</label>
+                                        <select id="addTextTransform" class="form-select">
+                                            <option value="none">As Typed (None)</option>
+                                            <option value="uppercase" selected>UPPERCASE</option>
+                                            <option value="capitalize">Capitalize Words</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Font Style</label>
+                                        <select id="addFontStyle" class="form-select">
+                                            <option value="normal" selected>Normal</option>
+                                            <option value="italic">Italic</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: TEXT APPEARANCE & STROKE -->
+                            <div class="design-tab-pane" id="addTab-appearance">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Custom Text Color</label>
+                                        <div class="color-hex-group">
+                                            <input type="color" id="addTextColor" value="#ffffff">
+                                            <input type="text" id="addTextColorHex" value="#ffffff" class="form-input" maxlength="7">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Text Opacity</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="addTextOpacity" min="10" max="100" value="100" step="5">
+                                            <span class="slider-val-badge" id="addTextOpacityVal">100%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Text Shadow Toggle -->
+                                <div class="toggle-row">
+                                    <label for="addTextShadowEnabled">
+                                        <i data-lucide="layers" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                        Enable Text Drop Shadow
+                                    </label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="addTextShadowEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div id="addTextShadowControls" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Shadow Color</label>
+                                        <input type="color" id="addTextShadowColor" value="#000000" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Blur Radius</label>
+                                        <input type="range" id="addTextShadowBlur" min="0" max="20" value="4">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Offset Y</label>
+                                        <input type="range" id="addTextShadowY" min="-10" max="10" value="2">
+                                    </div>
+                                </div>
+
+                                <!-- Text Stroke Toggle -->
+                                <div class="toggle-row">
+                                    <label for="addTextStrokeEnabled">
+                                        <i data-lucide="edit" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                        Enable Text Stroke / Outline
+                                    </label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="addTextStrokeEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div id="addTextStrokeControls" style="display:none;grid-template-columns:1fr 1fr;gap:14px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Stroke Color</label>
+                                        <input type="color" id="addTextStrokeColor" value="#000000" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Stroke Width (px)</label>
+                                        <input type="range" id="addTextStrokeWidth" min="1" max="6" value="2">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 3: BACKGROUND, GRADIENT & PATTERN -->
+                            <div class="design-tab-pane" id="addTab-background">
+                                <div class="form-group" style="margin-bottom:14px;">
+                                    <label class="form-label">Background Fill Type</label>
+                                    <div class="segmented-control" id="addBgTypeControl">
+                                        <button type="button" class="active" onclick="setBgType('add', 'solid')">Solid Color</button>
+                                        <button type="button" onclick="setBgType('add', 'gradient')">Multi-Color Gradient</button>
+                                        <button type="button" onclick="setBgType('add', 'pattern')">Pattern Texture</button>
+                                    </div>
+                                    <input type="hidden" id="addBgType" value="solid">
+                                </div>
+
+                                <!-- Gradient Controls -->
+                                <div id="addGradientControls" style="display:none;margin-bottom:14px;padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                                        <div class="form-group" style="margin:0;">
+                                            <label class="form-label">Start Color</label>
+                                            <input type="color" id="addBgColor1" value="#6366f1" style="width:100%;height:38px;border-radius:var(--radius-sm);cursor:pointer;">
+                                        </div>
+                                        <div class="form-group" style="margin:0;">
+                                            <label class="form-label">End Color</label>
+                                            <input type="color" id="addBgColor2" value="#4f46e5" style="width:100%;height:38px;border-radius:var(--radius-sm);cursor:pointer;">
+                                        </div>
+                                        <div class="form-group" style="margin:0;">
+                                            <label class="form-label">Middle Accent (Opt)</label>
+                                            <input type="color" id="addBgColor3" value="#ffd700" style="width:100%;height:38px;border-radius:var(--radius-sm);cursor:pointer;">
+                                        </div>
+                                    </div>
+
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                        <div class="form-group" style="margin:0;">
+                                            <label class="form-label">Gradient Type</label>
+                                            <select id="addGradientType" class="form-select">
+                                                <option value="linear" selected>Linear (Directional)</option>
+                                                <option value="radial">Radial (Center Outward)</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="margin:0;">
+                                            <label class="form-label">Angle (0° - 360°)</label>
+                                            <div class="slider-row">
+                                                <input type="range" id="addGradientAngle" min="0" max="360" value="90" step="5">
+                                                <span class="slider-val-badge" id="addGradientAngleVal">90°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pattern Overlay & Sheen -->
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Pattern Overlay</label>
+                                        <select id="addBgPattern" class="form-select">
+                                            <option value="none" selected>None (Clean)</option>
+                                            <option value="dots">Subtle Polka Dots</option>
+                                            <option value="stripes">Diagonal Stripes</option>
+                                            <option value="stars">Sparkle Stars</option>
+                                            <option value="chevrons">Geometric Chevrons</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Gloss Sheen Effect</label>
+                                        <div class="toggle-row" style="margin:0;padding:8px 12px;">
+                                            <label for="addHighlightEnabled" style="font-size:0.8rem;">Highlight Reflection</label>
+                                            <label class="toggle-switch">
+                                                <input type="checkbox" id="addHighlightEnabled">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 4: ICON / MOTIF -->
+                            <div class="design-tab-pane" id="addTab-icon">
+                                <div class="form-group" style="margin-bottom:12px;">
+                                    <label class="form-label">Select Segment Symbol / Icon</label>
+                                    <div class="icon-picker-grid" id="addIconGrid"></div>
+                                    <input type="hidden" id="addIconType" value="none">
+                                    <input type="hidden" id="addIconName" value="">
+                                </div>
+
+                                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Icon Position</label>
+                                        <select id="addIconPosition" class="form-select">
+                                            <option value="above" selected>Above Text</option>
+                                            <option value="below">Below Text</option>
+                                            <option value="left">Left of Text</option>
+                                            <option value="right">Right of Text</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Icon Size</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="addIconSize" min="10" max="32" value="16" step="1">
+                                            <span class="slider-val-badge" id="addIconSizeVal">16px</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Icon Spacing</label>
+                                        <div class="slider-row">
+                                            <input type="range" id="addIconSpacing" min="0" max="20" value="6" step="1">
+                                            <span class="slider-val-badge" id="addIconSpacingVal">6px</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TAB 5: BORDER & GLOW -->
+                            <div class="design-tab-pane" id="addTab-border">
+                                <!-- Border Divider Override -->
+                                <div class="toggle-row">
+                                    <label for="addBorderEnabled">
+                                        <i data-lucide="square" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                        Custom Slice Divider Border
+                                    </label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="addBorderEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div id="addBorderControls" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Border Color</label>
+                                        <input type="color" id="addBorderColor" value="#ffd700" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Width (px)</label>
+                                        <input type="range" id="addBorderWidth" min="1" max="6" value="2">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Border Style</label>
+                                        <select id="addBorderStyle" class="form-select">
+                                            <option value="solid" selected>Solid</option>
+                                            <option value="dashed">Dashed</option>
+                                            <option value="dotted">Dotted</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Glow Effect -->
+                                <div class="toggle-row">
+                                    <label for="addGlowEnabled">
+                                        <i data-lucide="sun" style="width:14px;height:14px;color:#f59e0b;"></i>
+                                        Slice Rim Glow / Aura
+                                    </label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="addGlowEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div id="addGlowControls" style="display:none;grid-template-columns:1fr 1fr;gap:12px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Glow Color</label>
+                                        <input type="color" id="addGlowColor" value="#ffd700" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                                    </div>
+                                    <div class="form-group" style="margin:0;">
+                                        <label class="form-label">Glow Intensity (1-10)</label>
+                                        <input type="range" id="addGlowIntensity" min="1" max="10" value="5">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Footer Actions inside accordion -->
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--border-subtle);">
+                                <span style="font-size:0.75rem;color:var(--text-muted);">
+                                    Live updates preview on the canvas wheel immediately.
+                                </span>
+                                <button type="button" class="btn-ghost" onclick="resetSegmentDesign('add')" style="font-size:0.78rem;color:var(--color-danger);padding:4px 10px;">
+                                    <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Reset to Theme Default
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width:100%;margin-top:18px;">
                         <i data-lucide="check" style="width:16px;height:16px;"></i> Save Prize Segment
                     </button>
                 </form>
@@ -202,22 +946,140 @@
 
         <!-- Right: Live Wheel Preview (Span 4 Cols Sticky) -->
         <div class="col-span-4">
-            <div class="bento-card" style="text-align:center;position:sticky;top:84px;">
-                <span class="bento-title" style="justify-content:center;margin-bottom:16px;">
-                    <i data-lucide="disc-3"></i> LIVE CANVAS WHEEL PREVIEW
-                </span>
+            <div class="bento-card" style="text-align:center;position:sticky;top:84px;padding:24px 16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <span class="bento-title" style="margin:0;font-size:0.88rem;">
+                        <i data-lucide="disc-3"></i> LIVE CANVAS PREVIEW
+                    </span>
+                    <span class="badge badge-active" style="font-size:0.68rem;" id="livePreviewBadge">● Real-time 60fps</span>
+                </div>
 
-                <div class="wheel-container" style="transform:scale(0.85);margin:-15px auto;">
+                <div class="wheel-container" style="transform:scale(0.88);margin:-10px auto;">
                     <canvas id="prizeWheel" width="340" height="340"></canvas>
+                </div>
+
+                <div style="margin-top:14px;padding:10px 12px;background:var(--bg-elevated);border-radius:var(--radius-sm);font-size:0.75rem;color:var(--text-muted);text-align:left;">
+                    <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">
+                        <i data-lucide="sparkles" style="width:12px;height:12px;color:var(--color-primary);"></i> Real-Time Synchronized
+                    </div>
+                    As you edit the form, font, colors, icons or borders, the canvas wheel updates dynamically in real-time.
+                </div>
+
+                <!-- ── WHEEL CENTER HUB & LOGO / ICON CUSTOMIZER ── -->
+                <div style="margin-top:16px;border-top:1px solid var(--border-subtle);padding-top:14px;text-align:left;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:0.82rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="disc" style="width:14px;height:14px;color:var(--color-primary);"></i> Center Hub & Logo / Icon
+                        </span>
+                        <span id="centerHubStatusBadge" class="badge" style="display:none;background:rgba(16,185,129,0.15);color:var(--color-success);font-size:0.68rem;padding:2px 6px;">Saved ✓</span>
+                    </div>
+
+                    <form id="centerHubForm" method="POST" action="{% url 'prize_manager' campaign.id %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update_wheel_center">
+                        <input type="hidden" name="hub_mode" id="hubModeInput" value="{{ center_hub_config.mode|default:'motif' }}">
+                        <input type="hidden" name="hub_icon" id="hubIconInput" value="{{ center_hub_config.icon|default:'crown' }}">
+                        <input type="hidden" name="remove_logo" id="hubRemoveLogoInput" value="0">
+                        <input type="hidden" name="use_shop_logo" id="hubUseShopLogoInput" value="0">
+
+                        <!-- Mode Switch Tabs -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;background:var(--bg-elevated);padding:3px;border-radius:var(--radius-sm);margin-bottom:10px;">
+                            <button type="button" class="hub-mode-tab {% if center_hub_config.mode == 'motif' or not center_hub_config.mode %}active{% endif %}" data-mode="motif" style="padding:5px 4px;font-size:0.72rem;font-weight:700;border:none;border-radius:var(--radius-sm);cursor:pointer;background:transparent;color:var(--text-secondary);transition:all 0.15s ease;">
+                                🎨 3D Motif
+                            </button>
+                            <button type="button" class="hub-mode-tab {% if center_hub_config.mode == 'icon' %}active{% endif %}" data-mode="icon" style="padding:5px 4px;font-size:0.72rem;font-weight:700;border:none;border-radius:var(--radius-sm);cursor:pointer;background:transparent;color:var(--text-secondary);transition:all 0.15s ease;">
+                                ✨ Icon / Emoji
+                            </button>
+                            <button type="button" class="hub-mode-tab {% if center_hub_config.mode == 'image' %}active{% endif %}" data-mode="image" style="padding:5px 4px;font-size:0.72rem;font-weight:700;border:none;border-radius:var(--radius-sm);cursor:pointer;background:transparent;color:var(--text-secondary);transition:all 0.15s ease;">
+                                🖼️ Center Logo
+                            </button>
+                        </div>
+
+                        <!-- Panel A: Motif -->
+                        <div id="hubMotifPanel" style="display:{% if center_hub_config.mode == 'motif' or not center_hub_config.mode %}block{% else %}none{% endif %};">
+                            <label class="form-label" style="font-size:0.72rem;margin-bottom:3px;">Theme 3D Procedural Motif</label>
+                            <select name="hub_type" id="hubTypeSelect" class="form-select" style="font-size:0.78rem;padding:6px 10px;margin-bottom:10px;width:100%;">
+                                <option value="crown" {% if center_hub_config.hubType == 'crown' or not center_hub_config.hubType and active_theme != 'kurti' %}selected{% endif %}>👑 Royal Diamond Crown</option>
+                                <option value="kurti_medallion" {% if center_hub_config.hubType == 'kurti_medallion' or not center_hub_config.hubType and active_theme == 'kurti' %}selected{% endif %}>🏵️ Kurti Embroidered Medallion</option>
+                                <option value="peacock_flute" {% if center_hub_config.hubType == 'peacock_flute' %}selected{% endif %}>🦚 Peacock Feather & Flute</option>
+                                <option value="diya" {% if center_hub_config.hubType == 'diya' %}selected{% endif %}>🪔 Golden Diya Flame</option>
+                                <option value="kite" {% if center_hub_config.hubType == 'kite' %}selected{% endif %}>🪁 Festive Uttarayan Kite</option>
+                                <option value="snowflake" {% if center_hub_config.hubType == 'snowflake' %}selected{% endif %}>❄️ Crystalline Snowflake</option>
+                                <option value="prismatic_gem" {% if center_hub_config.hubType == 'prismatic_gem' %}selected{% endif %}>💎 Prismatic Faceted Gem</option>
+                                <option value="heart_gem" {% if center_hub_config.hubType == 'heart_gem' %}selected{% endif %}>❤️ Romantic Heart Jewel</option>
+                                <option value="speed_star" {% if center_hub_config.hubType == 'speed_star' %}selected{% endif %}>⭐ Turbo Speed Star</option>
+                                <option value="coffee_cup" {% if center_hub_config.hubType == 'coffee_cup' %}selected{% endif %}>☕ Artisan Coffee Cup</option>
+                                <option value="cloche_dome" {% if center_hub_config.hubType == 'cloche_dome' %}selected{% endif %}>🍽️ Gourmet Cloche Dome</option>
+                                <option value="candy_swirl" {% if center_hub_config.hubType == 'candy_swirl' %}selected{% endif %}>🍭 Sweet Candy Swirl</option>
+                                <option value="cyber_node" {% if center_hub_config.hubType == 'cyber_node' %}selected{% endif %}>⚡ Cyber Neon Node</option>
+                                <option value="pearl_sphere" {% if center_hub_config.hubType == 'pearl_sphere' %}selected{% endif %}>⚪ Lustrous Royal Pearl</option>
+                                <option value="holi_splash" {% if center_hub_config.hubType == 'holi_splash' %}selected{% endif %}>🎨 Holi Festive Splash</option>
+                            </select>
+                        </div>
+
+                        <!-- Panel B: Custom Icon / Emoji -->
+                        <div id="hubIconPanel" style="display:{% if center_hub_config.mode == 'icon' %}block{% else %}none{% endif %};">
+                            <label class="form-label" style="font-size:0.72rem;margin-bottom:4px;">Select Center Icon or Symbol</label>
+                            <div id="hubIconGrid" style="display:grid;grid-template-columns:repeat(6, 1fr);gap:4px;margin-bottom:8px;">
+                                <!-- populated via buildHubIconGrid() in JS -->
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                                <div>
+                                    <label class="form-label" style="font-size:0.72rem;margin-bottom:2px;">Icon Color</label>
+                                    <input type="color" name="icon_color" id="hubIconColor" value="{{ center_hub_config.iconColor|default:'#ffd700' }}" style="width:100%;height:30px;border-radius:var(--radius-sm);cursor:pointer;">
+                                </div>
+                                <div>
+                                    <label class="form-label" style="font-size:0.72rem;margin-bottom:2px;">Custom Emoji</label>
+                                    <input type="text" id="hubCustomEmoji" maxlength="4" placeholder="e.g. 🎯" class="form-input" style="font-size:0.8rem;padding:4px 6px;text-align:center;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel C: Logo Image -->
+                        <div id="hubImagePanel" style="display:{% if center_hub_config.mode == 'image' %}block{% else %}none{% endif %};">
+                            {% if shop.logo %}
+                            <div style="margin-bottom:8px;">
+                                <button type="button" id="useShopLogoBtn" class="btn-secondary" style="width:100%;font-size:0.75rem;padding:5px 8px;display:flex;align-items:center;justify-content:center;gap:6px;">
+                                    <img src="{{ shop.logo.url }}" style="width:14px;height:14px;border-radius:50%;object-fit:cover;"> Use Shop Logo
+                                </button>
+                            </div>
+                            {% endif %}
+                            <div style="margin-bottom:8px;">
+                                <label class="form-label" style="font-size:0.72rem;margin-bottom:2px;">Upload Center Logo File</label>
+                                <input type="file" name="center_logo" id="hubLogoFileInput" accept="image/*" class="form-input" style="font-size:0.72rem;padding:4px;">
+                            </div>
+                            <div id="hubLogoPreviewWrap" style="display:{% if center_hub_config.logoUrl %}flex{% else %}none{% endif %};align-items:center;gap:8px;padding:6px;background:var(--bg-elevated);border-radius:var(--radius-sm);margin-bottom:8px;">
+                                <img id="hubLogoPreviewImg" src="{{ center_hub_config.logoUrl|default:'' }}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid var(--border-subtle);">
+                                <span style="font-size:0.72rem;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Active Logo</span>
+                                <button type="button" id="hubRemoveLogoBtn" class="btn-ghost" style="color:var(--color-danger);font-size:0.7rem;padding:2px 6px;">Remove</button>
+                            </div>
+                        </div>
+
+                        <!-- Hub Ring & Surface Colors -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;padding-top:6px;border-top:1px dashed var(--border-subtle);">
+                            <div>
+                                <label class="form-label" style="font-size:0.72rem;margin-bottom:2px;">Outer Ring</label>
+                                <input type="color" name="rim_color" id="hubRimColor" value="{{ center_hub_config.rimColor|default:'#ffd700' }}" style="width:100%;height:28px;border-radius:var(--radius-sm);cursor:pointer;">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:0.72rem;margin-bottom:2px;">Inner Base</label>
+                                <input type="color" name="bg_color" id="hubBgColor" value="{{ center_hub_config.bgColor|default:'#1e1324' }}" style="width:100%;height:28px;border-radius:var(--radius-sm);cursor:pointer;">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="saveCenterHubBtn" class="btn-primary" style="width:100%;font-size:0.78rem;padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <i data-lucide="check" style="width:13px;height:13px;"></i> Save Center Hub
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Edit Prize Modal -->
+<!-- ── EDIT PRIZE MODAL ── -->
 <div id="editPrizeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
-    <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:480px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;">
+    <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:24px 28px;width:100%;max-width:640px;box-shadow:var(--shadow-lg);max-height:92vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
             <h3 style="font-size:1.25rem;font-weight:800;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
                 <i data-lucide="edit-3" style="width:18px;height:18px;color:var(--color-primary);"></i> Edit Reward Segment
@@ -225,11 +1087,13 @@
             <button onclick="closeEditPrizeModal()" class="btn-ghost" style="padding:4px 8px;font-size:1rem;">✕</button>
         </div>
 
-        <form method="POST" action="{% url 'prize_manager' campaign.id %}">
+        <form method="POST" action="{% url 'prize_manager' campaign.id %}" id="editPrizeForm" onsubmit="document.getElementById('editDesignConfig').value = JSON.stringify(extractDesignConfig('edit'));">
             {% csrf_token %}
             <input type="hidden" name="action" value="edit_prize">
             <input type="hidden" name="prize_id" id="editPrizeId">
+            <input type="hidden" name="design_config" id="editDesignConfig" value="{}">
 
+            <!-- Basic Info -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Reward Name</label>
@@ -238,27 +1102,34 @@
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Reward Type</label>
                     <select name="prize_type" id="editPrizeType" class="form-select">
-                        <option value="percentage">Percentage Discount</option>
-                        <option value="fixed">Fixed Amount Discount</option>
+                        <option value="percentage">Percentage Discount (%)</option>
+                        <option value="fixed">Fixed Amount Discount ({{ shop.currency_symbol|default:'₹' }})</option>
                         <option value="freebie">Free Gift / Item</option>
-                        <option value="no_win">Try Again / No Win</option>
+                        <option value="no_win">Try Again / No Win (Teaser)</option>
                     </select>
                 </div>
             </div>
 
+            <!-- Dynamic Conditional Fields for Edit Modal -->
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
-                <div class="form-group" style="margin:0;">
+                <div class="form-group" id="editDiscPctGroup" style="margin:0;">
                     <label class="form-label">Discount %</label>
-                    <input type="number" step="0.1" name="discount_percentage" id="editDiscountPct" class="form-input">
+                    <input type="number" step="0.1" min="0" max="100" name="discount_percentage" id="editDiscountPct" class="form-input">
                 </div>
-                <div class="form-group" style="margin:0;">
-                    <label class="form-label">Fixed Amount (₹/$)</label>
-                    <input type="number" step="0.1" name="fixed_discount_amount" id="editFixedAmt" class="form-input">
+                <div class="form-group" id="editFixedAmtGroup" style="margin:0;display:none;">
+                    <label class="form-label">Fixed Amount ({{ shop.currency_symbol|default:'₹' }})</label>
+                    <input type="number" step="0.1" min="0" name="fixed_discount_amount" id="editFixedAmt" class="form-input">
                 </div>
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Weight % (Probability)</label>
                     <input type="number" step="0.1" min="0" max="100" name="probability" id="editProbability" required class="form-input">
-                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">Set to <strong>0%</strong> to make this prize never win.</div>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Segment Color</label>
+                    <div class="color-hex-group">
+                        <input type="color" name="display_color" id="editDisplayColor" value="#6366f1">
+                        <input type="text" id="editDisplayColorHex" value="#6366f1" class="form-input" maxlength="7">
+                    </div>
                 </div>
             </div>
 
@@ -268,14 +1139,353 @@
                     <input type="text" name="coupon_text" id="editCouponText" placeholder="e.g. Valid on minimum $20 spend" class="form-input">
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Segment Color</label>
-                    <input type="color" name="display_color" id="editDisplayColor" style="width:100%;height:42px;padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);background:var(--bg-elevated);cursor:pointer;">
+                    <label class="form-label">Max Quantity (Stock)</label>
+                    <input type="number" name="remaining_quantity" id="editRemainingQty" required class="form-input">
                 </div>
             </div>
 
-            <div class="form-group" style="margin-bottom:20px;">
-                <label class="form-label">Max Quantity (Stock)</label>
-                <input type="number" name="remaining_quantity" id="editRemainingQty" required class="form-input">
+            <!-- ── EDIT MODAL SEGMENT DESIGN SECTION ── -->
+            <div class="segment-design-box" id="editDesignAccordion" style="margin-bottom:20px;">
+                <div class="design-accordion-header" onclick="toggleDesignAccordion('edit')">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i data-lucide="palette" style="width:18px;height:18px;color:var(--color-primary);"></i>
+                        <span style="font-size:0.92rem;font-weight:800;color:var(--text-primary);">Custom Segment Design & Styling</span>
+                        <span class="badge" style="background:rgba(99,102,241,0.15);color:var(--color-primary);font-size:0.68rem;">CUSTOMIZER</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="editDesignBadge" style="font-size:0.72rem;color:var(--text-muted);">Theme Default</span>
+                        <i data-lucide="chevron-down" id="editAccordionIcon" style="width:16px;height:16px;transition:transform 0.2s;"></i>
+                    </div>
+                </div>
+
+                <div class="design-accordion-body" id="editDesignBody">
+                    <div class="design-tabs-nav">
+                        <button type="button" class="design-tab-btn active" onclick="switchDesignTab('edit', 'typography', event)">
+                            🔤 Font & Typography
+                        </button>
+                        <button type="button" class="design-tab-btn" onclick="switchDesignTab('edit', 'appearance', event)">
+                            ✨ Text FX & Stroke
+                        </button>
+                        <button type="button" class="design-tab-btn" onclick="switchDesignTab('edit', 'background', event)">
+                            🌈 Gradient & Texture
+                        </button>
+                        <button type="button" class="design-tab-btn" onclick="switchDesignTab('edit', 'icon', event)">
+                            🎁 Segment Motif / Icon
+                        </button>
+                        <button type="button" class="design-tab-btn" onclick="switchDesignTab('edit', 'border', event)">
+                            ⭐ Border & Glow
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: EDIT FONT & TYPOGRAPHY -->
+                    <div class="design-tab-pane active" id="editTab-typography">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Font Family</label>
+                                <div class="font-picker-wrap" id="editFontPickerWrap">
+                                    <button type="button" class="font-picker-btn" id="editFontPickerBtn" onclick="toggleFontDropdown('edit')">
+                                        <span id="editFontPickerLabel">Inter (Default)</span>
+                                        <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    <div class="font-picker-dropdown" id="editFontDropdown">
+                                        <input type="text" placeholder="Search fonts..." class="font-search-input" id="editFontSearch" oninput="filterFonts('edit')">
+                                        <div id="editFontOptionsList"></div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="editFontFamily" value="inter">
+                            </div>
+
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Font Weight</label>
+                                <select id="editFontWeight" class="form-select">
+                                    <option value="400">400 - Regular</option>
+                                    <option value="500">500 - Medium</option>
+                                    <option value="600">600 - Semi Bold</option>
+                                    <option value="700">700 - Bold</option>
+                                    <option value="800">800 - Extra Bold</option>
+                                    <option value="900">900 - Black</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Font Size</label>
+                                <div class="slider-row">
+                                    <input type="range" id="editFontSize" min="8" max="32" value="13" step="1">
+                                    <span class="slider-val-badge" id="editFontSizeVal">13px</span>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Letter Spacing</label>
+                                <div class="slider-row">
+                                    <input type="range" id="editLetterSpacing" min="-1" max="6" value="0" step="0.5">
+                                    <span class="slider-val-badge" id="editLetterSpacingVal">0px</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Alignment</label>
+                                <select id="editTextAlign" class="form-select">
+                                    <option value="center">Center</option>
+                                    <option value="left">Towards Outer Rim</option>
+                                    <option value="right">Towards Hub</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Text Transform</label>
+                                <select id="editTextTransform" class="form-select">
+                                    <option value="none">As Typed (None)</option>
+                                    <option value="uppercase">UPPERCASE</option>
+                                    <option value="capitalize">Capitalize Words</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Font Style</label>
+                                <select id="editFontStyle" class="form-select">
+                                    <option value="normal">Normal</option>
+                                    <option value="italic">Italic</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: EDIT TEXT FX -->
+                    <div class="design-tab-pane" id="editTab-appearance">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Text Color</label>
+                                <div class="color-hex-group">
+                                    <input type="color" id="editTextColor" value="#ffffff">
+                                    <input type="text" id="editTextColorHex" value="#ffffff" class="form-input" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Text Opacity</label>
+                                <div class="slider-row">
+                                    <input type="range" id="editTextOpacity" min="10" max="100" value="100" step="5">
+                                    <span class="slider-val-badge" id="editTextOpacityVal">100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="toggle-row">
+                            <label for="editTextShadowEnabled">
+                                <i data-lucide="layers" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                Text Drop Shadow
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="editTextShadowEnabled">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="editTextShadowControls" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Shadow Color</label>
+                                <input type="color" id="editTextShadowColor" value="#000000" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Blur Radius</label>
+                                <input type="range" id="editTextShadowBlur" min="0" max="20" value="4">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Offset Y</label>
+                                <input type="range" id="editTextShadowY" min="-10" max="10" value="2">
+                            </div>
+                        </div>
+
+                        <div class="toggle-row">
+                            <label for="editTextStrokeEnabled">
+                                <i data-lucide="edit" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                Text Stroke / Outline
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="editTextStrokeEnabled">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="editTextStrokeControls" style="display:none;grid-template-columns:1fr 1fr;gap:14px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Stroke Color</label>
+                                <input type="color" id="editTextStrokeColor" value="#000000" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Stroke Width (px)</label>
+                                <input type="range" id="editTextStrokeWidth" min="1" max="6" value="2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: EDIT BACKGROUND -->
+                    <div class="design-tab-pane" id="editTab-background">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label class="form-label">Background Fill Type</label>
+                            <div class="segmented-control" id="editBgTypeControl">
+                                <button type="button" class="active" onclick="setBgType('edit', 'solid')">Solid Color</button>
+                                <button type="button" onclick="setBgType('edit', 'gradient')">Multi-Color Gradient</button>
+                                <button type="button" onclick="setBgType('edit', 'pattern')">Pattern Texture</button>
+                            </div>
+                            <input type="hidden" id="editBgType" value="solid">
+                        </div>
+
+                        <div id="editGradientControls" style="display:none;margin-bottom:14px;padding:14px;background:var(--bg-elevated);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Start Color</label>
+                                    <input type="color" id="editBgColor1" value="#6366f1" style="width:100%;height:38px;border-radius:var(--radius-sm);cursor:pointer;">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">End Color</label>
+                                    <input type="color" id="editBgColor2" value="#4f46e5" style="width:100%;height:38px;border-radius:var(--radius-sm);cursor:pointer;">
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Middle Accent (Opt)</label>
+                                    <input type="color" id="editBgColor3" value="#ffd700" style="width:100%;height:38px;border-radius:var(--radius-sm);cursor:pointer;">
+                                </div>
+                            </div>
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Gradient Type</label>
+                                    <select id="editGradientType" class="form-select">
+                                        <option value="linear">Linear</option>
+                                        <option value="radial">Radial</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <label class="form-label">Angle (0° - 360°)</label>
+                                    <div class="slider-row">
+                                        <input type="range" id="editGradientAngle" min="0" max="360" value="90" step="5">
+                                        <span class="slider-val-badge" id="editGradientAngleVal">90°</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Pattern Overlay</label>
+                                <select id="editBgPattern" class="form-select">
+                                    <option value="none">None (Clean)</option>
+                                    <option value="dots">Subtle Polka Dots</option>
+                                    <option value="stripes">Diagonal Stripes</option>
+                                    <option value="stars">Sparkle Stars</option>
+                                    <option value="chevrons">Geometric Chevrons</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Gloss Sheen Effect</label>
+                                <div class="toggle-row" style="margin:0;padding:8px 12px;">
+                                    <label for="editHighlightEnabled" style="font-size:0.8rem;">Highlight Reflection</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="editHighlightEnabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: EDIT ICON -->
+                    <div class="design-tab-pane" id="editTab-icon">
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label class="form-label">Select Segment Symbol / Icon</label>
+                            <div class="icon-picker-grid" id="editIconGrid"></div>
+                            <input type="hidden" id="editIconType" value="none">
+                            <input type="hidden" id="editIconName" value="">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Icon Position</label>
+                                <select id="editIconPosition" class="form-select">
+                                    <option value="above">Above Text</option>
+                                    <option value="below">Below Text</option>
+                                    <option value="left">Left of Text</option>
+                                    <option value="right">Right of Text</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Icon Size</label>
+                                <div class="slider-row">
+                                    <input type="range" id="editIconSize" min="10" max="32" value="16" step="1">
+                                    <span class="slider-val-badge" id="editIconSizeVal">16px</span>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Icon Spacing</label>
+                                <div class="slider-row">
+                                    <input type="range" id="editIconSpacing" min="0" max="20" value="6" step="1">
+                                    <span class="slider-val-badge" id="editIconSpacingVal">6px</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 5: EDIT BORDER & GLOW -->
+                    <div class="design-tab-pane" id="editTab-border">
+                        <div class="toggle-row">
+                            <label for="editBorderEnabled">
+                                <i data-lucide="square" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                Custom Slice Divider Border
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="editBorderEnabled">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="editBorderControls" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Border Color</label>
+                                <input type="color" id="editBorderColor" value="#ffd700" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Width (px)</label>
+                                <input type="range" id="editBorderWidth" min="1" max="6" value="2">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Border Style</label>
+                                <select id="editBorderStyle" class="form-select">
+                                    <option value="solid">Solid</option>
+                                    <option value="dashed">Dashed</option>
+                                    <option value="dotted">Dotted</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="toggle-row">
+                            <label for="editGlowEnabled">
+                                <i data-lucide="sun" style="width:14px;height:14px;color:#f59e0b;"></i>
+                                Slice Rim Glow / Aura
+                            </label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="editGlowEnabled">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div id="editGlowControls" style="display:none;grid-template-columns:1fr 1fr;gap:12px;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-sm);">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Glow Color</label>
+                                <input type="color" id="editGlowColor" value="#ffd700" style="width:100%;height:36px;border-radius:var(--radius-sm);cursor:pointer;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Glow Intensity (1-10)</label>
+                                <input type="range" id="editGlowIntensity" min="1" max="10" value="5">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--border-subtle);">
+                        <span style="font-size:0.75rem;color:var(--text-muted);">
+                            Changes preview live on the canvas wheel immediately.
+                        </span>
+                        <button type="button" class="btn-ghost" onclick="resetSegmentDesign('edit')" style="font-size:0.78rem;color:var(--color-danger);padding:4px 10px;">
+                            <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i> Reset to Theme Default
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div style="display:flex;gap:12px;justify-content:flex-end;">
@@ -289,31 +1499,809 @@
 </div>
 
 <script>
+    // ── 1. GLOBAL CURATED FONTS & PRESET MOTIFS ──
+    const FONT_OPTIONS = [
+        { id: 'inter', name: 'Inter', category: 'Sans-Serif', family: "'Inter', sans-serif" },
+        { id: 'poppins', name: 'Poppins', category: 'Geometric Sans', family: "'Poppins', sans-serif" },
+        { id: 'montserrat', name: 'Montserrat', category: 'Urban Sans', family: "'Montserrat', sans-serif" },
+        { id: 'roboto', name: 'Roboto', category: 'Grotesque', family: "'Roboto', sans-serif" },
+        { id: 'lato', name: 'Lato', category: 'Humanist', family: "'Lato', sans-serif" },
+        { id: 'nunito', name: 'Nunito', category: 'Rounded', family: "'Nunito', sans-serif" },
+        { id: 'outfit', name: 'Outfit', category: 'Modern Tech', family: "'Outfit', sans-serif" },
+        { id: 'manrope', name: 'Manrope', category: 'Executive', family: "'Manrope', sans-serif" },
+        { id: 'dm_sans', name: 'DM Sans', category: 'Geometric', family: "'DM Sans', sans-serif" },
+        { id: 'plus_jakarta_sans', name: 'Plus Jakarta Sans', category: 'Corporate', family: "'Plus Jakarta Sans', sans-serif" },
+        { id: 'oswald', name: 'Oswald', category: 'Condensed', family: "'Oswald', sans-serif" },
+        { id: 'bebas_neue', name: 'Bebas Neue', category: 'Poster All-Caps', family: "'Bebas Neue', sans-serif" },
+        { id: 'anton', name: 'Anton', category: 'Heavy Display', family: "'Anton', sans-serif" },
+        { id: 'playfair', name: 'Playfair Display', category: 'Luxury Serif', family: "'Playfair Display', serif" },
+        { id: 'cormorant_garamond', name: 'Cormorant Garamond', category: 'Classical Serif', family: "'Cormorant Garamond', serif" },
+        { id: 'cinzel', name: 'Cinzel', category: 'Regal Roman', family: "'Cinzel', serif" },
+        { id: 'raleway', name: 'Raleway', category: 'Fashion Sans', family: "'Raleway', sans-serif" },
+        { id: 'quicksand', name: 'Quicksand', category: 'Soft Geometric', family: "'Quicksand', sans-serif" },
+        { id: 'rubik', name: 'Rubik', category: 'Soft Square', family: "'Rubik', sans-serif" },
+        { id: 'space_grotesk', name: 'Space Grotesk', category: 'Tech Monospace', family: "'Space Grotesk', monospace" },
+        { id: 'archivo', name: 'Archivo', category: 'Performance', family: "'Archivo', sans-serif" },
+        { id: 'barlow_condensed', name: 'Barlow Condensed', category: 'Compact', family: "'Barlow Condensed', sans-serif" },
+        { id: 'league_spartan', name: 'League Spartan', category: 'Bold Geometric', family: "'League Spartan', sans-serif" }
+    ];
+
+    const PRESET_ICONS = [
+        { id: 'none', label: 'None', sym: '—' },
+        { id: 'gift', label: 'Gift', sym: '🎁' },
+        { id: 'percent', label: 'Percent', sym: '%' },
+        { id: 'tag', label: 'Tag', sym: '🏷️' },
+        { id: 'star', label: 'Star', sym: '⭐' },
+        { id: 'crown', label: 'Crown', sym: '👑' },
+        { id: 'sparkles', label: 'Sparkles', sym: '✨' },
+        { id: 'flame', label: 'Flame', sym: '🔥' },
+        { id: 'trophy', label: 'Trophy', sym: '🏆' },
+        { id: 'diamond', label: 'Diamond', sym: '💎' },
+        { id: 'heart', label: 'Heart', sym: '❤️' },
+        { id: 'coffee', label: 'Coffee', sym: '☕' },
+        { id: 'shopping-bag', label: 'Shopping', sym: '🛍️' },
+        { id: 'zap', label: 'Zap / Flash', sym: '⚡' },
+        { id: 'smile', label: 'Smile', sym: '😊' },
+        { id: 'award', label: 'Badge', sym: '🎖️' },
+        { id: 'ticket', label: 'Ticket', sym: '🎫' }
+    ];
+
+    let originalPrizes = {{ prizes_json|safe }};
+    let wheelInstance = null;
+    let editingPrizeId = null;
+
+    // ── 2. INITIALIZATION ON DOM READY ──
     document.addEventListener('DOMContentLoaded', function() {
-        const prizes = {{ prizes_json|safe }};
-        new SpinWheel('prizeWheel', {
-            prizes: prizes,
-            theme: '{{ active_theme|default:"royal" }}'
+        const activeTheme = '{{ active_theme|default:"royal" }}';
+        const centerConfig = {{ center_hub_config_json|safe|default:'{}' }};
+        const centerLogo = (centerConfig && centerConfig.mode === 'image' && centerConfig.logoUrl) ? centerConfig.logoUrl : (!centerConfig.mode && centerConfig.logoUrl ? centerConfig.logoUrl : null);
+
+        wheelInstance = new SpinWheel('prizeWheel', {
+            prizes: originalPrizes,
+            theme: activeTheme,
+            centerLogo: centerLogo || null,
+            centerConfig: centerConfig
         });
+        window.wheelInstance = wheelInstance;
+
+        // Initialize icon grids
+        buildIconGrid('add');
+        buildIconGrid('edit');
+
+        // Initialize font picker option lists
+        buildFontOptions('add');
+        buildFontOptions('edit');
+
+        // Setup conditional reward fields
+        setupConditionalRewardFields('add');
+        setupConditionalRewardFields('edit');
+
+        // Setup slider live badges & color sync
+        setupFormBinding('add');
+        setupFormBinding('edit');
+
+        // Initialize Center Hub Customizer
+        initCenterHubCustomizer();
+
+        // Delegated listener for edit prize buttons
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.edit-prize-btn');
+            if (btn) {
+                e.preventDefault();
+                openEditPrizeModal(btn);
+            }
+        });
+
+        if (window.lucide) window.lucide.createIcons();
     });
 
-    function openEditPrizeModal(id, name, type, discPct, fixedAmt, prob, color, couponText, qty) {
-        document.getElementById('editPrizeId').value = id;
-        document.getElementById('editPrizeName').value = name;
-        document.getElementById('editPrizeType').value = type;
-        document.getElementById('editDiscountPct').value = parseFloat(discPct) || 0;
-        document.getElementById('editFixedAmt').value = parseFloat(fixedAmt) || 0;
-        document.getElementById('editProbability').value = parseFloat(prob) || 10;
-        document.getElementById('editDisplayColor').value = color || '#6366f1';
-        document.getElementById('editCouponText').value = couponText || '';
-        document.getElementById('editRemainingQty').value = parseInt(qty) || 100;
-        document.getElementById('editPrizeModal').style.display = 'flex';
-        if (window.lucide) window.lucide.createIcons();
+    // ── 3. CONDITIONAL REWARD FIELD LOGIC ──
+    function setupConditionalRewardFields(prefix) {
+        const typeSelect = document.getElementById(prefix + 'PrizeType');
+        const nameInput = document.getElementById(prefix + 'PrizeName');
+        const discGroup = document.getElementById(prefix + 'DiscPctGroup');
+        const fixedGroup = document.getElementById(prefix + 'FixedAmtGroup');
+        const discInput = document.getElementById(prefix + 'DiscountPct');
+        const fixedInput = document.getElementById(prefix + 'FixedAmt');
+
+        function updateVisibility() {
+            const val = typeSelect.value;
+            if (val === 'percentage') {
+                if (discGroup) discGroup.style.display = 'block';
+                if (fixedGroup) fixedGroup.style.display = 'none';
+                if (prefix === 'add' && (!nameInput.value || nameInput.value.includes('OFF') || nameInput.value.includes('Better Luck'))) {
+                    nameInput.value = (discInput.value || '10') + '% OFF Total Bill';
+                }
+            } else if (val === 'fixed') {
+                if (discGroup) discGroup.style.display = 'none';
+                if (fixedGroup) fixedGroup.style.display = 'block';
+                if (prefix === 'add' && (!nameInput.value || nameInput.value.includes('OFF') || nameInput.value.includes('Better Luck'))) {
+                    nameInput.value = '{{ shop.currency_symbol|default:"₹" }}' + (fixedInput.value || '50') + ' OFF Bill';
+                }
+            } else if (val === 'freebie') {
+                if (discGroup) discGroup.style.display = 'none';
+                if (fixedGroup) fixedGroup.style.display = 'none';
+                if (prefix === 'add' && (!nameInput.value || nameInput.value.includes('OFF') || nameInput.value.includes('Better Luck'))) {
+                    nameInput.value = 'Free Complimentary Item';
+                }
+            } else if (val === 'no_win') {
+                if (discGroup) discGroup.style.display = 'none';
+                if (fixedGroup) fixedGroup.style.display = 'none';
+                if (prefix === 'add') {
+                    nameInput.value = 'Better Luck Next Time';
+                    const cText = document.getElementById(prefix + 'CouponText');
+                    if (cText) cText.value = 'Non-winning segment';
+                }
+            }
+            triggerLiveWheelPreview();
+        }
+
+        typeSelect.addEventListener('change', updateVisibility);
+
+        // Auto update name when typing discount numbers in add mode
+        if (prefix === 'add') {
+            discInput.addEventListener('input', () => {
+                if (typeSelect.value === 'percentage' && nameInput.value.includes('% OFF')) {
+                    nameInput.value = (discInput.value || '0') + '% OFF Total Bill';
+                }
+                triggerLiveWheelPreview();
+            });
+            fixedInput.addEventListener('input', () => {
+                if (typeSelect.value === 'fixed' && nameInput.value.includes('OFF Bill')) {
+                    nameInput.value = '{{ shop.currency_symbol|default:"₹" }}' + (fixedInput.value || '0') + ' OFF Bill';
+                }
+                triggerLiveWheelPreview();
+            });
+        }
+    }
+
+    // ── 4. FORM BINDING & REAL-TIME EVENT HOOKS ──
+    function setupFormBinding(prefix) {
+        // Sliders & Live numeric badges
+        const sliders = [
+            { id: 'FontSize', unit: 'px' },
+            { id: 'LetterSpacing', unit: 'px' },
+            { id: 'TextOpacity', unit: '%' },
+            { id: 'GradientAngle', unit: '°' },
+            { id: 'IconSize', unit: 'px' },
+            { id: 'IconSpacing', unit: 'px' }
+        ];
+
+        sliders.forEach(s => {
+            const slider = document.getElementById(prefix + s.id);
+            const badge = document.getElementById(prefix + s.id + 'Val');
+            if (slider && badge) {
+                slider.addEventListener('input', () => {
+                    badge.innerText = slider.value + s.unit;
+                    triggerLiveWheelPreview();
+                });
+            }
+        });
+
+        // Color & Hex input sync
+        const colorSyncPairs = [
+            { picker: 'DisplayColor', hex: 'DisplayColorHex' },
+            { picker: 'TextColor', hex: 'TextColorHex' }
+        ];
+
+        colorSyncPairs.forEach(p => {
+            const picker = document.getElementById(prefix + p.picker);
+            const hex = document.getElementById(prefix + p.hex);
+            if (picker && hex) {
+                picker.addEventListener('input', () => {
+                    hex.value = picker.value;
+                    if (p.picker === 'DisplayColor') {
+                        const bg1 = document.getElementById(prefix + 'BgColor1');
+                        if (bg1) bg1.value = picker.value;
+                    }
+                    triggerLiveWheelPreview();
+                });
+                hex.addEventListener('input', () => {
+                    if (/^#[0-9A-Fa-f]{6}$/.test(hex.value)) {
+                        picker.value = hex.value;
+                        if (p.picker === 'DisplayColor') {
+                            const bg1 = document.getElementById(prefix + 'BgColor1');
+                            if (bg1) bg1.value = hex.value;
+                        }
+                        triggerLiveWheelPreview();
+                    }
+                });
+            }
+        });
+
+        // Gradient Start Color sync with base color
+        const bg1 = document.getElementById(prefix + 'BgColor1');
+        if (bg1) {
+            bg1.addEventListener('input', () => {
+                const dispCol = document.getElementById(prefix + 'DisplayColor');
+                const dispHex = document.getElementById(prefix + 'DisplayColorHex');
+                if (dispCol) dispCol.value = bg1.value;
+                if (dispHex) dispHex.value = bg1.value;
+                triggerLiveWheelPreview();
+            });
+        }
+
+        // Toggles show/hide
+        setupToggleReveal(prefix + 'TextShadowEnabled', prefix + 'TextShadowControls');
+        setupToggleReveal(prefix + 'TextStrokeEnabled', prefix + 'TextStrokeControls');
+        setupToggleReveal(prefix + 'BorderEnabled', prefix + 'BorderControls');
+        setupToggleReveal(prefix + 'GlowEnabled', prefix + 'GlowControls');
+
+        // All inputs onchange trigger preview
+        const container = document.getElementById(prefix === 'add' ? 'addPrizeForm' : 'editPrizeForm');
+        if (container) {
+            container.addEventListener('input', triggerLiveWheelPreview);
+            container.addEventListener('change', triggerLiveWheelPreview);
+        }
+    }
+
+    function setupToggleReveal(toggleId, targetContainerId) {
+        const toggle = document.getElementById(toggleId);
+        const container = document.getElementById(targetContainerId);
+        if (toggle && container) {
+            toggle.addEventListener('change', () => {
+                container.style.display = toggle.checked ? 'grid' : 'none';
+                triggerLiveWheelPreview();
+            });
+        }
+    }
+
+    // ── 5. ACCORDION & TABS TOGGLING ──
+    function toggleDesignAccordion(prefix) {
+        const body = document.getElementById(prefix + 'DesignBody');
+        const icon = document.getElementById(prefix + 'AccordionIcon');
+        const isOpen = body.classList.contains('open');
+        if (isOpen) {
+            body.classList.remove('open');
+            icon.style.transform = 'rotate(0deg)';
+        } else {
+            body.classList.add('open');
+            icon.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    function switchDesignTab(prefix, tabName, evt) {
+        const parent = document.getElementById(prefix + 'DesignBody');
+        parent.querySelectorAll('.design-tab-btn').forEach(btn => btn.classList.remove('active'));
+        parent.querySelectorAll('.design-tab-pane').forEach(pane => pane.classList.remove('active'));
+
+        evt.currentTarget.classList.add('active');
+        const targetPane = document.getElementById(prefix + 'Tab-' + tabName);
+        if (targetPane) targetPane.classList.add('active');
+    }
+
+    // ── 6. FONT PICKER DROPDOWN & SEARCH ──
+    function buildFontOptions(prefix) {
+        const list = document.getElementById(prefix + 'FontOptionsList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        FONT_OPTIONS.forEach(f => {
+            const item = document.createElement('div');
+            item.className = 'font-option-item';
+            item.dataset.font = f.id;
+            item.dataset.name = f.name.toLowerCase();
+            item.innerHTML = `
+                <span class="font-name" style="font-family:${f.family};">${f.name}</span>
+                <span class="font-cat">${f.category}</span>
+            `;
+            item.onclick = () => selectFont(prefix, f.id, f.name, f.family);
+            list.appendChild(item);
+        });
+    }
+
+    function toggleFontDropdown(prefix) {
+        const dd = document.getElementById(prefix + 'FontDropdown');
+        const isOpen = dd.classList.contains('open');
+        // close others
+        document.querySelectorAll('.font-picker-dropdown').forEach(d => d.classList.remove('open'));
+        if (!isOpen) {
+            dd.classList.add('open');
+            const search = document.getElementById(prefix + 'FontSearch');
+            if (search) {
+                search.value = '';
+                filterFonts(prefix);
+                search.focus();
+            }
+        }
+    }
+
+    function filterFonts(prefix) {
+        const query = (document.getElementById(prefix + 'FontSearch').value || '').toLowerCase().trim();
+        const items = document.getElementById(prefix + 'FontOptionsList').querySelectorAll('.font-option-item');
+        items.forEach(item => {
+            const match = !query || item.dataset.name.includes(query) || item.dataset.font.includes(query);
+            item.style.display = match ? 'flex' : 'none';
+        });
+    }
+
+    function selectFont(prefix, fontId, fontName, fontFamily) {
+        document.getElementById(prefix + 'FontFamily').value = fontId;
+        const label = document.getElementById(prefix + 'FontPickerLabel');
+        label.innerText = fontName;
+        label.style.fontFamily = fontFamily;
+
+        // Mark selected in list
+        const items = document.getElementById(prefix + 'FontOptionsList').querySelectorAll('.font-option-item');
+        items.forEach(item => {
+            item.classList.toggle('selected', item.dataset.font === fontId);
+        });
+
+        // Close dropdown
+        document.getElementById(prefix + 'FontDropdown').classList.remove('open');
+
+        // Lazy load google font
+        if (window.ensureGoogleFontLoaded) {
+            window.ensureGoogleFontLoaded(fontId);
+        }
+
+        triggerLiveWheelPreview();
+    }
+
+    // Close font dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.font-picker-wrap')) {
+            document.querySelectorAll('.font-picker-dropdown').forEach(d => d.classList.remove('open'));
+        }
+    });
+
+    // ── 7. ICON PICKER GRID ──
+    function buildIconGrid(prefix) {
+        const grid = document.getElementById(prefix + 'IconGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        PRESET_ICONS.forEach(icon => {
+            const el = document.createElement('div');
+            el.className = 'icon-picker-item' + (icon.id === 'none' ? ' active' : '');
+            el.dataset.id = icon.id;
+            el.innerHTML = `
+                <span class="icon-sym">${icon.sym}</span>
+                <span class="icon-lbl">${icon.label}</span>
+            `;
+            el.onclick = () => selectIcon(prefix, icon.id);
+            grid.appendChild(el);
+        });
+    }
+
+    function selectIcon(prefix, iconId, skipPreview) {
+        const grid = document.getElementById(prefix + 'IconGrid');
+        if (grid) {
+            grid.querySelectorAll('.icon-picker-item').forEach(it => {
+                it.classList.toggle('active', it.dataset.id === iconId);
+            });
+        }
+
+        const typeInput = document.getElementById(prefix + 'IconType');
+        const nameInput = document.getElementById(prefix + 'IconName');
+        if (iconId === 'none') {
+            if (typeInput) typeInput.value = 'none';
+            if (nameInput) nameInput.value = '';
+        } else {
+            if (typeInput) typeInput.value = 'preset';
+            if (nameInput) nameInput.value = iconId;
+        }
+
+        if (!skipPreview && typeof triggerLiveWheelPreview === 'function') {
+            triggerLiveWheelPreview();
+        }
+    }
+
+    // ── 8. BACKGROUND TYPE SELECTOR ──
+    function setBgType(prefix, type, skipPreview) {
+        const bgInput = document.getElementById(prefix + 'BgType');
+        if (bgInput) bgInput.value = type;
+
+        const ctrl = document.getElementById(prefix + 'BgTypeControl');
+        if (ctrl) {
+            ctrl.querySelectorAll('button').forEach((b, idx) => {
+                const types = ['solid', 'gradient', 'pattern'];
+                b.classList.toggle('active', types[idx] === type);
+            });
+        }
+
+        const gradControls = document.getElementById(prefix + 'GradientControls');
+        if (gradControls) {
+            gradControls.style.display = (type === 'gradient' || type === 'pattern') ? 'block' : 'none';
+        }
+
+        if (!skipPreview && typeof triggerLiveWheelPreview === 'function') {
+            triggerLiveWheelPreview();
+        }
+    }
+
+    // ── 9. SERIALIZATION & DESERIALIZATION OF DESIGN CONFIG ──
+    function extractDesignConfig(prefix) {
+        const config = {};
+
+        // Font
+        const font = document.getElementById(prefix + 'FontFamily').value;
+        if (font) config.font_family = font;
+
+        const weight = parseInt(document.getElementById(prefix + 'FontWeight').value);
+        if (weight) config.font_weight = weight;
+
+        const size = parseInt(document.getElementById(prefix + 'FontSize').value);
+        if (size) config.font_size = size;
+
+        const align = document.getElementById(prefix + 'TextAlign').value;
+        if (align) config.text_align = align;
+
+        const transform = document.getElementById(prefix + 'TextTransform').value;
+        if (transform) config.text_transform = transform;
+
+        const spacing = parseFloat(document.getElementById(prefix + 'LetterSpacing').value);
+        if (!isNaN(spacing)) config.letter_spacing = spacing;
+
+        const style = document.getElementById(prefix + 'FontStyle').value;
+        if (style) config.font_style = style;
+
+        // Appearance
+        const txtCol = document.getElementById(prefix + 'TextColor').value;
+        if (txtCol) config.text_color = txtCol;
+
+        const txtOp = parseInt(document.getElementById(prefix + 'TextOpacity').value);
+        if (!isNaN(txtOp)) config.text_opacity = txtOp;
+
+        if (document.getElementById(prefix + 'TextShadowEnabled').checked) {
+            config.text_shadow_enabled = true;
+            config.text_shadow_color = document.getElementById(prefix + 'TextShadowColor').value;
+            config.text_shadow_blur = parseInt(document.getElementById(prefix + 'TextShadowBlur').value);
+            config.text_shadow_y = parseInt(document.getElementById(prefix + 'TextShadowY').value);
+        }
+
+        if (document.getElementById(prefix + 'TextStrokeEnabled').checked) {
+            config.text_stroke_enabled = true;
+            config.text_stroke_color = document.getElementById(prefix + 'TextStrokeColor').value;
+            config.text_stroke_width = parseInt(document.getElementById(prefix + 'TextStrokeWidth').value);
+        }
+
+        // Background
+        const bgType = document.getElementById(prefix + 'BgType').value || 'solid';
+        config.bg_type = bgType;
+        const displayColor = document.getElementById(prefix + 'DisplayColor').value;
+        if (bgType === 'solid') {
+            config.bg_color_1 = document.getElementById(prefix + 'BgColor1').value || displayColor;
+        } else {
+            config.bg_color_1 = document.getElementById(prefix + 'BgColor1').value || displayColor;
+            config.bg_color_2 = document.getElementById(prefix + 'BgColor2').value;
+            const bg3 = document.getElementById(prefix + 'BgColor3').value;
+            if (bg3) config.bg_color_3 = bg3;
+            config.gradient_type = document.getElementById(prefix + 'GradientType').value;
+            config.gradient_angle = parseInt(document.getElementById(prefix + 'GradientAngle').value);
+        }
+
+        const pattern = document.getElementById(prefix + 'BgPattern').value;
+        if (pattern && pattern !== 'none') config.bg_pattern = pattern;
+
+        if (document.getElementById(prefix + 'HighlightEnabled').checked) {
+            config.highlight_enabled = true;
+        }
+
+        // Icon
+        const iconType = document.getElementById(prefix + 'IconType').value;
+        if (iconType === 'preset') {
+            config.icon_type = 'preset';
+            config.icon_name = document.getElementById(prefix + 'IconName').value;
+            config.icon_position = document.getElementById(prefix + 'IconPosition').value;
+            config.icon_size = parseInt(document.getElementById(prefix + 'IconSize').value);
+            config.icon_spacing = parseInt(document.getElementById(prefix + 'IconSpacing').value);
+        }
+
+        // Border
+        if (document.getElementById(prefix + 'BorderEnabled').checked) {
+            config.border_enabled = true;
+            config.border_color = document.getElementById(prefix + 'BorderColor').value;
+            config.border_width = parseInt(document.getElementById(prefix + 'BorderWidth').value);
+            config.border_style = document.getElementById(prefix + 'BorderStyle').value;
+        }
+
+        // Glow
+        if (document.getElementById(prefix + 'GlowEnabled').checked) {
+            config.glow_enabled = true;
+            config.glow_color = document.getElementById(prefix + 'GlowColor').value;
+            config.glow_intensity = parseInt(document.getElementById(prefix + 'GlowIntensity').value);
+        }
+
+        return config;
+    }
+
+    function populateDesignConfig(prefix, cfg) {
+        cfg = cfg || {};
+
+        // Font
+        const font = cfg.font_family || 'inter';
+        document.getElementById(prefix + 'FontFamily').value = font;
+        const fontObj = FONT_OPTIONS.find(f => f.id === font) || FONT_OPTIONS[0];
+        const fontLabel = document.getElementById(prefix + 'FontPickerLabel');
+        fontLabel.innerText = fontObj.name;
+        fontLabel.style.fontFamily = fontObj.family;
+        if (window.ensureGoogleFontLoaded) window.ensureGoogleFontLoaded(font);
+
+        document.getElementById(prefix + 'FontWeight').value = cfg.font_weight || '700';
+
+        const size = cfg.font_size || 13;
+        document.getElementById(prefix + 'FontSize').value = size;
+        document.getElementById(prefix + 'FontSizeVal').innerText = size + 'px';
+
+        document.getElementById(prefix + 'TextAlign').value = cfg.text_align || 'center';
+        document.getElementById(prefix + 'TextTransform').value = cfg.text_transform || 'uppercase';
+
+        const spacing = cfg.letter_spacing !== undefined ? cfg.letter_spacing : 0;
+        document.getElementById(prefix + 'LetterSpacing').value = spacing;
+        document.getElementById(prefix + 'LetterSpacingVal').innerText = spacing + 'px';
+
+        document.getElementById(prefix + 'FontStyle').value = cfg.font_style || 'normal';
+
+        // Appearance
+        const txtCol = cfg.text_color || '#ffffff';
+        document.getElementById(prefix + 'TextColor').value = txtCol;
+        document.getElementById(prefix + 'TextColorHex').value = txtCol;
+
+        const txtOp = cfg.text_opacity !== undefined ? cfg.text_opacity : 100;
+        document.getElementById(prefix + 'TextOpacity').value = txtOp;
+        document.getElementById(prefix + 'TextOpacityVal').innerText = txtOp + '%';
+
+        // Shadow
+        const shadowOn = !!cfg.text_shadow_enabled;
+        document.getElementById(prefix + 'TextShadowEnabled').checked = shadowOn;
+        document.getElementById(prefix + 'TextShadowControls').style.display = shadowOn ? 'grid' : 'none';
+        if (shadowOn) {
+            document.getElementById(prefix + 'TextShadowColor').value = cfg.text_shadow_color || '#000000';
+            document.getElementById(prefix + 'TextShadowBlur').value = cfg.text_shadow_blur || 4;
+            document.getElementById(prefix + 'TextShadowY').value = cfg.text_shadow_y || 2;
+        }
+
+        // Stroke
+        const strokeOn = !!cfg.text_stroke_enabled;
+        document.getElementById(prefix + 'TextStrokeEnabled').checked = strokeOn;
+        document.getElementById(prefix + 'TextStrokeControls').style.display = strokeOn ? 'grid' : 'none';
+        if (strokeOn) {
+            document.getElementById(prefix + 'TextStrokeColor').value = cfg.text_stroke_color || '#000000';
+            document.getElementById(prefix + 'TextStrokeWidth').value = cfg.text_stroke_width || 2;
+        }
+
+        // Background
+        const bgType = cfg.bg_type || 'solid';
+        setBgType(prefix, bgType, true);
+        const currDisplayColor = document.getElementById(prefix + 'DisplayColor').value;
+        const activeBg1 = cfg.bg_color_1 || currDisplayColor;
+        if (document.getElementById(prefix + 'BgColor1')) document.getElementById(prefix + 'BgColor1').value = activeBg1;
+        if (document.getElementById(prefix + 'DisplayColor') && cfg.bg_color_1) document.getElementById(prefix + 'DisplayColor').value = cfg.bg_color_1;
+        if (document.getElementById(prefix + 'DisplayColorHex') && cfg.bg_color_1) document.getElementById(prefix + 'DisplayColorHex').value = cfg.bg_color_1;
+        if (cfg.bg_color_2 && document.getElementById(prefix + 'BgColor2')) document.getElementById(prefix + 'BgColor2').value = cfg.bg_color_2;
+        if (cfg.bg_color_3 && document.getElementById(prefix + 'BgColor3')) document.getElementById(prefix + 'BgColor3').value = cfg.bg_color_3;
+        if (cfg.gradient_type && document.getElementById(prefix + 'GradientType')) document.getElementById(prefix + 'GradientType').value = cfg.gradient_type;
+        const angle = cfg.gradient_angle !== undefined ? cfg.gradient_angle : 90;
+        if (document.getElementById(prefix + 'GradientAngle')) document.getElementById(prefix + 'GradientAngle').value = angle;
+        if (document.getElementById(prefix + 'GradientAngleVal')) document.getElementById(prefix + 'GradientAngleVal').innerText = angle + '°';
+
+        if (document.getElementById(prefix + 'BgPattern')) document.getElementById(prefix + 'BgPattern').value = cfg.bg_pattern || 'none';
+        if (document.getElementById(prefix + 'HighlightEnabled')) document.getElementById(prefix + 'HighlightEnabled').checked = !!cfg.highlight_enabled;
+
+        // Icon
+        selectIcon(prefix, (cfg.icon_type === 'preset' && cfg.icon_name) ? cfg.icon_name : 'none', true);
+        document.getElementById(prefix + 'IconPosition').value = cfg.icon_position || 'above';
+        const iconSize = cfg.icon_size || 16;
+        document.getElementById(prefix + 'IconSize').value = iconSize;
+        document.getElementById(prefix + 'IconSizeVal').innerText = iconSize + 'px';
+        const iconSpacing = cfg.icon_spacing || 6;
+        document.getElementById(prefix + 'IconSpacing').value = iconSpacing;
+        document.getElementById(prefix + 'IconSpacingVal').innerText = iconSpacing + 'px';
+
+        // Border
+        const borderOn = !!cfg.border_enabled;
+        document.getElementById(prefix + 'BorderEnabled').checked = borderOn;
+        document.getElementById(prefix + 'BorderControls').style.display = borderOn ? 'grid' : 'none';
+        if (borderOn) {
+            document.getElementById(prefix + 'BorderColor').value = cfg.border_color || '#ffd700';
+            document.getElementById(prefix + 'BorderWidth').value = cfg.border_width || 2;
+            document.getElementById(prefix + 'BorderStyle').value = cfg.border_style || 'solid';
+        }
+
+        // Glow
+        const glowOn = !!cfg.glow_enabled;
+        document.getElementById(prefix + 'GlowEnabled').checked = glowOn;
+        document.getElementById(prefix + 'GlowControls').style.display = glowOn ? 'grid' : 'none';
+        if (glowOn) {
+            document.getElementById(prefix + 'GlowColor').value = cfg.glow_color || '#ffd700';
+            document.getElementById(prefix + 'GlowIntensity').value = cfg.glow_intensity || 5;
+        }
+
+        // Badge indicator
+        const hasCustom = Object.keys(cfg).length > 0;
+        const badge = document.getElementById(prefix + 'DesignBadge');
+        if (badge) {
+            badge.innerText = hasCustom ? '● Custom Style Active' : 'Theme Default';
+            badge.style.color = hasCustom ? 'var(--color-primary)' : 'var(--text-muted)';
+        }
+    }
+
+    function resetSegmentDesign(prefix) {
+        populateDesignConfig(prefix, {});
+        document.getElementById(prefix + 'DesignConfig').value = '{}';
+        triggerLiveWheelPreview();
+    }
+
+    // ── 10. REAL-TIME LIVE CANVAS WHEEL PREVIEW ──
+    function triggerLiveWheelPreview() {
+        if (!wheelInstance) return;
+
+        if (editingPrizeId !== null) {
+            // Live Preview in Edit Modal
+            const config = extractDesignConfig('edit');
+            const hiddenConfig = document.getElementById('editDesignConfig');
+            if (hiddenConfig) hiddenConfig.value = JSON.stringify(config);
+
+            const updatedPrizes = JSON.parse(JSON.stringify(originalPrizes));
+            const idx = updatedPrizes.findIndex(p => p.id == editingPrizeId);
+            if (idx !== -1) {
+                updatedPrizes[idx] = {
+                    ...updatedPrizes[idx],
+                    name: document.getElementById('editPrizeName').value.trim() || 'Reward',
+                    prize_type: document.getElementById('editPrizeType').value,
+                    discount_percentage: document.getElementById('editDiscountPct').value || '0',
+                    fixed_discount_amount: document.getElementById('editFixedAmt').value || '0',
+                    probability: parseFloat(document.getElementById('editProbability').value) || 10,
+                    display_color: document.getElementById('editDisplayColor').value,
+                    coupon_text: document.getElementById('editCouponText').value,
+                    remaining_quantity: parseInt(document.getElementById('editRemainingQty').value) || 100,
+                    design_config: config
+                };
+                wheelInstance.setPrizes(updatedPrizes);
+            }
+        } else {
+            // Live Preview in Add Prize Form
+            const config = extractDesignConfig('add');
+            const hiddenConfig = document.getElementById('addDesignConfig');
+            if (hiddenConfig) hiddenConfig.value = JSON.stringify(config);
+
+            const hasCustom = Object.keys(config).length > 0;
+            const badge = document.getElementById('addDesignBadge');
+            if (badge) {
+                badge.innerText = hasCustom ? '● Custom Style Active' : 'Theme Default';
+                badge.style.color = hasCustom ? 'var(--color-primary)' : 'var(--text-muted)';
+            }
+
+            const name = document.getElementById('addPrizeName').value.trim();
+            if (name) {
+                const tempPrizes = JSON.parse(JSON.stringify(originalPrizes));
+                tempPrizes.push({
+                    id: 'draft-new-prize',
+                    name: name,
+                    prize_type: document.getElementById('addPrizeType').value,
+                    discount_percentage: document.getElementById('addDiscountPct').value || '0',
+                    fixed_discount_amount: document.getElementById('addFixedAmt').value || '0',
+                    probability: parseFloat(document.getElementById('addProbability').value) || 10,
+                    display_color: document.getElementById('addDisplayColor').value,
+                    coupon_text: document.getElementById('addCouponText').value,
+                    remaining_quantity: parseInt(document.getElementById('addRemainingQty').value) || 500,
+                    design_config: config
+                });
+                wheelInstance.setPrizes(tempPrizes);
+            } else {
+                wheelInstance.setPrizes(originalPrizes);
+            }
+        }
+    }
+
+    // ── 11. OPEN & CLOSE EDIT MODAL ──
+    function openEditPrizeModal(target, fallbackName, fallbackType, fallbackDiscPct, fallbackFixedAmt, fallbackProb, fallbackColor, fallbackCoupon, fallbackQty) {
+        const modal = document.getElementById('editPrizeModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+
+        try {
+            let id = target;
+            let fbName = fallbackName || '';
+            let fbType = fallbackType || 'percentage';
+            let fbDisc = fallbackDiscPct || '0';
+            let fbFixed = fallbackFixedAmt || '0';
+            let fbProb = fallbackProb || '10';
+            let fbColor = fallbackColor || '#6366f1';
+            let fbCoupon = fallbackCoupon || '';
+            let fbQty = fallbackQty || '100';
+
+            if (target && typeof target === 'object' && (target.dataset || target.getAttribute)) {
+                id = target.dataset.prizeId || target.getAttribute('data-prize-id') || target.id;
+                fbName = target.dataset.name || target.getAttribute('data-name') || fbName;
+                fbType = target.dataset.type || target.getAttribute('data-type') || fbType;
+                fbDisc = target.dataset.disc || target.getAttribute('data-disc') || fbDisc;
+                fbFixed = target.dataset.fixed || target.getAttribute('data-fixed') || fbFixed;
+                fbProb = target.dataset.prob || target.getAttribute('data-prob') || fbProb;
+                fbColor = target.dataset.color || target.getAttribute('data-color') || fbColor;
+                fbCoupon = target.dataset.coupon || target.getAttribute('data-coupon') || fbCoupon;
+                fbQty = target.dataset.qty || target.getAttribute('data-qty') || fbQty;
+            }
+
+            editingPrizeId = parseInt(id) || id;
+            const p = (typeof originalPrizes !== 'undefined' && Array.isArray(originalPrizes))
+                ? originalPrizes.find(item => item.id == id)
+                : null;
+
+            const finalId = id;
+            const finalName = (p && p.name !== undefined) ? p.name : fbName;
+            const finalType = (p && p.prize_type !== undefined) ? p.prize_type : fbType;
+            const finalDiscPct = (p && p.discount_percentage !== undefined) ? parseFloat(p.discount_percentage) : (parseFloat(fbDisc) || 0);
+            const finalFixedAmt = (p && p.fixed_discount_amount !== undefined) ? parseFloat(p.fixed_discount_amount) : (parseFloat(fbFixed) || 0);
+            const finalProb = (p && p.probability !== undefined) ? parseFloat(p.probability) : (parseFloat(fbProb) || 10);
+            const finalColor = (p && p.display_color) ? p.display_color : fbColor;
+            const finalCoupon = (p && p.coupon_text !== undefined) ? p.coupon_text : fbCoupon;
+            const finalQty = (p && p.remaining_quantity !== undefined) ? parseInt(p.remaining_quantity) : (parseInt(fbQty) || 100);
+
+            const elId = document.getElementById('editPrizeId');
+            if (elId) elId.value = finalId;
+
+            const elName = document.getElementById('editPrizeName');
+            if (elName) elName.value = finalName;
+
+            const elType = document.getElementById('editPrizeType');
+            if (elType) elType.value = finalType;
+
+            const elDisc = document.getElementById('editDiscountPct');
+            if (elDisc) elDisc.value = finalDiscPct;
+
+            const elFixed = document.getElementById('editFixedAmt');
+            if (elFixed) elFixed.value = finalFixedAmt;
+
+            const elProb = document.getElementById('editProbability');
+            if (elProb) elProb.value = finalProb;
+
+            const elColor = document.getElementById('editDisplayColor');
+            if (elColor) elColor.value = finalColor;
+
+            const elHex = document.getElementById('editDisplayColorHex');
+            if (elHex) elHex.value = finalColor;
+
+            const elCoupon = document.getElementById('editCouponText');
+            if (elCoupon) elCoupon.value = finalCoupon;
+
+            const elQty = document.getElementById('editRemainingQty');
+            if (elQty) elQty.value = finalQty;
+
+            // Set visibility of conditional fields
+            const discGroup = document.getElementById('editDiscPctGroup');
+            const fixedGroup = document.getElementById('editFixedAmtGroup');
+            if (discGroup && fixedGroup) {
+                if (finalType === 'percentage') {
+                    discGroup.style.display = 'block';
+                    fixedGroup.style.display = 'none';
+                } else if (finalType === 'fixed') {
+                    discGroup.style.display = 'none';
+                    fixedGroup.style.display = 'block';
+                } else {
+                    discGroup.style.display = 'none';
+                    fixedGroup.style.display = 'none';
+                }
+            }
+
+            // Populate segment design config safely
+            if (typeof populateDesignConfig === 'function') {
+                populateDesignConfig('edit', (p && p.design_config) ? p.design_config : {});
+            }
+
+            if (typeof triggerLiveWheelPreview === 'function') {
+                triggerLiveWheelPreview();
+            }
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (err) {
+            console.error('Error opening edit prize modal:', err);
+        }
     }
 
     function closeEditPrizeModal() {
-        document.getElementById('editPrizeModal').style.display = 'none';
+        editingPrizeId = null;
+        const modal = document.getElementById('editPrizeModal');
+        if (modal) modal.style.display = 'none';
+        if (wheelInstance && typeof originalPrizes !== 'undefined') {
+            wheelInstance.setPrizes(originalPrizes);
+        }
     }
+
+    window.openEditPrizeModal = openEditPrizeModal;
+    window.closeEditPrizeModal = closeEditPrizeModal;
 
     function confirmDeletePrize(id, name) {
         showConfirmModal(
@@ -323,6 +2311,236 @@
                 document.getElementById('deleteForm-' + id).submit();
             }
         );
+    }
+
+    // ── 12. CENTER HUB & LOGO / ICON CUSTOMIZER ──
+    function initCenterHubCustomizer() {
+        const form = document.getElementById('centerHubForm');
+        if (!form) return;
+
+        buildHubIconGrid();
+
+        // Mode switch tabs
+        const modeTabs = document.querySelectorAll('.hub-mode-tab');
+        modeTabs.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const mode = this.dataset.mode;
+                document.getElementById('hubModeInput').value = mode;
+                modeTabs.forEach(t => {
+                    if (t === btn) {
+                        t.style.background = 'var(--bg-surface)';
+                        t.style.color = 'var(--color-primary)';
+                        t.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
+                    } else {
+                        t.style.background = 'transparent';
+                        t.style.color = 'var(--text-secondary)';
+                        t.style.boxShadow = 'none';
+                    }
+                });
+
+                document.getElementById('hubMotifPanel').style.display = mode === 'motif' ? 'block' : 'none';
+                document.getElementById('hubIconPanel').style.display = mode === 'icon' ? 'block' : 'none';
+                document.getElementById('hubImagePanel').style.display = mode === 'image' ? 'block' : 'none';
+
+                updateLiveCenterHub();
+            });
+        });
+
+        const hubTypeSelect = document.getElementById('hubTypeSelect');
+        if (hubTypeSelect) {
+            hubTypeSelect.addEventListener('change', updateLiveCenterHub);
+        }
+
+        const iconColor = document.getElementById('hubIconColor');
+        if (iconColor) iconColor.addEventListener('input', updateLiveCenterHub);
+
+        const customEmoji = document.getElementById('hubCustomEmoji');
+        if (customEmoji) {
+            customEmoji.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    document.getElementById('hubIconInput').value = this.value.trim();
+                    updateLiveCenterHub();
+                }
+            });
+        }
+
+        const rimColor = document.getElementById('hubRimColor');
+        if (rimColor) rimColor.addEventListener('input', updateLiveCenterHub);
+
+        const bgColor = document.getElementById('hubBgColor');
+        if (bgColor) bgColor.addEventListener('input', updateLiveCenterHub);
+
+        const useShopLogoBtn = document.getElementById('useShopLogoBtn');
+        if (useShopLogoBtn) {
+            useShopLogoBtn.addEventListener('click', function() {
+                document.getElementById('hubUseShopLogoInput').value = '1';
+                document.getElementById('hubRemoveLogoInput').value = '0';
+                document.getElementById('hubModeInput').value = 'image';
+                modeTabs.forEach(t => {
+                    const isImg = t.dataset.mode === 'image';
+                    t.style.background = isImg ? 'var(--bg-surface)' : 'transparent';
+                    t.style.color = isImg ? 'var(--color-primary)' : 'var(--text-secondary)';
+                });
+                document.getElementById('hubMotifPanel').style.display = 'none';
+                document.getElementById('hubIconPanel').style.display = 'none';
+                document.getElementById('hubImagePanel').style.display = 'block';
+
+                const shopLogoUrl = '{% if shop.logo %}{{ shop.logo.url }}{% endif %}';
+                const previewWrap = document.getElementById('hubLogoPreviewWrap');
+                const previewImg = document.getElementById('hubLogoPreviewImg');
+                if (previewWrap && previewImg && shopLogoUrl) {
+                    previewImg.src = shopLogoUrl;
+                    previewWrap.style.display = 'flex';
+                }
+                updateLiveCenterHub();
+            });
+        }
+
+        const logoFileInput = document.getElementById('hubLogoFileInput');
+        if (logoFileInput) {
+            logoFileInput.addEventListener('change', function(e) {
+                const file = e.target.files && e.target.files[0];
+                if (file) {
+                    document.getElementById('hubRemoveLogoInput').value = '0';
+                    document.getElementById('hubUseShopLogoInput').value = '0';
+                    document.getElementById('hubModeInput').value = 'image';
+                    modeTabs.forEach(t => {
+                        const isImg = t.dataset.mode === 'image';
+                        t.style.background = isImg ? 'var(--bg-surface)' : 'transparent';
+                        t.style.color = isImg ? 'var(--color-primary)' : 'var(--text-secondary)';
+                    });
+                    document.getElementById('hubMotifPanel').style.display = 'none';
+                    document.getElementById('hubIconPanel').style.display = 'none';
+                    document.getElementById('hubImagePanel').style.display = 'block';
+
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const dataUrl = evt.target.result;
+                        const previewWrap = document.getElementById('hubLogoPreviewWrap');
+                        const previewImg = document.getElementById('hubLogoPreviewImg');
+                        if (previewWrap && previewImg) {
+                            previewImg.src = dataUrl;
+                            previewWrap.style.display = 'flex';
+                        }
+                        if (wheelInstance) {
+                            wheelInstance.setCenterConfig({ mode: 'image', logoUrl: dataUrl });
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        const removeLogoBtn = document.getElementById('hubRemoveLogoBtn');
+        if (removeLogoBtn) {
+            removeLogoBtn.addEventListener('click', function() {
+                document.getElementById('hubRemoveLogoInput').value = '1';
+                document.getElementById('hubUseShopLogoInput').value = '0';
+                if (logoFileInput) logoFileInput.value = '';
+                const previewWrap = document.getElementById('hubLogoPreviewWrap');
+                const previewImg = document.getElementById('hubLogoPreviewImg');
+                if (previewWrap) previewWrap.style.display = 'none';
+                if (previewImg) previewImg.src = '';
+
+                document.getElementById('hubModeInput').value = 'motif';
+                modeTabs.forEach(t => {
+                    const isMotif = t.dataset.mode === 'motif';
+                    t.style.background = isMotif ? 'var(--bg-surface)' : 'transparent';
+                    t.style.color = isMotif ? 'var(--color-primary)' : 'var(--text-secondary)';
+                });
+                document.getElementById('hubMotifPanel').style.display = 'block';
+                document.getElementById('hubIconPanel').style.display = 'none';
+                document.getElementById('hubImagePanel').style.display = 'none';
+
+                if (wheelInstance) {
+                    wheelInstance.setCenterConfig({ mode: 'motif', logoUrl: null });
+                }
+            });
+        }
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveCenterHubBtn');
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = 'Saving...';
+            }
+
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+                const badge = document.getElementById('centerHubStatusBadge');
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    setTimeout(() => { badge.style.display = 'none'; }, 3000);
+                }
+                if (data && data.center_hub_config && wheelInstance) {
+                    wheelInstance.setCenterConfig(data.center_hub_config);
+                }
+                if (window.lucide) window.lucide.createIcons();
+            })
+            .catch(() => {
+                form.submit();
+            });
+        });
+    }
+
+    function buildHubIconGrid() {
+        const grid = document.getElementById('hubIconGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        const currentIcon = document.getElementById('hubIconInput').value;
+
+        PRESET_ICONS.filter(i => i.id !== 'none').forEach(icon => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `icon-preset-btn ${currentIcon === icon.id ? 'active' : ''}`;
+            btn.style.padding = '5px 2px';
+            btn.style.fontSize = '0.85rem';
+            btn.title = icon.label;
+            btn.innerText = icon.sym;
+            btn.addEventListener('click', function() {
+                document.getElementById('hubIconInput').value = icon.id;
+                grid.querySelectorAll('.icon-preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateLiveCenterHub();
+            });
+            grid.appendChild(btn);
+        });
+    }
+
+    function updateLiveCenterHub() {
+        if (!wheelInstance) return;
+        const mode = document.getElementById('hubModeInput').value;
+        const hubType = document.getElementById('hubTypeSelect').value;
+        const icon = document.getElementById('hubIconInput').value;
+        const iconColor = document.getElementById('hubIconColor').value;
+        const rimColor = document.getElementById('hubRimColor').value;
+        const bgColor = document.getElementById('hubBgColor').value;
+        const previewImg = document.getElementById('hubLogoPreviewImg');
+        const logoUrl = (previewImg && previewImg.src && mode === 'image') ? previewImg.src : null;
+
+        wheelInstance.setCenterConfig({
+            mode: mode,
+            hubType: hubType,
+            icon: icon,
+            iconColor: iconColor,
+            rimColor: rimColor,
+            bgColor: bgColor,
+            logoUrl: logoUrl
+        });
     }
 </script>
 {% endblock %}

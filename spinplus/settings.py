@@ -30,7 +30,8 @@ TESTING = 'test' in sys.argv or 'test_coverage' in sys.argv
 IS_RUNSERVER = 'runserver' in sys.argv
 
 # Environment-based security configuration
-DEBUG = os.environ.get('DJANGO_DEBUG', os.environ.get('DEBUG', 'False')).strip().lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get('DJANGO_DEBUG', os.environ.get('DEBUG', 'True' if (IS_RUNSERVER or TESTING) else 'False')).strip().lower() in ('true', '1', 'yes')
+
 
 # SECRET_KEY Handling: Must come from environment; safe fallback for local development & testing only
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -275,6 +276,12 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
+
+# In local development / debug mode, serve live static files directly from static/
+WHITENOISE_USE_FINDERS = True if (DEBUG or IS_RUNSERVER) else False
+WHITENOISE_AUTOREFRESH = True if (DEBUG or IS_RUNSERVER) else False
+WHITENOISE_MAX_AGE = 0 if (DEBUG or IS_RUNSERVER) else 31536000
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
