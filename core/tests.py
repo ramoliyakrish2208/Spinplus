@@ -425,11 +425,19 @@ class SpinPlusCompleteAdminTestCase(TestCase):
         self.assertEqual(data['database'], 'connected')
 
     def test_admin_capacity_dashboard_endpoint(self):
-        """Test Super Admin capacity dashboard endpoint returns HTTP 200 OK without 500 error"""
+        """Test Super Admin capacity dashboard endpoint returns HTTP 200 OK and contains real telemetry"""
         self.client.login(username='admin', password='adminpassword')
         res = self.client.get('/dashboard/admin/capacity/')
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'System Capacity & Performance Dashboard')
+        self.assertContains(res, 'Live Database Engine & Performance Telemetry')
+        self.assertContains(res, 'Operational Section Capacity & Throughput Matrix')
+        self.assertContains(res, 'Live Server Process & Worker Diagnostics (Real Server Data)')
+        self.assertContains(res, 'Live Traffic & Ingestion Velocity (Past 1h & 24h Real Data)')
+        self.assertIn('section_throughputs', res.context)
+        self.assertIn('server_process', res.context)
+        self.assertIn('live_velocity', res.context)
+        self.assertIn('db_telemetry', res.context)
 
     def test_shop_usage_limit_helpers(self):
         """Test Shop model usage check helpers (can_create_campaign, can_add_prize, can_spin)"""

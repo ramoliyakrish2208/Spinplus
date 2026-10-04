@@ -1537,6 +1537,10 @@ def admin_capacity_dashboard_view(request):
         'environment': snapshot['environment'],
         'hardware': snapshot['hardware'],
         'database': snapshot['database'],
+        'db_telemetry': snapshot.get('db_telemetry') or snapshot.get('database'),
+        'section_throughputs': snapshot.get('section_throughputs', []),
+        'server_process': snapshot.get('server_process', {}),
+        'live_velocity': snapshot.get('live_velocity', {}),
         'app_counts': snapshot['app_counts'],
         'health_status': snapshot['health_status'],
         'collected_at': snapshot['collected_at'],
@@ -1595,81 +1599,9 @@ def get_or_create_shop_subscription(shop):
 
 
 def get_database_telemetry():
-    """
-    Computes live database throughput capacity (requests per second) and latency
-    for core operations, plans section, and tenant subscriptions section.
-    """
-    import time
-    import os
-    from django.db import connection
-
-    # Baseline DB Ping
-    t0 = time.perf_counter()
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT 1")
-        cursor.fetchone()
-    base_ping_ms = round((time.perf_counter() - t0) * 1000, 2)
-    base_lat_safe = max(base_ping_ms, 0.05)
-    overall_single_rps = int(1000 / base_lat_safe)
-    overall_multi_rps = int(overall_single_rps * 8)
-
-    # Section 1 Benchmark: Subscription Plans Query
-    plan_table = Plan._meta.db_table
-    t_plans = time.perf_counter()
-    with connection.cursor() as cursor:
-        cursor.execute(f"SELECT COUNT(*) FROM {plan_table}")
-        cursor.fetchone()
-    plans_lat_ms = round((time.perf_counter() - t_plans) * 1000, 2)
-    plans_lat_safe = max(plans_lat_ms, 0.05)
-    plans_rps = int(1000 / plans_lat_safe)
-    plans_multi_rps = int(plans_rps * 8)
-
-    # Section 2 Benchmark: Tenant Shop Subscriptions Query
-    sub_table = Subscription._meta.db_table
-    t_subs = time.perf_counter()
-    with connection.cursor() as cursor:
-        cursor.execute(f"SELECT COUNT(*) FROM {sub_table} WHERE status IN ('active', 'trial')")
-        cursor.fetchone()
-    subs_lat_ms = round((time.perf_counter() - t_subs) * 1000, 2)
-    subs_lat_safe = max(subs_lat_ms, 0.05)
-    subs_rps = int(1000 / subs_lat_safe)
-    subs_multi_rps = int(subs_rps * 8)
-
-    # DB Engine and Storage Size
-    engine_raw = connection.settings_dict.get('ENGINE', '')
-    if 'sqlite' in engine_raw.lower():
-        engine_name = 'SQLite 3 (WAL Mode)'
-    elif 'mysql' in engine_raw.lower():
-        engine_name = 'MySQL / MariaDB'
-    elif 'postgres' in engine_raw.lower():
-        engine_name = 'PostgreSQL'
-    else:
-        engine_name = connection.vendor.upper() if hasattr(connection, 'vendor') else 'SQL'
-
-    db_name = connection.settings_dict.get('NAME', '')
-    db_size_str = "Active"
-    if db_name and isinstance(db_name, (str, os.PathLike)) and os.path.exists(str(db_name)):
-        try:
-            size_mb = os.path.getsize(str(db_name)) / (1024 * 1024)
-            db_size_str = f"{size_mb:.2f} MB"
-        except Exception:
-            db_size_str = "Active"
-    elif db_name:
-        db_size_str = "Connected (Cloud DB)"
-
-    return {
-        'engine': engine_name,
-        'db_size_str': db_size_str,
-        'base_ping_ms': f"{base_ping_ms:.2f}",
-        'overall_single_rps': f"{overall_single_rps:,}",
-        'overall_multi_rps': f"{overall_multi_rps:,}",
-        'plans_lat_ms': f"{plans_lat_ms:.2f}",
-        'plans_rps': f"{plans_rps:,}",
-        'plans_multi_rps': f"{plans_multi_rps:,}",
-        'subs_lat_ms': f"{subs_lat_ms:.2f}",
-        'subs_rps': f"{subs_rps:,}",
-        'subs_multi_rps': f"{subs_multi_rps:,}",
-    }
+    """Computes live database throughput capacity and latency using central capacity engine."""
+    from core.services.capacity_engine import get_database_telemetry as _get_telemetry
+    return _get_telemetry()
 
 
 @superadmin_required

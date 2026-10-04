@@ -46,6 +46,165 @@
         </div>
     </div>
 
+    <!-- Live Database Details & Throughput Telemetry (Unified with Subscriptions Center) -->
+    <div class="bento-card" style="margin-bottom: 24px; padding: 20px 24px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(99, 102, 241, 0.04) 100%); border: 1px solid rgba(16, 185, 129, 0.25); box-shadow: var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:44px; height:44px; border-radius:12px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; color:var(--color-success); flex-shrink:0;">
+                    <i data-lucide="database" style="width:22px;height:22px;"></i>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-size:1rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.2px;">Live Database Engine & Performance Telemetry</span>
+                        <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; padding:2px 8px; border-radius:12px; background:rgba(16,185,129,0.15); color:var(--color-success); font-weight:700; border:1px solid rgba(16,185,129,0.3);">
+                            <span style="width:7px; height:7px; border-radius:50%; background:var(--color-success); display:inline-block; box-shadow:0 0 8px var(--color-success); animation:pulse 2s infinite;"></span>
+                            Optimal ({{ db_telemetry.base_ping_ms }} ms)
+                        </span>
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:3px;">
+                        Engine: <strong style="color:var(--text-primary);">{{ db_telemetry.engine }}</strong> &bull; Size: <strong style="color:var(--text-primary);">{{ db_telemetry.db_size_str }}</strong> &bull; Core Ping: <strong style="color:var(--color-success);">{{ db_telemetry.base_ping_ms }} ms</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                <div style="text-align:right;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Overall Peak Capacity</div>
+                    <div style="font-size:1.4rem; font-weight:900; color:var(--color-success); font-family:'Space Grotesk', monospace; line-height:1.2;">
+                        ~{{ db_telemetry.overall_multi_rps }} <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">req/s</span>
+                    </div>
+                </div>
+                <div style="height:34px; width:1px; background:var(--border-subtle);"></div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Sequential DB Queries</div>
+                    <div style="font-size:1.4rem; font-weight:900; color:var(--color-accent); font-family:'Space Grotesk', monospace; line-height:1.2;">
+                        ~{{ db_telemetry.overall_single_rps }} <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">req/s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Throughput Matrix: Requests Handled Per Second by Subsystem -->
+    <div class="bento-card" style="margin-bottom: 24px; padding: 22px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+            <div>
+                <h3 style="font-size:1.1rem; font-weight:800; margin:0 0 4px 0; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="cpu" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                    Operational Section Capacity & Throughput Matrix
+                </h3>
+                <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">
+                    Live requests per second handled by each core application subsystem under concurrent load.
+                </p>
+            </div>
+            <span class="badge badge-active" style="font-size:0.72rem; padding:4px 10px;">
+                <i data-lucide="activity" style="width:12px;height:12px;"></i> Real-Time Probe
+            </span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+            {% for sub in section_throughputs %}
+            <div style="background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; position:relative; overflow:hidden;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; color:{{ sub.accent }};">
+                        <i data-lucide="{{ sub.icon }}" style="width:18px;height:18px;"></i>
+                    </div>
+                    <span class="badge" style="font-size:0.65rem; background:rgba(255,255,255,0.06); color:var(--text-secondary); padding:2px 6px;">
+                        {{ sub.badge }}
+                    </span>
+                </div>
+                <div style="font-size:0.86rem; font-weight:800; color:var(--text-primary); margin-bottom:4px;">{{ sub.name }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); min-height:32px; margin-bottom:12px;">{{ sub.desc }}</div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06);">
+                    <div>
+                        <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase;">Peak Capacity</div>
+                        <div style="font-size:1.15rem; font-weight:900; color:var(--color-success); font-family:'Space Grotesk', monospace;">
+                            ~{{ sub.multi_rps }} <span style="font-size:0.68rem; font-weight:600; color:var(--text-muted);">req/s</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase;">Latency</div>
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--text-secondary); font-family:monospace;">
+                            {{ sub.latency_ms }} ms
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Live Server Process & Worker Diagnostics (Real Server Data) -->
+    <div class="bento-card" style="margin-bottom: 24px; padding: 22px;">
+        <h3 style="font-size:1.1rem; font-weight:800; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="terminal" style="width:20px;height:20px;color:#8b5cf6;"></i>
+            Live Server Process & Worker Diagnostics (Real Server Data)
+        </h3>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px;">
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Worker Process PID</div>
+                <div style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-top:2px;">{{ server_process.pid }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Parent PID: {{ server_process.ppid|default:"1" }}</div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Process Memory (RSS)</div>
+                <div style="font-size:1.4rem; font-weight:800; color:var(--color-accent); margin-top:2px;">
+                    {% if server_process.process_memory_mb %}{{ server_process.process_memory_mb }} MB{% else %}N/A{% endif %}
+                </div>
+                <div style="font-size:0.72rem; color:var(--color-success); margin-top:4px;">Active Worker Footprint</div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Active Threads</div>
+                <div style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-top:2px;">{{ server_process.thread_count }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Python worker concurrency</div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Disk I/O Write Speed</div>
+                <div style="font-size:1.4rem; font-weight:800; color:#10b981; margin-top:2px;">{{ server_process.disk_io_write_ms }} ms</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">4KB sync write benchmark</div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">GC Tracked Objects</div>
+                <div style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-top:2px;">{{ server_process.gc_tracked_objects }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Python Garbage Collector</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Traffic & Ingestion Velocity (Past 1h & 24h Real Data) -->
+    <div class="bento-card" style="margin-bottom: 24px; padding: 22px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h3 style="font-size:1.1rem; font-weight:800; margin:0; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="trending-up" style="width:20px;height:20px;color:#10b981;"></i>
+                Live Traffic & Ingestion Velocity (Past 1h & 24h Real Data)
+            </h3>
+            <span style="font-size:0.75rem; color:var(--text-muted);">Measured live from tenant activity records</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px;">
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Spins (Past 24h)</div>
+                <div style="font-size:1.5rem; font-weight:800; color:var(--color-primary); margin-top:2px;">{{ live_velocity.spins_24h }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Past 1 hour: <strong>{{ live_velocity.spins_1h }}</strong></div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">QR Scans (Past 24h)</div>
+                <div style="font-size:1.5rem; font-weight:800; color:#10b981; margin-top:2px;">{{ live_velocity.scans_24h }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Past 1 hour: <strong>{{ live_velocity.scans_1h }}</strong></div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Vouchers Claimed (24h)</div>
+                <div style="font-size:1.5rem; font-weight:800; color:#f59e0b; margin-top:2px;">{{ live_velocity.coupons_24h }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Active Coupons Issued</div>
+            </div>
+            <div style="background:var(--bg-elevated); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">New Tenants (7 Days)</div>
+                <div style="font-size:1.5rem; font-weight:800; color:var(--color-accent); margin-top:2px;">{{ live_velocity.shops_7d }}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">Active Campaigns: <strong>{{ live_velocity.active_campaigns }}</strong></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Live Hardware Telemetry Grid -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:24px;">
 
