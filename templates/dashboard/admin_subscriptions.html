@@ -126,14 +126,59 @@
         </div>
     </div>
 
+    <!-- Live Database Details & Throughput Telemetry -->
+    <div class="bento-card" style="margin-bottom: 24px; padding: 18px 22px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(99, 102, 241, 0.04) 100%); border: 1px solid rgba(16, 185, 129, 0.2); box-shadow: var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:42px; height:42px; border-radius:12px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; color:var(--color-success); flex-shrink:0;">
+                    <i data-lucide="database" style="width:20px;height:20px;"></i>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="font-size:0.95rem; font-weight:800; color:var(--text-primary); letter-spacing:-0.2px;">Live Database Engine & Performance Telemetry</span>
+                        <span style="display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; padding:2px 8px; border-radius:12px; background:rgba(16,185,129,0.15); color:var(--color-success); font-weight:700; border:1px solid rgba(16,185,129,0.3);">
+                            <span style="width:7px; height:7px; border-radius:50%; background:var(--color-success); display:inline-block; box-shadow:0 0 8px var(--color-success);"></span>
+                            Optimal ({{ db_telemetry.base_ping_ms }} ms)
+                        </span>
+                    </div>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:3px;">
+                        Engine: <strong style="color:var(--text-primary);">{{ db_telemetry.engine }}</strong> &bull; Size: <strong style="color:var(--text-primary);">{{ db_telemetry.db_size_str }}</strong> &bull; Core Ping: <strong style="color:var(--color-success);">{{ db_telemetry.base_ping_ms }} ms</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                <div style="text-align:right;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Overall Peak Capacity</div>
+                    <div style="font-size:1.35rem; font-weight:900; color:var(--color-success); font-family:'Space Grotesk', monospace; line-height:1.2;">
+                        ~{{ db_telemetry.overall_multi_rps }} <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">req/s</span>
+                    </div>
+                </div>
+                <div style="height:32px; width:1px; background:var(--border-subtle);"></div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Single-Worker Throughput</div>
+                    <div style="font-size:1.35rem; font-weight:900; color:var(--color-accent); font-family:'Space Grotesk', monospace; line-height:1.2;">
+                        ~{{ db_telemetry.overall_single_rps }} <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted);">req/s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Section 1: Subscription Plans CRUD in ₹ -->
     <div class="bento-card" style="margin-bottom: 28px;">
         <div
             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
             <div>
-                <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 2px 0;"><i data-lucide="package"
-                        style="width:18px;height:18px;"></i> Subscription Plans (Pricing in ₹)</h2>
-                <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Configure plan tiers, duration in days,
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <h2 style="font-size:1.2rem;font-weight:800;margin:0;"><i data-lucide="package"
+                            style="width:18px;height:18px;"></i> Subscription Plans (Pricing in ₹)</h2>
+                    <span class="badge" style="background:rgba(16,185,129,0.12);color:var(--color-success);border:1px solid rgba(16,185,129,0.25);font-size:0.73rem;padding:3px 9px;display:inline-flex;align-items:center;gap:5px;">
+                        <i data-lucide="zap" style="width:11px;height:11px;"></i>
+                        <strong>Live DB Capacity:</strong> ~{{ db_telemetry.plans_multi_rps }} req/s · Latency: {{ db_telemetry.plans_lat_ms }}ms
+                    </span>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin:4px 0 0 0;">Configure plan tiers, duration in days,
                     quotas, and pricing in Rupees.</p>
             </div>
             <button onclick="openCreatePlanModal()" class="btn-secondary" style="font-size:0.82rem;">
@@ -188,13 +233,12 @@
                                     class="btn-secondary" style="font-size:0.75rem;padding:4px 8px;min-height:30px;">
                                     <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
                                 </button>
-                                <button type="button" onclick="confirmDeletePlan('{{ p.id }}', '{{ p.name|escapejs }}')"
-                                    class="btn-danger" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="Delete Plan">
-                                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
-                                </button>
-                                <form method="POST" action="{% url 'admin_plan_delete' p.id %}"
-                                    id="deletePlanForm_{{ p.id }}" style="display:none;">
+                                <form method="POST" action="{% url 'admin_plan_delete' p.id %}" style="display:inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete plan &quot;{{ p.name|escapejs }}&quot;? Active subscribers will be reassigned to default plan.');">
                                     {% csrf_token %}
+                                    <button type="submit" class="btn-danger" style="font-size:0.75rem;padding:4px 8px;min-height:30px;" title="Delete Plan">
+                                        <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                    </button>
                                 </form>
                             </div>
                         </td>
@@ -215,9 +259,15 @@
         <div
             style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
             <div>
-                <h2 style="font-size:1.2rem;font-weight:800;margin:0 0 2px 0;"><i data-lucide="store"
-                        style="width:18px;height:18px;"></i> Tenant Shop Subscriptions</h2>
-                <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Monitor shop subscriptions, days
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <h2 style="font-size:1.2rem;font-weight:800;margin:0;"><i data-lucide="store"
+                            style="width:18px;height:18px;"></i> Tenant Shop Subscriptions</h2>
+                    <span class="badge" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:0.73rem;padding:3px 9px;display:inline-flex;align-items:center;gap:5px;">
+                        <i data-lucide="activity" style="width:11px;height:11px;"></i>
+                        <strong>Live DB Capacity:</strong> ~{{ db_telemetry.subs_multi_rps }} req/s · Latency: {{ db_telemetry.subs_lat_ms }}ms
+                    </span>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin:4px 0 0 0;">Monitor shop subscriptions, days
                     remaining, assign plans, and extend validity.</p>
             </div>
             <div>
@@ -400,10 +450,11 @@
                                 </form>
 
                                 {% if s.subscription.is_valid %}
-                                <form method="POST" action="{% url 'admin_subscription_status' s.subscription.id %}" id="expireSubForm_{{ s.subscription.id }}" style="display:inline;">
+                                <form method="POST" action="{% url 'admin_subscription_status' s.subscription.id %}" style="display:inline;"
+                                    onsubmit="return confirm('Instantly expire the subscription for &quot;{{ s.name|escapejs }}&quot;? Customer spins will pause immediately.');">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="instant_expire">
-                                    <button type="button" onclick="confirmExpireSub('{{ s.subscription.id }}', '{{ s.name|escapejs }}')" class="btn-danger" style="font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Instant Expire">
+                                    <button type="submit" class="btn-danger" style="font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Instant Expire">
                                         Expire
                                     </button>
                                 </form>
@@ -417,10 +468,11 @@
                                 </form>
                                 {% endif %}
 
-                                <form method="POST" action="{% url 'admin_subscription_delete' s.subscription.id %}" id="deleteSubForm_{{ s.subscription.id }}" style="display:inline;">
+                                <form method="POST" action="{% url 'admin_subscription_delete' s.subscription.id %}" style="display:inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete and cancel the subscription for &quot;{{ s.name|escapejs }}&quot;?');">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="delete">
-                                    <button type="button" onclick="confirmDeleteSub('{{ s.subscription.id }}', '{{ s.name|escapejs }}')" class="btn-ghost" style="color:var(--color-danger);font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Delete / Cancel Subscription">
+                                    <button type="submit" class="btn-ghost" style="color:var(--color-danger);font-size:0.72rem;padding:3px 7px;min-height:28px;" title="Delete / Cancel Subscription">
                                         <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
                                     </button>
                                 </form>
@@ -758,48 +810,6 @@
 
     function closeAssignModal() {
         document.getElementById('assignModal').classList.remove('open');
-    }
-
-    function confirmDeletePlan(planId, planName) {
-        showConfirmModal(
-            'Delete Subscription Plan',
-            `Are you sure you want to delete "${planName}"?\n\nActive subscribers on this plan will be safely reassigned to the default plan.`,
-            () => {
-                const form = document.getElementById('deletePlanForm_' + planId);
-                if (form) form.submit();
-            },
-            null,
-            'Delete Plan',
-            'btn-danger'
-        );
-    }
-
-    function confirmExpireSub(subId, shopName) {
-        showConfirmModal(
-            'Instant Expire Subscription',
-            `Instantly expire the subscription for "${shopName}"?\n\nCustomer spins on their wheel will pause immediately until renewed.`,
-            () => {
-                const form = document.getElementById('expireSubForm_' + subId);
-                if (form) form.submit();
-            },
-            null,
-            'Expire Now',
-            'btn-danger'
-        );
-    }
-
-    function confirmDeleteSub(subId, shopName) {
-        showConfirmModal(
-            'Delete Subscription',
-            `Are you sure you want to delete and cancel the subscription for "${shopName}"?\n\nCustomer spins on their wheel will pause immediately until a new plan is assigned.`,
-            () => {
-                const form = document.getElementById('deleteSubForm_' + subId);
-                if (form) form.submit();
-            },
-            null,
-            'Delete Subscription',
-            'btn-danger'
-        );
     }
 </script>
 {% endblock %}
