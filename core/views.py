@@ -1806,6 +1806,20 @@ def admin_plan_delete_view(request, plan_id):
         action="Subscription Plan Deleted",
         details=f"Subscription plan '{plan_name}' (Code: {plan_code}) was deleted by Super Admin."
     )
+    is_ajax = (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+        request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest' or
+        'application/json' in request.headers.get('accept', '') or
+        request.content_type == 'application/json'
+    )
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': f"Subscription plan '{plan_name}' was successfully deleted.",
+            'plan_id': plan_id,
+            'plan_name': plan_name
+        })
+
     messages.success(request, f"Subscription plan '{plan_name}' was successfully deleted.")
     return redirect('admin_subscriptions')
 
@@ -1981,6 +1995,22 @@ def admin_subscription_status_view(request, sub_id):
         details=f"Action: {action}, New Status: {sub.status}, Expires: {sub.expires_at.strftime('%d %b %Y %H:%M') if sub.expires_at else 'N/A'}"
     )
 
+    is_ajax = (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+        request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest' or
+        'application/json' in request.headers.get('accept', '') or
+        request.content_type == 'application/json'
+    )
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': f"Subscription status updated for '{sub.shop.name}'.",
+            'sub_id': sub.id,
+            'status': sub.status,
+            'is_active': sub.is_active,
+            'is_valid': sub.is_valid()
+        })
+
     return redirect('admin_subscriptions')
 
 
@@ -2006,6 +2036,22 @@ def admin_subscription_delete_view(request, sub_id):
         action="Subscription Deleted",
         details=f"Subscription for '{shop_name}' was cancelled/deleted by Super Admin."
     )
+    is_ajax = (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+        request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest' or
+        'application/json' in request.headers.get('accept', '') or
+        request.content_type == 'application/json'
+    )
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': f"Subscription for '{shop_name}' has been successfully deleted/cancelled.",
+            'sub_id': sub_id,
+            'shop_name': shop_name,
+            'status': 'cancelled',
+            'is_active': False
+        })
+
     messages.success(request, f"Subscription for '{shop_name}' has been successfully deleted/cancelled.")
     return redirect('admin_subscriptions')
 

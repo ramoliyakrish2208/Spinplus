@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 from core.models import User, Shop, ShopBranding, Campaign, Prize, SpinResult, Coupon, CouponRedemption, QRScanLog, ActivityLog, Plan, Subscription, Notification, CalendarEvent, ThemeAuditLog
 from core.qr import generate_shop_qr, generate_coupon_qr
 from core.services.theme_resolver import adapt_theme_to_category, get_active_shop_theme
@@ -1343,6 +1344,42 @@ class SubscriptionsManagementTestCase(TestCase):
         self.assertFalse(sub.is_active)
         self.assertFalse(sub.is_valid())
         self.assertTrue(ActivityLog.objects.filter(shop=self.shop, action="Subscription Deleted").exists())
+
+    def test_admin_delete_subscription_ajax_no_refresh(self):
+        """Super Admin can delete/cancel a subscription via AJAX and receive JSON without page refresh"""
+        sub = self.shop.get_subscription()
+        sub.status = 'active'
+        sub.expires_at = timezone.now() + timedelta(days=30)
+        sub.save()
+
+        self.client.login(username='sub_admin', password='password123')
+        res = self.client.post(
+            f'/dashboard/admin/subscriptions/{sub.id}/delete/',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        self.assertIn('successfully deleted/cancelled', data.get('message', ''))
+
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'cancelled')
+        self.assertFalse(sub.is_active)
+
+    def test_admin_delete_plan_ajax_no_refresh(self):
+        """Super Admin can delete a plan via AJAX and receive JSON without page refresh"""
+        from core.models import Plan
+        test_plan = Plan.objects.create(name="Custom Test Tier", code="custom_test_tier", price_rupees=Decimal('799.00'))
+        self.client.login(username='sub_admin', password='password123')
+
+        res = self.client.post(
+            f'/dashboard/admin/plans/{test_plan.id}/delete/',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('success'))
+        self.assertFalse(Plan.objects.filter(id=test_plan.id).exists())
 
     def test_admin_delete_subscription_via_status_action(self):
         """Super Admin can delete/cancel a shop subscription via status view action='delete'"""
