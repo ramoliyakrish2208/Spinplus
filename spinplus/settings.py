@@ -50,10 +50,21 @@ ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_env.split(',') if h.strip()]
 if '.pythonanywhere.com' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('.pythonanywhere.com')
 
-csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1,http://localhost,http://127.0.0.1:8000,http://localhost:8000,https://*.pythonanywhere.com')
+csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1,http://localhost,http://127.0.0.1:8000,http://localhost:8000,https://*.pythonanywhere.com,http://*.pythonanywhere.com,https://spinplus.pythonanywhere.com,http://spinplus.pythonanywhere.com')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_origins_env.split(',') if o.strip()]
-if 'https://*.pythonanywhere.com' not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append('https://*.pythonanywhere.com')
+trusted_defaults = [
+    'https://spinplus.pythonanywhere.com',
+    'http://spinplus.pythonanywhere.com',
+    'https://*.pythonanywhere.com',
+    'http://*.pythonanywhere.com',
+    'http://127.0.0.1',
+    'http://localhost',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
+for origin in trusted_defaults:
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 # Baseline & Production Security Headers
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -75,14 +86,30 @@ if DEBUG or TESTING or IS_RUNSERVER:
     SECURE_HSTS_PRELOAD = False
 else:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').strip().lower() in ('true', '1', 'yes')
-    CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True').strip().lower() in ('true', '1', 'yes')
+    
     # Supports both SECURE_SSL_REDIRECT and ENABLE_HTTPS_REDIRECT environment variables
-    ssl_redirect_env = os.environ.get('SECURE_SSL_REDIRECT', os.environ.get('ENABLE_HTTPS_REDIRECT', 'True'))
+    ssl_redirect_env = os.environ.get('SECURE_SSL_REDIRECT', os.environ.get('ENABLE_HTTPS_REDIRECT', 'False'))
     SECURE_SSL_REDIRECT = ssl_redirect_env.strip().lower() in ('true', '1', 'yes')
-    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000'))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True').strip().lower() in ('true', '1', 'yes')
-    SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'True').strip().lower() in ('true', '1', 'yes')
+
+    # If SSL redirect is enforced, cookies can safely be marked Secure=True.
+    # Otherwise, allow cookies over both HTTP and HTTPS to prevent browser cookie rejection ("CSRF cookie not set")
+    if SECURE_SSL_REDIRECT:
+        SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'True').strip().lower() in ('true', '1', 'yes')
+        CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'True').strip().lower() in ('true', '1', 'yes')
+        SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '31536000'))
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'True').strip().lower() in ('true', '1', 'yes')
+        SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'True').strip().lower() in ('true', '1', 'yes')
+    else:
+        SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').strip().lower() in ('true', '1', 'yes')
+        CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False').strip().lower() in ('true', '1', 'yes')
+        SECURE_HSTS_SECONDS = 0
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+        SECURE_HSTS_PRELOAD = False
+
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False
+CSRF_FAILURE_VIEW = 'core.views.csrf_failure_view'
 
 
 

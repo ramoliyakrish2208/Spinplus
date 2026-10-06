@@ -40,19 +40,27 @@ echo "[1/6] Pulling latest code from GitHub..."
 git pull origin main
 echo "      ✅ Code updated → $(git log --oneline -1)"
 
-# ── Ensure .env exists ─────────────────────────────────────────
+# ── Ensure .env exists & has robust CSRF settings ───────────────
 if [ ! -f "$DEPLOY_DIR/.env" ]; then
     echo ""
     echo "[!] .env not found. Creating production .env..."
     cat > "$DEPLOY_DIR/.env" << 'EOF'
 SECRET_KEY=spinplus-production-secret-key-high-entropy-random-98127398127391
 DJANGO_DEBUG=False
-ALLOWED_HOSTS=spinplus.pythonanywhere.com,localhost,127.0.0.1
-CSRF_TRUSTED_ORIGINS=https://spinplus.pythonanywhere.com
+ALLOWED_HOSTS=spinplus.pythonanywhere.com,localhost,127.0.0.1,.pythonanywhere.com
+CSRF_TRUSTED_ORIGINS=https://spinplus.pythonanywhere.com,http://spinplus.pythonanywhere.com,https://*.pythonanywhere.com,http://*.pythonanywhere.com
 SITE_URL=https://spinplus.pythonanywhere.com
 ENABLE_HTTPS_REDIRECT=False
+CSRF_COOKIE_SECURE=False
+SESSION_COOKIE_SECURE=False
 EOF
     echo "      ✅ .env created with production settings"
+else
+    # Ensure existing .env doesn't break CSRF if user visits over HTTP or before SSL toggle
+    if grep -q "ENABLE_HTTPS_REDIRECT=False" "$DEPLOY_DIR/.env" && grep -q "CSRF_COOKIE_SECURE=True" "$DEPLOY_DIR/.env"; then
+        sed -i 's/CSRF_COOKIE_SECURE=True/CSRF_COOKIE_SECURE=False/g' "$DEPLOY_DIR/.env"
+        echo "      🔧 Auto-healed CSRF_COOKIE_SECURE=False in .env (prevents cookie rejection)"
+    fi
 fi
 
 # ── 2. Install / update dependencies ─────────────────────────

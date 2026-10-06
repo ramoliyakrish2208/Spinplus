@@ -8,6 +8,7 @@ from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -599,6 +600,7 @@ def verify_coupon_token_view(request, token):
 # AUTHENTICATION
 # ---------------------------------------------------------
 
+@ensure_csrf_cookie
 def user_login_view(request):
     if request.user.is_authenticated:
         if request.user.is_superadmin():
@@ -2304,6 +2306,7 @@ def request_plan_view(request):
     return redirect('billing')
 
 
+@ensure_csrf_cookie
 def onboarding_view(request):
     """
     Setup Wizard for Business Creation and Shop Onboarding.
@@ -3026,6 +3029,42 @@ def custom_403_view(request, exception=None):
     if ctx.get('is_ajax'):
         return JsonResponse({'status': 'error', 'code': 403, 'message': 'Access Denied: You do not have permission to access this resource.'}, status=403)
     return render(request, 'errors/403.html', ctx, status=403)
+
+
+@ensure_csrf_cookie
+def csrf_failure_view(request, reason=""):
+    logger.warning(
+        f"CSRF verification failed: path={request.path}, method={request.method}, "
+        f"reason={reason}, ip={get_client_ip(request)}"
+    )
+
+    # 1. AJAX or JSON API requests -> Return clean 403 JSON
+    is_ajax = (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+        'application/json' in request.META.get('HTTP_ACCEPT', '') or
+        request.content_type == 'application/json'
+    )
+    if is_ajax:
+        return JsonResponse({
+            'status': 'error',
+            'code': 403,
+            'message': 'Security token expired or cookies were cleared. Please reload the page.',
+            'reason': str(reason)
+        }, status=403)
+
+    # 2. Login or Sign-up submission failed CSRF -> Re-render login with clear warning & guaranteed fresh cookie
+    clean_path = (request.path or '').rstrip('/')
+    if clean_path in ['/login', '', '/signup', '/register']:
+        return render(request, 'auth/login.html', {
+            'error': "Security session expired. Please sign in again.",
+            'is_public_page': True
+        }, status=403)
+
+    # 3. Standard view failure -> Render custom 403 page
+    ctx = get_error_context(request, 403, default_msg="Security Verification Failed")
+    ctx['csrf_failure_reason'] = reason
+    return render(request, 'errors/403.html', ctx, status=403)
+
 
 
 def custom_404_view(request, exception=None):
